@@ -143,39 +143,42 @@ def manage_request_action(data: MediaRequestActionModel, request: Request):
         mp_url = cfg.get("moviepilot_url")
         mp_token = cfg.get("moviepilot_token")
         
-        # 如果配置了 MP，调用自动订阅
+# 如果配置了 MP，调用自动订阅
         if mp_url and mp_token:
             conn = sqlite3.connect(DB_PATH); c = conn.cursor()
-            c.execute("SELECT title, tmdb_id, media_type FROM media_requests WHERE tmdb_id=?", (data.tmdb_id,))
+            c.execute("SELECT title, tmdb_id, media_type, year FROM media_requests WHERE tmdb_id=?", (data.tmdb_id,))
             req_info = c.fetchone(); conn.close()
             
             if req_info:
                 try:
-                    # 1. 清理 Token 及其两侧可能存在的单引号/空格
-                    clean_token = mp_token.strip().strip("'").strip('"')
-                    
-                    # 2. 🔥 核心修复：强制加上末尾斜杠，避免 307 重定向
+                    # 1. 强制加上末尾斜杠，避免 307 重定向导致 Header 丢失
                     mp_api = f"{mp_url.rstrip('/')}/api/v1/subscribe/" 
                     
-                    # 3. 准备数据负载 (类型对齐 MP 标准)
+                    # 2. 构造 payload，确保数据类型 100% 匹配 MP 后端模型
                     payload = {
-                        "name": req_info[0], 
-                        "tmdbid": int(req_info[1]), 
-                        "type": req_info[2]  # 'movie' 或 'tv'
+                        "name": req_info[0],
+                        "type": "movie" if req_info[2] == "movie" else "tv",
+                        "year": str(req_info[3]) if req_info[3] else "",
+                        "tmdbid": int(req_info[1])
                     }
                     
-                    # 4. 🔥 核心修复：移除 URL 里的 token，只保留标准的 Bearer Header
-                    auth_headers = {
-                        "Authorization": f"Bearer {clean_token}",
+                    # 3. 构造请求头
+                    # 注意：如果设置里的 token 已经带了 'Bearer '，则不再重复加
+                    final_token = mp_token.strip()
+                    auth_header = f"Bearer {final_token}" if not final_token.startswith("Bearer ") else final_token
+                    
+                    headers = {
+                        "Authorization": auth_header,
                         "Content-Type": "application/json"
                     }
                     
-                    # 发送请求
-                    res = requests.post(mp_api, json=payload, headers=auth_headers, timeout=10)
+                    # 4. 执行请求
+                    res = requests.post(mp_api, json=payload, headers=headers, timeout=15)
                     
                     if res.status_code != 200:
-                        # 如果 MP 返回 401/403，通常是 Token 真的不对
-                        return {"status": "error", "message": f"MoviePilot 拒绝请求: {res.text}"}
+                        # 打印详细错误方便排查
+                        error_detail = res.text
+                        return {"status": "error", "message": f"MoviePilot 拒绝请求: {error_detail}"}
                 except Exception as e:
                     return {"status": "error", "message": f"连接 MoviePilot 失败: {str(e)}"}
 
