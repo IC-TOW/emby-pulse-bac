@@ -70,7 +70,7 @@ def search_tmdb(query: str, request: Request):
                 for row in c.fetchall(): local_status_map[str(row[0])] = row[1]
                 conn.close()
 
-                # 2. 🔥 穿透查询 Emby 媒体库
+                # 2. 穿透查询 Emby 媒体库
                 emby_host = cfg.get("emby_host"); emby_key = cfg.get("emby_api_key")
                 if emby_host and emby_key:
                     provider_query = ",".join([f"tmdb.{tid}" for tid in tmdb_ids])
@@ -102,7 +102,7 @@ def search_tmdb(query: str, request: Request):
         return {"status": "error", "message": "TMDB API 响应异常"}
     except Exception as e: return {"status": "error", "message": f"网络或代理错误: {str(e)}"}
 
-# ================= 🔥 提交求片 (带代理拉取图，企微100%有封面) =================
+# ================= 🔥 提交求片 (极速异步发图) =================
 @router.post("/api/requests/submit")
 def submit_media_request(data: MediaRequestSubmitModel, request: Request):
     user = request.session.get("req_user")
@@ -123,7 +123,6 @@ def submit_media_request(data: MediaRequestSubmitModel, request: Request):
     conn.close()
     if not success: return {"status": "error", "message": "你已经提交过啦，不用重复点 +1"}
 
-    # --- 准备精美通知 ---
     type_cn = "🎬 电影" if data.media_type == "movie" else "📺 剧集"
     overview_text = data.overview if data.overview else "暂无剧情简介"
     if len(overview_text) > 120: overview_text = overview_text[:115] + "..."
@@ -137,20 +136,13 @@ def submit_media_request(data: MediaRequestSubmitModel, request: Request):
     admin_url = cfg.get("pulse_url") or str(request.base_url).rstrip('/')
     keyboard = {"inline_keyboard": [[{"text": "🍿 前往后台一键审批", "url": f"{admin_url}/requests_admin"}]]}
     
-    # 🔥 修复企微无图的关键：挂载代理拉取 TMDB 封面转成字节流
-    photo_data = REPORT_COVER_URL
-    if data.poster_path:
-        try:
-            proxy = cfg.get("proxy_url"); proxies = {"http": proxy, "https": proxy} if proxy else None
-            img_res = requests.get(data.poster_path, proxies=proxies, timeout=15)
-            if img_res.status_code == 200: photo_data = io.BytesIO(img_res.content)
-        except: pass
-
-    # 传给机器人的 wecom_photo_io 确保企微能收到图
-    bot.send_photo("sys_notify", photo_data, bot_msg, reply_markup=keyboard, platform="all", wecom_photo_io=photo_data)
+    # 🔥 修复企微无图：不再阻塞下载，直接把链接扔给 bot_service 的异步多线程处理
+    photo_url = data.poster_path if data.poster_path else REPORT_COVER_URL
+    bot.send_photo("sys_notify", photo_url, bot_msg, reply_markup=keyboard, platform="all")
+    
     return {"status": "success", "message": "心愿提交成功！已通知服主处理。"}
 
-# ================= 🔥 管理员审批 (MoviePilot 终极适配版) =================
+# ================= 🔥 管理员审批 (修复 S00 问题) =================
 @router.post("/api/manage/requests/action")
 def manage_request_action(data: MediaRequestActionModel, request: Request):
     if not request.session.get("user"): return {"status": "error", "message": "权限不足"}
@@ -162,7 +154,6 @@ def manage_request_action(data: MediaRequestActionModel, request: Request):
         mp_token = cfg.get("moviepilot_token")
         
         if mp_url and mp_token:
-            # 采用 Row 模式获取数据，确保字段名引用正确
             conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row; c = conn.cursor()
             c.execute("SELECT * FROM media_requests WHERE tmdb_id = ?", (data.tmdb_id,))
             row = c.fetchone(); conn.close()
@@ -172,25 +163,24 @@ def manage_request_action(data: MediaRequestActionModel, request: Request):
                     clean_token = mp_token.strip().strip("'").strip('"')
                     mp_api = f"{mp_url.rstrip('/')}/api/v1/subscribe/" 
                     
-                    # 🔥 源码适配：类型必须是中文，tmdbid 必须是 int
                     mp_type_map = {"movie": "电影", "tv": "电视剧"}
+                    
+                    # 🔥 修复 S00：如果是电影，坚决不能带 season 字段！
                     payload = {
                         "name": row["title"], 
                         "tmdbid": int(row["tmdb_id"]), 
                         "year": str(row["year"]) if row["year"] else "",
-                        "type": mp_type_map.get(row["media_type"], "未知"),
-                        "season": 1 if row["media_type"] == "tv" else 0
+                        "type": mp_type_map.get(row["media_type"], "未知")
                     }
+                    if row["media_type"] == "tv":
+                        payload["season"] = 1 # 只有剧集才带季数
                     
                     print(f"[MP DEBUG] 发送 Payload: {json.dumps(payload, ensure_ascii=False)}")
                     
-                    # 优先使用 X-API-KEY 认证
                     headers = {"X-API-KEY": clean_token, "Content-Type": "application/json"}
                     res = requests.post(mp_api, json=payload, headers=headers, timeout=15)
                     
-                    # 备选方案：apikey URL 参数模式
                     if res.status_code != 200:
-                        print(f"[MP DEBUG] 第一轮失败({res.status_code})，尝试 apikey 模式...")
                         res = requests.post(f"{mp_api}?apikey={clean_token}", json=payload, headers={"Content-Type": "application/json"}, timeout=15)
 
                     if res.status_code != 200:

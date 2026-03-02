@@ -58,15 +58,14 @@ class TelegramBot:
         proxy = cfg.get("proxy_url")
         return {"http": proxy, "https": proxy} if proxy else None
 
-    # 🔥 [新增功能] 自动更新求片大厅状态 (绝不干扰原有流程)
+    # 🔥 [自动入库闭环] 自动更新求片大厅状态 
     def _auto_finish_request(self, tmdb_id):
         if not tmdb_id: return
         try:
             tid = int(tmdb_id)
             query_db("UPDATE media_requests SET status = 2, updated_at = CURRENT_TIMESTAMP WHERE tmdb_id = ? AND status IN (0, 1)", (tid,))
-            logger.info(f"✅ 自动入库闭环: TMDB ID {tid} 状态已更新")
         except Exception as e:
-            pass
+            logger.error(f"Auto-finish request error: {e}")
 
     def _get_admin_id(self):
         key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
@@ -107,9 +106,7 @@ class TelegramBot:
                 data = res.json()
                 if data.get('success'):
                     info = data.get('info', {})
-                    country = info.get('country', '')
-                    prov = info.get('prov', '')
-                    city = info.get('city', '')
+                    country, prov, city = info.get('country', ''), info.get('prov', ''), info.get('city', '')
                     if prov or city: loc = f"{country} {prov} {city}".strip()
         except: pass
         if not loc or loc == "中国  ":
@@ -126,10 +123,7 @@ class TelegramBot:
                 if res.status_code == 200:
                     d = res.json()
                     if d.get('status') == 'success':
-                        country = d.get('country', '')
-                        region = d.get('regionName', '')
-                        city = d.get('city', '')
-                        loc = f"{country} {region} {city}".strip()
+                        loc = f"{d.get('country', '')} {d.get('regionName', '')} {d.get('city', '')}".strip()
             except: pass
         if not loc: loc = "未知地区"
         else:
@@ -156,7 +150,7 @@ class TelegramBot:
     # ================= 🔥 企微核心洗稿引擎 (全面兼容普通微信) =================
     
     def _get_wecom_token(self):
-        corpid = cfg.get("wecom_corpid"); corpsecret = cfg.get("wecom_corpsecret")
+        corpid, corpsecret = cfg.get("wecom_corpid"), cfg.get("wecom_corpsecret")
         proxy_url = cfg.get("wecom_proxy_url", "https://qyapi.weixin.qq.com").rstrip('/')
         if not corpid or not corpsecret: return None
         if self.wecom_token and time.time() < self.wecom_token_expires:
@@ -164,14 +158,12 @@ class TelegramBot:
         try:
             res = requests.get(f"{proxy_url}/cgi-bin/gettoken?corpid={corpid}&corpsecret={corpsecret}", timeout=5).json()
             if res.get("errcode") == 0:
-                self.wecom_token = res["access_token"]
-                self.wecom_token_expires = time.time() + res["expires_in"] - 60
+                self.wecom_token, self.wecom_token_expires = res["access_token"], time.time() + res["expires_in"] - 60
                 return self.wecom_token
         except Exception as e: pass
         return None
 
     def _html_to_wecom_text(self, html_text, inline_keyboard=None):
-        # 彻底抛弃 markdown，使用纯文本 + 符号排版，100% 兼容普通微信
         text = html_text.replace("<b>", "【").replace("</b>", "】")
         text = text.replace("<i>", "").replace("</i>", "")
         text = text.replace("<code>", "").replace("</code>", "")
@@ -185,7 +177,7 @@ class TelegramBot:
         return text.strip()
 
     def _set_wecom_menu(self):
-        token = self._get_wecom_token(); agentid = cfg.get("wecom_agentid")
+        token, agentid = self._get_wecom_token(), cfg.get("wecom_agentid")
         proxy_url = cfg.get("wecom_proxy_url", "https://qyapi.weixin.qq.com").rstrip('/')
         if not token or not agentid: return
         menu_data = {
@@ -199,13 +191,11 @@ class TelegramBot:
             ]
         }
         try: 
-            res = requests.post(f"{proxy_url}/cgi-bin/menu/create?access_token={token}&agentid={agentid}", json=menu_data, timeout=5)
-            print(f"📦 WeCom Menu Sync: {res.status_code} - {res.text}")
-        except Exception as e: 
-            print(f"❌ WeCom Menu Error: {e}")
+            requests.post(f"{proxy_url}/cgi-bin/menu/create?access_token={token}&agentid={agentid}", json=menu_data, timeout=5)
+        except Exception as e: pass
 
     def _send_wecom_message(self, text, inline_keyboard=None, touser="@all"):
-        token = self._get_wecom_token(); agentid = cfg.get("wecom_agentid")
+        token, agentid = self._get_wecom_token(), cfg.get("wecom_agentid")
         proxy_url = cfg.get("wecom_proxy_url", "https://qyapi.weixin.qq.com").rstrip('/')
         if not token or not agentid: return
         try:
@@ -215,7 +205,7 @@ class TelegramBot:
         except Exception as e: pass
 
     def _send_wecom_photo(self, photo_bytes, html_text, inline_keyboard=None, touser="@all"):
-        token = self._get_wecom_token(); agentid = cfg.get("wecom_agentid")
+        token, agentid = self._get_wecom_token(), cfg.get("wecom_agentid")
         proxy_url = cfg.get("wecom_proxy_url", "https://qyapi.weixin.qq.com").rstrip('/')
         if not token or not agentid: return
         
@@ -281,13 +271,13 @@ class TelegramBot:
         except Exception as e:
             if html_text: self._send_wecom_message(html_text, inline_keyboard, touser)
 
-    # ================= 🚀 底层双通道路由分发 (重点修复：企微海报加载) =================
+    # ================= 🚀 底层双通道路由分发 (带 TMDB 封面代理增强) =================
 
     def send_photo(self, chat_id, photo_io, caption, parse_mode="HTML", reply_markup=None, platform="all", wecom_photo_io=None):
         photo_bytes = None
         if isinstance(photo_io, str):
             try: 
-                # 🔥 修复关键：判断 URL 是否含有 tmdb 等外部链接，如果是必须挂载代理下载到本地给企微用！
+                # 🔥 针对从 media_request.py 传过来的纯 URL 字符串，如果包含 tmdb，挂上代理
                 proxies = self._get_proxies() if ("tmdb" in photo_io.lower() or "themoviedb" in photo_io.lower()) else None
                 photo_bytes = requests.get(photo_io, proxies=proxies, timeout=10).content
             except Exception as e: pass
@@ -299,7 +289,6 @@ class TelegramBot:
         if wecom_photo_io is not None and wecom_photo_io != photo_io:
             if isinstance(wecom_photo_io, str):
                 try: 
-                    # 🔥 修复关键：同上，企微下载时必须挂载代理
                     proxies = self._get_proxies() if ("tmdb" in wecom_photo_io.lower() or "themoviedb" in wecom_photo_io.lower()) else None
                     wecom_photo_bytes = requests.get(wecom_photo_io, proxies=proxies, timeout=10).content
                 except Exception as e: pass
@@ -456,11 +445,11 @@ class TelegramBot:
         except: pass
         if not series_info: series_info = episodes[0]
 
-        # 🔥 [联动介入点] 自动标记剧集入库状态
+        # 🔥 自动更新求片大厅状态
         st_tmdb = series_info.get("ProviderIds", {}).get("Tmdb")
         if st_tmdb: self._auto_finish_request(st_tmdb)
 
-        # 🔥 按季号(ParentIndexNumber)进行二次分组，彻底解决多季丢失问题
+        # 按季号(ParentIndexNumber)进行二次分组，彻底解决多季丢失问题
         season_groups = defaultdict(list)
         for ep in episodes:
             s_idx = ep.get('ParentIndexNumber', 1)
@@ -528,7 +517,7 @@ class TelegramBot:
             if res.status_code == 200: item = res.json()
         except: pass
 
-        # 🔥 [联动介入点] 自动标记电影入库状态
+        # 🔥 自动更新求片大厅状态
         tmdb_id = item.get("ProviderIds", {}).get("Tmdb")
         if tmdb_id: self._auto_finish_request(tmdb_id)
 
@@ -572,14 +561,12 @@ class TelegramBot:
             
             if item.get("SeriesName"): 
                 idx = item.get("IndexNumber", 0); parent_idx = item.get("ParentIndexNumber", 1)
-                # 🔥 直接拼接到标题后的季集信息
                 ep_info = f" S{str(parent_idx).zfill(2)}E{str(idx).zfill(2)} 第 {idx} 集"
                 title = f"{item.get('SeriesName')}"
             
             emoji = "▶️" if action == "start" else "⏹️"; act = "开始播放" if action == "start" else "停止播放"
             ip = session.get("RemoteEndPoint", "127.0.0.1"); loc = self._get_location(ip)
             
-            # 🔥 浓缩后的首行标题体验拉满
             msg = (f"{emoji} <b>【{user.get('Name')}】{act} {type_cn} {title}</b>{ep_info}\n\n"
                    f"🌐 地址：{ip} ({loc})\n"
                    f"📱 设备：{session.get('Client')} on {session.get('DeviceName')}\n"
