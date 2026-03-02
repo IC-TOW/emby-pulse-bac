@@ -162,7 +162,7 @@ def get_all_requests(request: Request):
     c.execute(query); rows = c.fetchall(); conn.close()
     return {"status": "success", "data": [{"tmdb_id": r[0], "media_type": r[1], "title": r[2], "year": r[3], "poster_path": r[4], "status": r[5], "created_at": r[6], "request_count": r[7], "requested_by": r[8] or "未知"} for r in rows]}
 
-# 🔥 核心更新：manage_request_action 增加调试日志输出
+# 🔥 终极修复：精确 Token 匹配方案
 @router.post("/api/manage/requests/action")
 def manage_request_action(data: MediaRequestActionModel, request: Request):
     if not request.session.get("user"): return {"status": "error", "message": "权限不足"}
@@ -180,14 +180,10 @@ def manage_request_action(data: MediaRequestActionModel, request: Request):
             
             if req_info:
                 try:
-                    # 1. 强力清洗 Token：不强制去引号，尝试两种常见认证格式
-                    raw_token = mp_token.strip()
-                    clean_token = raw_token.strip("'").strip('"')
-                    
-                    # 2. 补齐末尾斜杠，绕过重定向
+                    # 1. 强制补齐末尾斜杠
                     mp_api = f"{mp_url.rstrip('/')}/api/v1/subscribe/" 
                     
-                    # 3. Payload 严格对齐 MP V2 规范 (tmdbid必须是int, type必须全小写)
+                    # 2. 对齐 MP V2 Payload
                     payload = {
                         "name": req_info[0], 
                         "tmdbid": int(req_info[1]), 
@@ -195,38 +191,22 @@ def manage_request_action(data: MediaRequestActionModel, request: Request):
                         "type": "movie" if req_info[2] == "movie" else "tv"
                     }
                     
-                    # 4. 准备两种 Headers 方案 (如果 Bearer 不行就换直接传)
+                    # 3. 🔥 重要：不进行任何 strip 剥离，完全使用设置项填写的字符串
+                    final_token = mp_token.strip() 
+                    
                     headers = {
-                        "Authorization": f"Bearer {clean_token}",
+                        "Authorization": f"Bearer {final_token}",
                         "Content-Type": "application/json"
                     }
                     
-                    # 📢 调试日志输出
-                    print("-" * 50)
-                    print(f"DEBUG: 正在向 MoviePilot 发送请求...")
-                    print(f"DEBUG: URL -> {mp_api}")
-                    print(f"DEBUG: Headers (Authorization) -> Bearer {clean_token[:4]}***{clean_token[-4:] if len(clean_token)>4 else ''}")
-                    print(f"DEBUG: Payload -> {json.dumps(payload, ensure_ascii=False)}")
+                    # 📢 调试日志
+                    print(f"DEBUG: 发送认证 -> Bearer {final_token}")
                     
-                    # 5. 执行请求
                     res = requests.post(mp_api, json=payload, headers=headers, timeout=10)
                     
-                    print(f"DEBUG: MP 返回状态码 -> {res.status_code}")
-                    print(f"DEBUG: MP 返回内容 -> {res.text}")
-                    print("-" * 50)
-
-                    # 如果 Bearer 方案返回 403，尝试直接传 Token 方案
-                    if res.status_code == 403:
-                        print("DEBUG: 检测到 403，正在尝试切换认证头格式 (无 Bearer 模式)...")
-                        headers["Authorization"] = clean_token
-                        res = requests.post(mp_api, json=payload, headers=headers, timeout=10)
-                        print(f"DEBUG: 切换后 MP 返回状态码 -> {res.status_code}")
-                        print(f"DEBUG: 切换后 MP 返回内容 -> {res.text}")
-
                     if res.status_code != 200:
                         return {"status": "error", "message": f"MoviePilot 拒绝请求: {res.text}"}
                 except Exception as e:
-                    print(f"DEBUG: 请求异常 -> {str(e)}")
                     return {"status": "error", "message": f"连接 MoviePilot 失败: {str(e)}"}
 
     elif data.action == "reject": new_status = 3
