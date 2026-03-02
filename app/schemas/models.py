@@ -14,6 +14,11 @@ class SettingsModel(BaseModel):
     hidden_users: List[str] = []
     emby_public_url: Optional[str] = ""  
     welcome_message: Optional[str] = ""  
+    client_download_url: Optional[str] = ""
+    # 🔥 新增：MoviePilot 和面板地址设置项
+    moviepilot_url: Optional[str] = ""
+    moviepilot_token: Optional[str] = ""
+    pulse_url: Optional[str] = ""
 
 class BotSettingsModel(BaseModel):
     tg_bot_token: str
@@ -64,17 +69,6 @@ class UserRegisterModel(BaseModel):
     code: str
     username: str
     password: str
-
-class SettingsModel(BaseModel):
-    emby_host: str
-    emby_api_key: str
-    tmdb_api_key: Optional[str] = ""
-    proxy_url: Optional[str] = ""
-    webhook_token: Optional[str] = "embypulse"
-    hidden_users: List[str] = []
-    emby_public_url: Optional[str] = ""  
-    welcome_message: Optional[str] = ""  
-    client_download_url: Optional[str] = ""
 
 # 🔥 新增：批量操作模型
 class BatchActionModel(BaseModel):
