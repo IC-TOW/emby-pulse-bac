@@ -28,6 +28,16 @@ def execute_sql(query, params=()):
         conn.rollback(); return False, str(e)
     finally: conn.close()
 
+# 获取 Emby 管理员 ID (解决查重查不到的终极方案)
+def get_emby_admin(host, key):
+    if not host or not key: return None
+    try:
+        users = requests.get(f"{host}/emby/Users?api_key={key}", timeout=5).json()
+        for u in users:
+            if u.get("Policy", {}).get("IsAdministrator"): return u['Id']
+        return users[0]['Id'] if users else None
+    except: return None
+
 class MediaRequestSubmitModel(BaseSubmitModel):
     season: int = 0
 
@@ -35,7 +45,6 @@ class RequestLoginModel(BaseModel):
     username: str
     password: str
 
-# ================= 独立登录状态管理 =================
 @router.post("/api/requests/auth")
 def request_system_login(data: RequestLoginModel, request: Request):
     host = cfg.get("emby_host")
@@ -61,7 +70,6 @@ def request_system_logout(request: Request):
     request.session.clear()
     return {"status": "success"}
 
-# ================= 🔥 双通道热门数据 (区分电影/剧集) =================
 @router.get("/api/requests/trending")
 def get_trending(request: Request):
     tmdb_key = cfg.get("tmdb_api_key")
@@ -98,19 +106,20 @@ def get_trending(request: Request):
         return {"status": "success", "data": {"movies": movies, "tv": tvs}}
     except Exception as e: return {"status": "error", "message": str(e)}
 
-# ================= 精准查季数 =================
+# 🔥 精准查季数 (携带管理员 ID，100% 穿透查重)
 @router.get("/api/requests/tv/{tmdb_id}")
 def get_tv_details(tmdb_id: int, request: Request):
     tmdb_key = cfg.get("tmdb_api_key"); proxy = cfg.get("proxy_url"); proxies = {"http": proxy, "https": proxy} if proxy else None
     local_seasons = []
     try:
         emby_host = cfg.get("emby_host"); emby_key = cfg.get("emby_api_key")
-        if emby_host and emby_key:
-            search_url = f"{emby_host}/emby/Items?AnyProviderIdEquals=tmdb.{tmdb_id}&IncludeItemTypes=Series&api_key={emby_key}"
+        admin_id = get_emby_admin(emby_host, emby_key)
+        if admin_id:
+            search_url = f"{emby_host}/emby/Users/{admin_id}/Items?AnyProviderIdEquals=tmdb.{tmdb_id}&IncludeItemTypes=Series&Recursive=true&api_key={emby_key}"
             res = requests.get(search_url, timeout=5).json()
             if res.get("Items"):
                 series_id = res["Items"][0]["Id"]
-                season_url = f"{emby_host}/emby/Shows/{series_id}/Seasons?api_key={emby_key}"
+                season_url = f"{emby_host}/emby/Shows/{series_id}/Seasons?UserId={admin_id}&api_key={emby_key}"
                 season_res = requests.get(season_url, timeout=5).json()
                 local_seasons = [s.get("IndexNumber") for s in season_res.get("Items", []) if s.get("IndexNumber") is not None]
 
@@ -139,9 +148,10 @@ def search_tmdb(query: str, request: Request):
             conn.close()
 
             emby_host = cfg.get("emby_host"); emby_key = cfg.get("emby_api_key")
-            if emby_host and emby_key:
+            admin_id = get_emby_admin(emby_host, emby_key)
+            if admin_id:
                 provider_query = ",".join([f"tmdb.{tid}" for tid in tmdb_ids])
-                emby_search_url = f"{emby_host}/emby/Items?AnyProviderIdEquals={provider_query}&Recursive=true&IncludeItemTypes=Movie,Series&Fields=ProviderIds&api_key={emby_key}"
+                emby_search_url = f"{emby_host}/emby/Users/{admin_id}/Items?AnyProviderIdEquals={provider_query}&Recursive=true&IncludeItemTypes=Movie,Series&Fields=ProviderIds&api_key={emby_key}"
                 try:
                     emby_res = requests.get(emby_search_url, timeout=5)
                     if emby_res.status_code == 200:
@@ -168,7 +178,6 @@ def search_tmdb(query: str, request: Request):
         return {"status": "success", "data": results}
     except Exception as e: return {"status": "error", "message": f"网络错误: {str(e)}"}
 
-# ================= 提交 & 审批 =================
 @router.post("/api/requests/submit")
 def submit_media_request(data: MediaRequestSubmitModel, request: Request):
     user = request.session.get("req_user")
@@ -241,6 +250,7 @@ def manage_request_action(data: MediaRequestActionModel, request: Request):
     execute_sql("UPDATE media_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE tmdb_id = ?", (new_status, data.tmdb_id))
     return {"status": "success", "message": "审批成功"}
 
+# 🔥 核心修复：给后台传数据时，自动把季数塞进标题里！
 @router.get("/api/requests/my")
 def get_my_requests(request: Request):
     user = request.session.get("req_user")
@@ -248,7 +258,13 @@ def get_my_requests(request: Request):
     conn = sqlite3.connect(DB_PATH); c = conn.cursor()
     query = "SELECT m.tmdb_id, m.title, m.year, m.poster_path, m.status, m.season, m.media_type, r.requested_at FROM request_users r JOIN media_requests m ON r.tmdb_id = m.tmdb_id WHERE r.user_id = ? ORDER BY r.requested_at DESC"
     c.execute(query, (user.get("Id"),)); rows = c.fetchall(); conn.close()
-    return {"status": "success", "data": [{"tmdb_id": r[0], "title": r[1], "year": r[2], "poster_path": r[3], "status": r[4], "season": r[5], "media_type": r[6], "requested_at": r[7]} for r in rows]}
+    
+    results = []
+    for r in rows:
+        display_title = r[1]
+        if r[6] == 'tv' and r[5] and r[5] > 0: display_title = f"{r[1]} (第 {r[5]} 季)"
+        results.append({"tmdb_id": r[0], "title": display_title, "year": r[2], "poster_path": r[3], "status": r[4], "season": r[5], "media_type": r[6], "requested_at": r[7]})
+    return {"status": "success", "data": results}
 
 @router.get("/api/manage/requests")
 def get_all_requests(request: Request):
@@ -256,4 +272,10 @@ def get_all_requests(request: Request):
     conn = sqlite3.connect(DB_PATH); c = conn.cursor()
     query = "SELECT m.tmdb_id, m.media_type, m.title, m.year, m.poster_path, m.status, m.season, m.created_at, COUNT(r.user_id) as request_count, GROUP_CONCAT(r.username, ', ') as requested_by FROM media_requests m LEFT JOIN request_users r ON m.tmdb_id = r.tmdb_id GROUP BY m.tmdb_id ORDER BY m.status ASC, request_count DESC, m.created_at DESC"
     c.execute(query); rows = c.fetchall(); conn.close()
-    return {"status": "success", "data": [{"tmdb_id": r[0], "media_type": r[1], "title": r[2], "year": r[3], "poster_path": r[4], "status": r[5], "season": r[6], "created_at": r[7], "request_count": r[8], "requested_by": r[9] or "未知"} for r in rows]}
+    
+    results = []
+    for r in rows:
+        display_title = r[2]
+        if r[1] == 'tv' and r[6] and r[6] > 0: display_title = f"{r[2]} (第 {r[6]} 季)"
+        results.append({"tmdb_id": r[0], "media_type": r[1], "title": display_title, "year": r[3], "poster_path": r[4], "status": r[5], "season": r[6], "created_at": r[7], "request_count": r[8], "requested_by": r[9] or "未知"})
+    return {"status": "success", "data": results}
