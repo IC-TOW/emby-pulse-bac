@@ -6,15 +6,17 @@ import io
 import json
 from app.core.config import cfg, REPORT_COVER_URL
 from app.core.database import DB_PATH
-from app.schemas.models import MediaRequestSubmitModel as BaseSubmitModel, MediaRequestActionModel
+from app.schemas.models import MediaRequestSubmitModel as BaseSubmitModel
 from app.services.bot_service import bot
 
 router = APIRouter()
 
-# 自动为旧数据库添加 season 字段
+# 🔥 自动为旧数据库添加 season 和 reject_reason 字段
 def ensure_db_schema():
     conn = sqlite3.connect(DB_PATH); c = conn.cursor()
     try: c.execute("ALTER TABLE media_requests ADD COLUMN season INTEGER DEFAULT 0")
+    except: pass
+    try: c.execute("ALTER TABLE media_requests ADD COLUMN reject_reason TEXT")
     except: pass
     conn.commit(); conn.close()
 ensure_db_schema()
@@ -28,7 +30,6 @@ def execute_sql(query, params=()):
         conn.rollback(); return False, str(e)
     finally: conn.close()
 
-# 获取 Emby 管理员 ID
 def get_emby_admin(host, key):
     if not host or not key: return None
     try:
@@ -40,6 +41,12 @@ def get_emby_admin(host, key):
 
 class MediaRequestSubmitModel(BaseSubmitModel):
     season: int = 0
+
+# 🔥 为管理员专门定义新的 Action 模型，支持 reject_reason
+class AdminActionModel(BaseModel):
+    tmdb_id: int
+    action: str
+    reject_reason: str = None
 
 class RequestLoginModel(BaseModel):
     username: str
@@ -191,9 +198,11 @@ def submit_media_request(data: MediaRequestSubmitModel, request: Request):
                     (data.tmdb_id, data.media_type, data.title, data.year, data.poster_path, data.season))
     else:
         if existing[0] == 2 and data.media_type == "tv" and data.season > 0:
-            execute_sql("UPDATE media_requests SET status = 0, season = ? WHERE tmdb_id = ?", (data.season, data.tmdb_id))
+            execute_sql("UPDATE media_requests SET status = 0, season = ?, reject_reason = NULL WHERE tmdb_id = ?", (data.season, data.tmdb_id))
         elif existing[0] == 2:
             conn.close(); return {"status": "error", "message": "这部片子已经入库啦！"}
+        elif existing[0] == 3: # 如果是被拒绝的，允许重新提交
+            execute_sql("UPDATE media_requests SET status = 0, season = ?, reject_reason = NULL WHERE tmdb_id = ?", (data.season, data.tmdb_id))
 
     success, err_msg = execute_sql("INSERT INTO request_users (tmdb_id, user_id, username) VALUES (?, ?, ?)", (data.tmdb_id, user.get("Id"), user.get("Name")))
     conn.close()
@@ -213,42 +222,55 @@ def submit_media_request(data: MediaRequestSubmitModel, request: Request):
     bot.send_photo("sys_notify", data.poster_path or REPORT_COVER_URL, bot_msg, reply_markup=keyboard, platform="all")
     return {"status": "success", "message": "心愿提交成功！已通知服主处理。"}
 
+# 🔥 处理各类操作，并专门处理“拒绝”及原因
 @router.post("/api/manage/requests/action")
-def manage_request_action(data: MediaRequestActionModel, request: Request):
+def manage_request_action(data: AdminActionModel, request: Request):
     if not request.session.get("user"): return {"status": "error", "message": "权限不足"}
     new_status = 0
+    
+    # 获取剧集信息用于通知
+    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row; c = conn.cursor()
+    c.execute("SELECT * FROM media_requests WHERE tmdb_id = ?", (data.tmdb_id,))
+    row = c.fetchone(); conn.close()
+    if not row: return {"status": "error", "message": "记录不存在"}
+
     if data.action == "approve":
         new_status = 1
         mp_url = cfg.get("moviepilot_url"); mp_token = cfg.get("moviepilot_token")
         if mp_url and mp_token:
-            conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row; c = conn.cursor()
-            c.execute("SELECT * FROM media_requests WHERE tmdb_id = ?", (data.tmdb_id,))
-            row = c.fetchone(); conn.close()
-            if row:
-                try:
-                    clean_token = mp_token.strip().strip("'").strip('"')
-                    mp_api = f"{mp_url.rstrip('/')}/api/v1/subscribe/" 
-                    mp_type_map = {"movie": "电影", "tv": "电视剧"}
-                    payload = {"name": row["title"], "tmdbid": int(row["tmdb_id"]), "year": str(row["year"]) if row["year"] else "", "type": mp_type_map.get(row["media_type"], "未知")}
-                    
-                    # 🔥 修复 get 报错：安全提取季数
-                    if row["media_type"] == "tv": 
-                        season_val = row["season"] if "season" in row.keys() else 0
-                        payload["season"] = season_val if season_val else 1
-                    
-                    headers = {"X-API-KEY": clean_token, "Content-Type": "application/json"}
-                    res = requests.post(mp_api, json=payload, headers=headers, timeout=15)
-                    if res.status_code != 200:
-                        res = requests.post(f"{mp_api}?apikey={clean_token}", json=payload, headers={"Content-Type": "application/json"}, timeout=15)
-                    if res.status_code != 200: return {"status": "error", "message": f"MP 拒绝: {res.text}"}
-                except Exception as e: return {"status": "error", "message": f"连接 MP 异常: {str(e)}"}
+            try:
+                clean_token = mp_token.strip().strip("'").strip('"')
+                mp_api = f"{mp_url.rstrip('/')}/api/v1/subscribe/" 
+                mp_type_map = {"movie": "电影", "tv": "电视剧"}
+                payload = {"name": row["title"], "tmdbid": int(row["tmdb_id"]), "year": str(row["year"]) if row["year"] else "", "type": mp_type_map.get(row["media_type"], "未知")}
+                
+                if row["media_type"] == "tv": 
+                    season_val = row["season"] if "season" in row.keys() else 0
+                    payload["season"] = season_val if season_val else 1
+                
+                headers = {"X-API-KEY": clean_token, "Content-Type": "application/json"}
+                res = requests.post(mp_api, json=payload, headers=headers, timeout=15)
+                if res.status_code != 200:
+                    res = requests.post(f"{mp_api}?apikey={clean_token}", json=payload, headers={"Content-Type": "application/json"}, timeout=15)
+                if res.status_code != 200: return {"status": "error", "message": f"MP 拒绝: {res.text}"}
+            except Exception as e: return {"status": "error", "message": f"连接 MP 异常: {str(e)}"}
 
-    elif data.action == "reject": new_status = 3
+    elif data.action == "reject": 
+        new_status = 3
+        # 发送拒绝通知
+        t_name = row['title']
+        if row['media_type'] == 'tv' and row.get('season'): t_name += f" (第 {row['season']} 季)"
+        bot_msg = f"❌ <b>求片被拒绝</b>\n\n📌 <b>片名：</b>{t_name}\n⚠️ <b>原因：</b>{data.reject_reason or '暂无说明'}"
+        bot.send_message("sys_notify", bot_msg, platform="all")
+        
+        execute_sql("UPDATE media_requests SET status = ?, reject_reason = ?, updated_at = CURRENT_TIMESTAMP WHERE tmdb_id = ?", (new_status, data.reject_reason, data.tmdb_id))
+        return {"status": "success", "message": "已拒绝并反馈原因"}
+
     elif data.action == "finish": new_status = 2
     elif data.action == "delete":
         execute_sql("DELETE FROM media_requests WHERE tmdb_id = ?", (data.tmdb_id,))
         execute_sql("DELETE FROM request_users WHERE tmdb_id = ?", (data.tmdb_id,))
-        return {"status": "success", "message": "已删除"}
+        return {"status": "success", "message": "已彻底删除"}
 
     execute_sql("UPDATE media_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE tmdb_id = ?", (new_status, data.tmdb_id))
     return {"status": "success", "message": "审批成功"}
@@ -258,26 +280,28 @@ def get_my_requests(request: Request):
     user = request.session.get("req_user")
     if not user: return {"status": "error", "message": "未登录"}
     conn = sqlite3.connect(DB_PATH); c = conn.cursor()
-    query = "SELECT m.tmdb_id, m.title, m.year, m.poster_path, m.status, m.season, m.media_type, r.requested_at FROM request_users r JOIN media_requests m ON r.tmdb_id = m.tmdb_id WHERE r.user_id = ? ORDER BY r.requested_at DESC"
+    # 提取 reject_reason
+    query = "SELECT m.tmdb_id, m.title, m.year, m.poster_path, m.status, m.season, m.media_type, r.requested_at, m.reject_reason FROM request_users r JOIN media_requests m ON r.tmdb_id = m.tmdb_id WHERE r.user_id = ? ORDER BY r.requested_at DESC"
     c.execute(query, (user.get("Id"),)); rows = c.fetchall(); conn.close()
     
     results = []
     for r in rows:
         display_title = r[1]
         if r[6] == 'tv' and r[5] and r[5] > 0: display_title = f"{r[1]} (第 {r[5]} 季)"
-        results.append({"tmdb_id": r[0], "title": display_title, "year": r[2], "poster_path": r[3], "status": r[4], "season": r[5], "media_type": r[6], "requested_at": r[7]})
+        results.append({"tmdb_id": r[0], "title": display_title, "year": r[2], "poster_path": r[3], "status": r[4], "season": r[5], "media_type": r[6], "requested_at": r[7], "reject_reason": r[8]})
     return {"status": "success", "data": results}
 
 @router.get("/api/manage/requests")
 def get_all_requests(request: Request):
     if not request.session.get("user"): return {"status": "error", "message": "未登录"}
     conn = sqlite3.connect(DB_PATH); c = conn.cursor()
-    query = "SELECT m.tmdb_id, m.media_type, m.title, m.year, m.poster_path, m.status, m.season, m.created_at, COUNT(r.user_id) as request_count, GROUP_CONCAT(r.username, ', ') as requested_by FROM media_requests m LEFT JOIN request_users r ON m.tmdb_id = r.tmdb_id GROUP BY m.tmdb_id ORDER BY m.status ASC, request_count DESC, m.created_at DESC"
+    # 提取 reject_reason
+    query = "SELECT m.tmdb_id, m.media_type, m.title, m.year, m.poster_path, m.status, m.season, m.created_at, COUNT(r.user_id) as request_count, GROUP_CONCAT(r.username, ', ') as requested_by, m.reject_reason FROM media_requests m LEFT JOIN request_users r ON m.tmdb_id = r.tmdb_id GROUP BY m.tmdb_id ORDER BY m.status ASC, request_count DESC, m.created_at DESC"
     c.execute(query); rows = c.fetchall(); conn.close()
     
     results = []
     for r in rows:
         display_title = r[2]
         if r[1] == 'tv' and r[6] and r[6] > 0: display_title = f"{r[2]} (第 {r[6]} 季)"
-        results.append({"tmdb_id": r[0], "media_type": r[1], "title": display_title, "year": r[3], "poster_path": r[4], "status": r[5], "season": r[6], "created_at": r[7], "request_count": r[8], "requested_by": r[9] or "未知"})
+        results.append({"tmdb_id": r[0], "media_type": r[1], "title": display_title, "year": r[3], "poster_path": r[4], "status": r[5], "season": r[6], "created_at": r[7], "request_count": r[8], "requested_by": r[9] or "未知", "reject_reason": r[10]})
     return {"status": "success", "data": results}
