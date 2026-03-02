@@ -3,54 +3,74 @@ import os
 from app.core.config import cfg, DB_PATH
 
 def init_db():
-    # 确保数据库目录存在
-    db_dir = os.path.dirname(DB_PATH)
-    if not os.path.exists(db_dir):
-        try:
-            os.makedirs(db_dir, exist_ok=True)
-        except: pass
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # [原有代码] 播放记录表
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS PlaybackActivity (
+            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+            UserId TEXT,
+            UserName TEXT,
+            ItemId TEXT,
+            ItemName TEXT,
+            PlayDuration INTEGER,
+            DateCreated DATETIME DEFAULT CURRENT_TIMESTAMP,
+            Client TEXT,
+            DeviceName TEXT
+        )
+    ''')
+    
+    # [原有代码] 用户扩展信息表 (到期时间等)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users_meta (
+            user_id TEXT PRIMARY KEY,
+            expire_date TEXT
+        )
+    ''')
+    
+    # [原有代码] 邀请码表
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS invitations (
+            code TEXT PRIMARY KEY,
+            days INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            used_at DATETIME,
+            used_by TEXT,
+            status INTEGER DEFAULT 0 
+        )
+    ''')
 
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        
-        # 1. 只初始化机器人专属配置表 (不碰插件的表)
-        c.execute('''CREATE TABLE IF NOT EXISTS users_meta (
-                        user_id TEXT PRIMARY KEY,
-                        expire_date TEXT,
-                        note TEXT,
-                        created_at TEXT
-                    )''')
-        
-        # 2. 🔥 新增/更新：邀请码表 (加入 template_user_id)
-        c.execute('''CREATE TABLE IF NOT EXISTS invitations (
-                        code TEXT PRIMARY KEY,
-                        days INTEGER,        -- 有效期天数 (-1为永久)
-                        used_count INTEGER DEFAULT 0,
-                        max_uses INTEGER DEFAULT 1,
-                        created_at TEXT,
-                        template_user_id TEXT -- 🔥 绑定的权限模板用户
-                    )''')
-        
-        # 🔥 兼容老版本数据库：尝试追加列 (如果列已存在会抛异常，忽略即可)
-        try:
-            c.execute("ALTER TABLE invitations ADD COLUMN template_user_id TEXT")
-        except:
-            pass
+    # 🔥 [新增代码] 求片资源主表
+    # status说明: 0=待审核, 1=正在寻找/下载中, 2=已入库, 3=已拒绝
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS media_requests (
+            tmdb_id INTEGER PRIMARY KEY,
+            media_type TEXT,
+            title TEXT,
+            year TEXT,
+            poster_path TEXT,
+            status INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
 
-        # 3. 🔥 新增：追剧日历本地缓存表
-        c.execute('''CREATE TABLE IF NOT EXISTS tv_calendar_cache (
-                        id TEXT PRIMARY KEY,       -- 组合主键: seriesId_season_episode
-                        series_id TEXT,            -- Emby 剧集 ID，用于 Webhook 联动
-                        season INTEGER,
-                        episode INTEGER,
-                        air_date TEXT,             -- 播出日期 (YYYY-MM-DD)
-                        status TEXT,               -- 红绿灯状态: ready/missing/upcoming/today
-                        data_json TEXT             -- 完整数据的 JSON 文本
-                    )''')
+    # 🔥 [新增代码] 求片用户关联表 (+1 机制)
+    # 联合唯一索引保证一个用户对同一部片子只能求一次
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS request_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tmdb_id INTEGER,
+            user_id TEXT,
+            username TEXT,
+            requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(tmdb_id, user_id)
+        )
+    ''')
 
-        conn.commit()
-        conn.close()
+    conn.commit()
+    conn.close()
         print("✅ Database initialized (Plugin Read-Only Mode).")
     except Exception as e: 
         print(f"❌ DB Init Error: {e}")

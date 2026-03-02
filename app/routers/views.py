@@ -20,6 +20,12 @@ def check_login(request: Request):
         return True
     return False
 
+@router.get("/requests_admin")
+async def requests_admin_page(request: Request):
+    if not request.session.get("user"):
+        return RedirectResponse(url="/login")
+    return templates.TemplateResponse("requests_admin.html", {"request": request, "active_nav": "requests_admin"})
+
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     if not check_login(request): return RedirectResponse("/login")

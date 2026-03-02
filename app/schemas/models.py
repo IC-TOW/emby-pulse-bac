@@ -81,3 +81,20 @@ class BatchActionModel(BaseModel):
     user_ids: List[str]
     action: str  # 可选: 'enable', 'disable', 'delete', 'renew'
     value: Optional[str] = None  # 用于 renew 时传递 '+30' 或 '2025-10-01'
+
+# ================= 资源求片系统 Models =================
+
+class MediaRequestSubmitModel(BaseModel):
+    tmdb_id: int
+    media_type: str  # 'movie' or 'tv'
+    title: str
+    year: str = ""
+    poster_path: str = ""
+
+class MediaRequestStatusUpdateModel(BaseModel):
+    tmdb_id: int
+    status: int  # 0:待审核, 1:下载中, 2:已入库, 3:已拒绝
+
+class MediaRequestActionModel(BaseModel):
+    action: str  # 例如 'approve', 'reject', 'delete'
+    tmdb_id: int
