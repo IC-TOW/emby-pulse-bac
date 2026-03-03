@@ -310,7 +310,7 @@
             }, 500); // 500ms 防抖，防止压垮 Emby
         });
 
-// 渲染酷炫的搜索结果卡片 (终极防爆版：抹平换行符 + 绝对宽度锁定)
+// 渲染酷炫的搜索结果卡片 (终极防爆版：扒光HTML标签 + 抹平换行)
         function renderSearchResults(items) {
             if (items.length === 0) {
                 searchResults.innerHTML = '<div class="text-center py-12 text-gray-500 dark:text-gray-400 font-medium">未在库中找到相关媒体资源 🤷‍♂️</div>';
@@ -327,10 +327,14 @@
                     ? '<i class="fa-solid fa-film text-blue-500"></i>' 
                     : '<i class="fa-solid fa-tv text-purple-500"></i>';
 
-                // 🔥 核心修复：用正则把所有的换行符(\r, \n)全部替换为空格，防止 line-clamp 计算崩溃
-                let safeOverview = item.overview ? item.overview.replace(/[\r\n]+/g, ' ') : '暂无简介';
+                // 🔥 核心终极杀手锏：
+                // 1. replace(/<[^>]+>/g, ' ')  -> 扒光所有诸如 <br> <p> 的 HTML 标签！
+                // 2. replace(/[\r\n]+/g, ' ') -> 抹平所有物理换行符！
+                let safeOverview = item.overview 
+                    ? item.overview.replace(/<[^>]+>/g, ' ').replace(/[\r\n]+/g, ' ').trim() 
+                    : '暂无简介';
 
-                // 🔥 排版加固：在 flex-1 内部的所有容器层级，全部加上 min-w-0 和 overflow-hidden
+                // 🔥 排版微调：将 break-all 改成了更优雅的 break-words whitespace-normal
                 html += `
                     <a href="${item.emby_url}" target="_blank" title="点击跳转至 Emby 详情页" 
                        class="flex gap-4 p-3 mb-1 hover:bg-white dark:hover:bg-gray-700/60 rounded-xl cursor-pointer transition-all group border border-transparent hover:border-gray-200 dark:hover:border-gray-600 hover:shadow-sm w-full overflow-hidden">
@@ -345,7 +349,7 @@
                                     <h4 class="font-bold text-base text-gray-900 dark:text-white truncate flex-1 min-w-0 group-hover:text-blue-500 transition-colors">${item.name}</h4>
                                     <span class="text-xs text-gray-400 dark:text-gray-500 font-mono bg-gray-100 dark:bg-gray-800 px-1.5 rounded shrink-0">${item.year}</span>
                                 </div>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed pr-2 break-all overflow-hidden">${safeOverview}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed pr-2 break-words whitespace-normal overflow-hidden">${safeOverview}</p>
                             </div>
                             <div class="flex flex-wrap gap-2 mt-2 overflow-hidden">
                                 ${badgesHtml}
