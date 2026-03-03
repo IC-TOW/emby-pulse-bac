@@ -331,9 +331,22 @@ def submit_media_request(data: MediaRequestSubmitModel, request: Request):
     if not results: 
         return {"status": "error", "message": "所选资源均已入库或排队中"}
 
-    sn_tag = f"第 {', '.join(map(str, results))} 季" if data.media_type == 'tv' else "电影"
+    # 🔥 修复机器人通知的分类显示逻辑
+    if data.media_type == 'tv':
+        type_name = "剧集"
+        season_info = f"\n📦 <b>季数</b>：第 {', '.join(map(str, results))} 季"
+    else:
+        type_name = "电影"
+        season_info = ""
+
     overview_text = data.overview[:110] + "..." if data.overview and len(data.overview) > 110 else (data.overview or "无")
-    bot_msg = f"🔔 <b>新求片提醒</b>\n\n👤 <b>用户</b>：{uname}\n📌 <b>片名</b>：{data.title} ({data.year})\n🏷️ <b>类型</b>：{sn_tag}\n\n📝 <b>简介：</b>\n{overview_text}"
+    
+    bot_msg = (f"🔔 <b>新求片提醒</b>\n\n"
+               f"👤 <b>用户</b>：{uname}\n"
+               f"📌 <b>片名</b>：{data.title} ({data.year})\n"
+               f"🏷️ <b>类型</b>：{type_name}"
+               f"{season_info}\n\n"
+               f"📝 <b>简介：</b>\n{overview_text}")
     
     admin_url = cfg.get("pulse_url") or str(request.base_url).rstrip('/')
     bot.send_photo("sys_notify", data.poster_path or REPORT_COVER_URL, bot_msg, reply_markup={"inline_keyboard": [[{"text": "🍿 立即审批", "url": f"{admin_url}/requests_admin"}]]}, platform="all")
