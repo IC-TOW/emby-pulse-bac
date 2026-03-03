@@ -1,99 +1,175 @@
 {% extends "layout.html" %}
 {% block title %}机器人助手 - EmbyPulse{% endblock %}
+
 {% block content %}
-<div class="max-w-6xl mx-auto w-full px-4 md:px-8 py-8 pb-24">
+<div class="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
     
-    <div class="flex items-center justify-between mb-8">
-        <div>
-            <h1 class="text-2xl font-black text-gray-900 dark:text-white">通知与机器人</h1>
-            <p class="text-xs text-gray-500 mt-1">支持 Telegram 与 企业微信 双通道同步推送与指令交互</p>
-        </div>
-        <button onclick="saveConfig()" id="save-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 dark:shadow-none transition flex items-center">
-            <i class="fa-solid fa-save mr-2"></i> 保存所有配置
-        </button>
+    <div class="mb-10">
+        <h1 class="text-3xl font-black text-gray-900 dark:text-white tracking-tight">通知与机器人</h1>
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">配置 Telegram 与企业微信，实现双通道同步推送与指令交互</p>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="space-y-8 divide-y divide-gray-100 dark:divide-gray-800">
         
-        <div class="space-y-6">
-            
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider flex items-center">
-                        <i class="fa-brands fa-telegram text-blue-500 mr-2"></i> Telegram 机器人
-                    </h3>
-                    <button onclick="testConnection()" id="test-btn" class="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-bold text-[10px] transition border border-blue-100 dark:border-blue-800">
-                        测试连接
-                    </button>
-                </div>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">Bot Token</label>
-                        <input type="password" id="tg_bot_token" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition" placeholder="从 @BotFather 获取">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-12 pt-8 first:pt-0">
+            <div class="md:col-span-1">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                        <i class="fa-solid fa-toggle-on"></i>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">Admin Chat ID</label>
-                        <input type="text" id="tg_chat_id" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition" placeholder="123456789">
-                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">推送场景开关</h3>
                 </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed ml-11">
+                    全局控制机器人与通知引擎。开启后，EmbyPulse 会根据设定条件向 TG 或企微发送精美的图文通知。
+                </p>
             </div>
-
-            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider flex items-center">
-                        <i class="fa-solid fa-building text-green-500 mr-2"></i> 企业微信 (支持交互菜单)
-                    </h3>
-                    <button onclick="testWeComConnection()" id="test-wecom-btn" class="bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 px-3 py-1.5 rounded-lg font-bold text-[10px] transition border border-green-100 dark:border-green-800">
-                        测试连接
-                    </button>
-                </div>
-                
-                <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1.5">企业 ID (CorpID)</label>
-                            <input type="text" id="wecom_corpid" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:text-white transition">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1.5">应用 ID (AgentID)</label>
-                            <input type="text" id="wecom_agentid" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:text-white transition">
-                        </div>
-                    </div>
+            <div class="md:col-span-2">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700/80 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/50">
                     
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="p-5 sm:p-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                         <div>
-                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1.5">应用 Secret</label>
-                            <input type="password" id="wecom_corpsecret" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:text-white transition">
+                            <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200">启用机器人底层引擎</h4>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">总开关：必须开启，两端服务才会生效并注册菜单。</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer ml-4">
+                            <input type="checkbox" id="enable_bot" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
+                    </div>
+
+                    <div class="p-5 sm:p-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                        <div>
+                            <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200">播放状态通知</h4>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">有人开始或停止播放时，立即发送即时卡片。</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer ml-4">
+                            <input type="checkbox" id="enable_notify" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                        </label>
+                    </div>
+
+                    <div class="p-5 sm:p-6 transition-colors">
+                        <div class="flex items-center justify-between mb-2">
+                            <div>
+                                <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200">新资源入库通知</h4>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">需要配合 Emby Webhook 使用，支持剧集自动合并推送。</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer ml-4">
+                                <input type="checkbox" id="enable_library_notify" class="sr-only peer" onchange="toggleWebhookInfo(this)">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            </label>
+                        </div>
+                        <div id="webhook-info" class="hidden mt-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/30 rounded-xl p-4 text-xs transition-all duration-300">
+                            <div class="flex items-start gap-3">
+                                <i class="fa-solid fa-circle-info text-indigo-500 mt-0.5 text-sm"></i>
+                                <div class="space-y-2 w-full">
+                                    <p class="font-bold text-indigo-900 dark:text-indigo-300">Emby Webhook 专用地址：</p>
+                                    <input type="text" id="webhook-url" readonly onclick="this.select()" class="w-full bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700/50 rounded-lg px-3 py-2 font-mono text-indigo-600 dark:text-indigo-400 text-xs focus:outline-none cursor-pointer shadow-sm">
+                                    <p class="text-xs text-indigo-500/80 dark:text-indigo-400/80">请在 Emby 插件中勾选 "New Media Added" 和 "Playback Start/Stop" 并填入此链接。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-12 pt-8">
+            <div class="md:col-span-1">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-500 dark:text-blue-400">
+                        <i class="fa-brands fa-telegram text-lg"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Telegram 通道</h3>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed ml-11">
+                    向 @BotFather 申请 Token。如果你需要机器人只响应你的指令，请填写你的 Chat ID。
+                </p>
+                <div class="ml-11 mt-4">
+                    <button onclick="testConnection()" id="test-btn" class="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 px-4 py-2 rounded-lg text-xs font-bold transition-all active:scale-95">
+                        <i class="fa-regular fa-paper-plane"></i> 测试 TG 推送
+                    </button>
+                </div>
+            </div>
+            <div class="md:col-span-2">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700/80 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/50">
+                    <div class="p-5 sm:p-6">
+                        <label class="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">Bot Token</label>
+                        <input type="password" id="tg_bot_token" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none transition-all" placeholder="例如: 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11">
+                    </div>
+                    <div class="p-5 sm:p-6">
+                        <label class="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">Admin Chat ID (可选)</label>
+                        <input type="text" id="tg_chat_id" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none transition-all placeholder-gray-400" placeholder="例如: 123456789">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-12 pt-8">
+            <div class="md:col-span-1">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-500/10 flex items-center justify-center text-green-600 dark:text-green-400">
+                        <i class="fa-brands fa-weixin text-lg"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">企业微信通道</h3>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed ml-11">
+                    在国内网络环境下，企业微信是最好的推送选择。配置交互回调后，可通过手机微信直接发送搜索指令。
+                </p>
+                <div class="ml-11 mt-4">
+                    <button onclick="testWeComConnection()" id="test-wecom-btn" class="flex items-center gap-2 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800/50 px-4 py-2 rounded-lg text-xs font-bold transition-all active:scale-95">
+                        <i class="fa-regular fa-paper-plane"></i> 测试企微推送
+                    </button>
+                </div>
+            </div>
+            <div class="md:col-span-2">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700/80 overflow-hidden divide-y divide-gray-100 dark:divide-gray-700/50">
+                    
+                    <div class="p-5 sm:p-6 grid sm:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">企业 ID (CorpID)</label>
+                            <input type="text" id="wecom_corpid" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500/30 focus:border-green-500 outline-none transition-all">
                         </div>
                         <div>
-                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1.5">接收账号 (ToUser) 默认@all</label>
-                            <input type="text" id="wecom_touser" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:text-white transition" placeholder="例如: ZhangSan|LiSi">
+                            <label class="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">应用 ID (AgentID)</label>
+                            <input type="text" id="wecom_agentid" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500/30 focus:border-green-500 outline-none transition-all">
                         </div>
                     </div>
 
-                    <div class="pt-2 border-t border-gray-100 dark:border-gray-700">
-                        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 text-blue-500">API 代理转发地址 (针对IP白名单限制)</label>
-                        <input type="text" id="wecom_proxy_url" class="w-full bg-blue-50 dark:bg-gray-700 border border-blue-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:text-white transition font-mono" placeholder="https://qyapi.weixin.qq.com">
+                    <div class="p-5 sm:p-6 grid sm:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">应用 Secret</label>
+                            <input type="password" id="wecom_corpsecret" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500/30 focus:border-green-500 outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">接收账号 (默认 @all)</label>
+                            <input type="text" id="wecom_touser" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500/30 focus:border-green-500 outline-none transition-all" placeholder="例如: ZhangSan|LiSi">
+                        </div>
                     </div>
 
-                    <div class="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
-                        <div class="mb-3 flex items-center gap-2">
-                            <i class="fa-solid fa-link text-gray-400"></i>
-                            <span class="text-xs font-bold text-gray-700 dark:text-gray-300">交互回调配置 (需要公网并配置Token)</span>
+                    <div class="p-5 sm:p-6">
+                        <label class="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-1">API 代理转发地址 <span class="font-normal text-xs text-gray-400">(解决IP白名单)</span></label>
+                        <input type="text" id="wecom_proxy_url" class="w-full mt-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500/30 focus:border-green-500 outline-none transition-all font-mono placeholder-gray-400" placeholder="https://qyapi.weixin.qq.com">
+                    </div>
+
+                    <div class="p-5 sm:p-6 bg-slate-50 dark:bg-gray-900/30">
+                        <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-link text-gray-400"></i> 交互指令回调配置 (选填)
+                        </h4>
+                        <div class="grid sm:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">回调 Token</label>
+                                <input type="text" id="wecom_token" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs font-mono dark:text-gray-200 focus:outline-none focus:border-green-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">EncodingAESKey</label>
+                                <input type="password" id="wecom_aeskey" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs font-mono dark:text-gray-200 focus:outline-none focus:border-green-500">
+                            </div>
                         </div>
-                        <div class="space-y-3">
-                            <div>
-                                <label class="block text-[10px] text-gray-500 mb-1">回调 Token</label>
-                                <input type="text" id="wecom_token" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded px-2 py-1.5 text-xs font-mono dark:text-white">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] text-gray-500 mb-1">EncodingAESKey</label>
-                                <input type="password" id="wecom_aeskey" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded px-2 py-1.5 text-xs font-mono dark:text-white">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] text-gray-500 mb-1">请在企微后台填入此 URL：</label>
-                                <input type="text" id="wecom-webhook-url" readonly onclick="this.select()" class="w-full bg-green-50 border border-green-200 text-green-700 rounded px-2 py-1.5 text-[10px] font-mono cursor-pointer dark:bg-green-900/30 dark:border-green-800 dark:text-green-400">
-                            </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">请在企微后台填入此 URL：</label>
+                            <input type="text" id="wecom-webhook-url" readonly onclick="this.select()" class="w-full bg-white dark:bg-gray-800 border border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-500 rounded-lg px-3 py-2 text-xs font-mono cursor-pointer shadow-sm">
                         </div>
                     </div>
 
@@ -101,109 +177,66 @@
             </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 h-fit">
-            <h3 class="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-4 flex items-center">
-                <i class="fa-solid fa-toggle-on text-purple-500 mr-2"></i> 推送场景开关
-            </h3>
-            
-            <div class="flex items-center justify-between py-3 border-b border-gray-50 dark:border-gray-700/50">
-                <div>
-                    <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200">启用机器人底层引擎</h4>
-                    <p class="text-[10px] text-gray-400 mt-0.5">总开关：开启后两端服务才会生效并注册菜单</p>
-                </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="enable_bot" class="sr-only peer">
-                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-            </div>
-
-            <div class="flex items-center justify-between py-3 border-b border-gray-50 dark:border-gray-700/50">
-                <div>
-                    <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200">播放状态通知</h4>
-                    <p class="text-[10px] text-gray-400 mt-0.5">有人开始/停止播放时发送即时卡片</p>
-                </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="enable_notify" class="sr-only peer">
-                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
-                </label>
-            </div>
-
-            <div class="py-3 pt-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200">新资源入库通知</h4>
-                        <p class="text-[10px] text-gray-400 mt-0.5">需要配置 Emby Webhook 配合工作</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-12 pt-8">
+            <div class="md:col-span-1">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400">
+                        <i class="fa-solid fa-terminal"></i>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="enable_library_notify" class="sr-only peer" onchange="toggleWebhookInfo(this)">
-                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
-                    </label>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">内置指令清单</h3>
                 </div>
-
-                <div id="webhook-info" class="hidden mt-4 bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700/50 rounded-xl p-4 text-xs transition-all duration-300">
-                    <div class="flex items-start gap-3">
-                        <i class="fa-solid fa-circle-info text-purple-500 mt-0.5 text-sm"></i>
-                        <div class="space-y-3 w-full">
-                            <p class="font-bold text-gray-700 dark:text-gray-300">Emby Webhook 配置地址：</p>
-                            <input type="text" id="webhook-url" readonly onclick="this.select()" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 font-mono text-blue-500 text-[10px] focus:outline-none cursor-pointer">
-                            <p class="text-[10px] text-gray-400 italic">在 Emby 插件中勾选 "New Media Added" 和 "Playback Start/Stop" 并填入此链接。</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed ml-11">
+                    在开启回调并在 Telegram 或微信对话框中发送以下指令，即可获得系统的即时反馈与数据报表。
+                </p>
+            </div>
+            <div class="md:col-span-2">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700/80 p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    
+                    <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
+                        <span class="font-mono font-bold text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 px-2 py-1 rounded text-xs mt-0.5">/stats</span>
+                        <div class="flex-1">
+                            <p class="text-gray-800 dark:text-gray-200 font-bold text-sm">媒体超级日报</p>
+                            <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">汇总今日播放量、活跃用户并生成精美日报。</p>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
+                    <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
+                        <span class="font-mono font-bold text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 px-2 py-1 rounded text-xs mt-0.5">/now</span>
+                        <div class="flex-1">
+                            <p class="text-gray-800 dark:text-gray-200 font-bold text-sm">正在播放状态</p>
+                            <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">列出当前服务器上活跃会话、用户及播放进度。</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
+                        <span class="font-mono font-bold text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 px-2 py-1 rounded text-xs mt-0.5">/latest</span>
+                        <div class="flex-1">
+                            <p class="text-gray-800 dark:text-gray-200 font-bold text-sm">最近入库影片</p>
+                            <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">主动抓取最近入库的最新资源列表。</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
+                        <span class="font-mono font-bold text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 px-2 py-1 rounded text-xs mt-0.5">/search</span>
+                        <div class="flex-1">
+                            <p class="text-gray-800 dark:text-gray-200 font-bold text-sm">影视资源搜索</p>
+                            <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">输入 /search 蝙蝠侠 即可检索并跳转播放。</p>
+                        </div>
+                    </div>
 
-    <div class="mt-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-        <h3 class="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-4">
-            <i class="fa-solid fa-terminal text-gray-400 mr-2"></i> 机器人指令集 (两端通用)
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                <span class="font-mono text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded text-xs">/stats</span>
-                <div class="flex-1">
-                    <p class="text-gray-800 dark:text-gray-200 font-bold text-xs">媒体超级日报</p>
-                    <p class="text-gray-500 dark:text-gray-400 text-[11px] mt-0.5">汇总今日播放量、活跃用户排行及媒体生成精美日报图片。</p>
-                </div>
-            </div>
-            <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                <span class="font-mono text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded text-xs">/now</span>
-                <div class="flex-1">
-                    <p class="text-gray-800 dark:text-gray-200 font-bold text-xs">正在播放状态</p>
-                    <p class="text-gray-500 dark:text-gray-400 text-[11px] mt-0.5">列出当前服务器上所有活跃会话、观看用户、内容标题及实时进度百分比。</p>
-                </div>
-            </div>
-            <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                <span class="font-mono text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded text-xs">/latest</span>
-                <div class="flex-1">
-                    <p class="text-gray-800 dark:text-gray-200 font-bold text-xs">最近入库影片</p>
-                    <p class="text-gray-500 dark:text-gray-400 text-[11px] mt-0.5">主动从媒体库中抓取最近入库的 5 部影片（含入库日期）。</p>
-                </div>
-            </div>
-            <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                <span class="font-mono text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded text-xs">/recent</span>
-                <div class="flex-1">
-                    <p class="text-gray-800 dark:text-gray-200 font-bold text-xs">最近播放记录</p>
-                    <p class="text-gray-500 dark:text-gray-400 text-[11px] mt-0.5">显示历史记录中最近的 10 条播放动态（含时间、用户、片名）。</p>
-                </div>
-            </div>
-            <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                <span class="font-mono text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded text-xs">/check</span>
-                <div class="flex-1">
-                    <p class="text-gray-800 dark:text-gray-200 font-bold text-xs">系统健康检查</p>
-                    <p class="text-gray-500 dark:text-gray-400 text-[11px] mt-0.5">检查 Emby 服务器连接延迟、版本号及内/外网访问地址。</p>
-                </div>
-            </div>
-            <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                <span class="font-mono text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded text-xs">/search</span>
-                <div class="flex-1">
-                    <p class="text-gray-800 dark:text-gray-200 font-bold text-xs">搜索影片</p>
-                    <p class="text-gray-500 dark:text-gray-400 text-[11px] mt-0.5">微信或TG内输入 /search 蝙蝠侠 即可检索并跳转播放。</p>
                 </div>
             </div>
         </div>
+
     </div>
 </div>
+
+<div class="fixed bottom-6 left-0 right-0 z-50 pointer-events-none flex justify-center px-4">
+    <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl p-2 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/50 dark:border-gray-700/50 pointer-events-auto">
+        <button onclick="saveConfig()" id="save-btn" class="flex items-center justify-center gap-2.5 px-10 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-sm tracking-wide transition-all active:scale-95 w-full sm:w-auto">
+            <i class="fa-solid fa-floppy-disk text-base"></i>
+            <span id="save-btn-text">应用并保存配置</span>
+        </button>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -260,8 +293,11 @@
 
     async function saveConfig() {
         const btn = document.getElementById('save-btn');
-        const oldHtml = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> 保存中';
+        const textSpan = document.getElementById('save-btn-text');
+        const icon = btn.querySelector('i');
+        
+        icon.className = "fa-solid fa-spinner fa-spin text-base";
+        textSpan.textContent = "保存中...";
         btn.disabled = true;
 
         const payload = {
@@ -287,35 +323,61 @@
             });
             const json = await res.json();
             if (json.status === 'success') {
-                alert('✅ 配置已保存，机器人服务正在重载...');
+                icon.className = "fa-solid fa-check text-base";
+                textSpan.textContent = "保存成功并重载";
+                btn.classList.replace('bg-blue-600', 'bg-emerald-500');
+                btn.classList.replace('hover:bg-blue-700', 'hover:bg-emerald-600');
+                
+                setTimeout(() => {
+                    icon.className = "fa-solid fa-floppy-disk text-base";
+                    textSpan.textContent = "应用并保存配置";
+                    btn.classList.replace('bg-emerald-500', 'bg-blue-600');
+                    btn.classList.replace('hover:bg-emerald-600', 'hover:bg-blue-700');
+                    btn.disabled = false;
+                }, 2000);
                 init();
-            } else { alert('❌ 保存失败'); }
-        } catch(e) { alert('❌ 网络错误'); } 
-        finally { btn.innerHTML = oldHtml; btn.disabled = false; }
+            } else { 
+                alert('❌ 保存失败'); 
+                resetBtn();
+            }
+        } catch(e) { 
+            alert('❌ 网络错误'); 
+            resetBtn();
+        } 
+        
+        function resetBtn() {
+            icon.className = "fa-solid fa-floppy-disk text-base";
+            textSpan.textContent = "应用并保存配置";
+            btn.disabled = false;
+        }
     }
 
     async function testConnection() {
         const btn = document.getElementById('test-btn');
-        btn.innerText = '发送中...'; btn.disabled = true;
+        const ogText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 发送中'; 
+        btn.disabled = true;
         await saveConfig();
         try {
             const res = await fetch('/api/bot/test', { method: 'POST' });
             const json = await res.json();
             alert(json.status === 'success' ? '✅ 测试消息已成功发送至 Telegram！' : '❌ 发送失败: ' + json.message);
         } catch(e) { alert('❌ 网络错误'); }
-        finally { btn.innerText = '测试连接'; btn.disabled = false; }
+        finally { btn.innerHTML = ogText; btn.disabled = false; }
     }
 
     async function testWeComConnection() {
         const btn = document.getElementById('test-wecom-btn');
-        btn.innerText = '发送中...'; btn.disabled = true;
+        const ogText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 发送中'; 
+        btn.disabled = true;
         await saveConfig();
         try {
             const res = await fetch('/api/bot/test_wecom', { method: 'POST' });
             const json = await res.json();
             alert(json.status === 'success' ? '✅ 测试消息已成功发送至企业微信！' : '❌ 发送失败: ' + json.message);
         } catch(e) { alert('❌ 网络错误'); }
-        finally { btn.innerText = '测试连接'; btn.disabled = false; }
+        finally { btn.innerHTML = ogText; btn.disabled = false; }
     }
 
     init();
