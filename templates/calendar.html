@@ -1,130 +1,119 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="container mx-auto px-2 md:px-4 py-4 md:py-6 pb-24">
+<div id="sticky-header-container" class="sticky top-0 z-50 flex flex-col w-full shadow-sm">
     
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div>
-            <h1 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                <i class="fa-solid fa-calendar-days text-indigo-500"></i>
-                追剧日历
-                <span class="text-[10px] md:text-xs font-normal text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-500/30">Beta</span>
-            </h1>
-            <p class="hidden md:block text-gray-500 dark:text-gray-400 text-sm mt-1">
-                本周更新排期 · 智能联动 Emby 媒体库状态
-            </p>
+    <div class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl px-4 md:px-6 py-3.5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center transition-colors">
+        
+        <div class="flex items-center gap-3">
+            <div class="hidden sm:flex w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 items-center justify-center text-indigo-600 dark:text-indigo-400">
+                <i class="fa-solid fa-calendar-days"></i>
+            </div>
+            <div>
+                <h1 class="text-lg md:text-xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+                    追剧排期
+                    <span class="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-500/20">Beta</span>
+                </h1>
+                <p class="hidden md:block text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">智能联动 Emby 媒体库状态</p>
+            </div>
         </div>
         
-        <div class="flex items-center justify-between md:justify-end gap-3">
-            <div class="flex items-center bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-1">
-                <button onclick="changeWeek(-1)" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-500 transition-colors">
-                    <i class="fa-solid fa-chevron-left"></i>
+        <div class="flex items-center gap-2 md:gap-3">
+            <div class="flex items-center bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
+                <button onclick="changeWeek(-1)" class="p-1.5 md:p-2 hover:bg-white dark:hover:bg-gray-700 rounded-md text-gray-500 hover:text-indigo-500 transition-all shadow-sm hover:shadow">
+                    <i class="fa-solid fa-chevron-left text-xs md:text-sm"></i>
                 </button>
-                <div class="px-2 md:px-4 text-xs md:text-sm font-mono font-bold text-gray-700 dark:text-gray-200 min-w-[80px] md:min-w-[120px] text-center" id="date-range-display">
-                    加载中...
+                <div class="px-2 md:px-4 text-[10px] md:text-xs font-black text-gray-700 dark:text-gray-200 min-w-[75px] md:min-w-[100px] text-center tracking-wider" id="date-range-display">
+                    ...
                 </div>
-                <button onclick="changeWeek(1)" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-500 transition-colors">
-                    <i class="fa-solid fa-chevron-right"></i>
+                <button onclick="changeWeek(1)" class="p-1.5 md:p-2 hover:bg-white dark:hover:bg-gray-700 rounded-md text-gray-500 hover:text-indigo-500 transition-all shadow-sm hover:shadow">
+                    <i class="fa-solid fa-chevron-right text-xs md:text-sm"></i>
                 </button>
             </div>
 
-            <div class="flex items-center gap-2">
-                <select id="ttl-select" onchange="updateTTL(this.value)" class="appearance-none px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 shadow-sm outline-none cursor-pointer hover:border-indigo-500 transition-all">
-                    <option value="3600">1h</option>
-                    <option value="43200">12h</option>
-                    <option value="86400">1d</option>
-                </select>
-                <button onclick="fetchCalendar(true)" id="refresh-btn" class="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-300 shadow-sm hover:text-indigo-500 transition-all">
-                    <i class="fa-solid fa-arrows-rotate"></i>
+            <div class="flex items-center gap-1.5">
+                <div class="relative group hidden sm:block">
+                    <select id="ttl-select" onchange="updateTTL(this.value)" class="appearance-none pl-3 pr-7 py-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-bold text-gray-600 dark:text-gray-300 outline-none cursor-pointer hover:border-indigo-500 transition-all">
+                        <option value="3600">缓存 1h</option>
+                        <option value="43200">缓存 12h</option>
+                        <option value="86400">缓存 1d</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-2.5 top-2.5 text-[10px] text-gray-400 pointer-events-none"></i>
+                </div>
+                <button onclick="fetchCalendar(true)" id="refresh-btn" class="p-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-500 hover:text-indigo-500 shadow-sm hover:shadow transition-all active:scale-95">
+                    <i class="fa-solid fa-arrows-rotate text-sm"></i>
                 </button>
             </div>
         </div>
     </div>
 
-    <div class="flex flex-wrap gap-3 mb-4 px-1 md:hidden">
-        <div class="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400">
-            <span class="w-2 h-2 rounded-full bg-green-500"></span> 已入库
+    <div id="mobile-day-nav" class="md:hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 flex overflow-x-auto no-scrollbar shadow-sm">
         </div>
-        <div class="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400">
-            <span class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)] animate-pulse"></span> 待补货
-        </div>
-        <div class="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400">
-            <span class="w-2 h-2 rounded-full bg-blue-500"></span> 待播出
-        </div>
-    </div>
 
-    <div id="loading" class="flex flex-col items-center justify-center py-24">
+</div>
+
+<div class="w-full max-w-[1600px] mx-auto px-3 md:px-6 py-4 pb-24">
+    
+    <div id="loading" class="flex flex-col items-center justify-center py-32">
         <div class="relative w-12 h-12">
-            <div class="absolute inset-0 border-4 border-indigo-200 dark:border-indigo-900 rounded-full"></div>
+            <div class="absolute inset-0 border-4 border-indigo-100 dark:border-indigo-900/30 rounded-full"></div>
             <div class="absolute inset-0 border-4 border-indigo-600 dark:border-indigo-500 rounded-full animate-spin border-t-transparent"></div>
         </div>
-        <p class="mt-4 text-xs text-gray-400 animate-pulse">正在获取更新排期...</p>
+        <p class="mt-4 text-[10px] font-bold text-gray-400 animate-pulse tracking-widest uppercase">正在同步排期...</p>
     </div>
 
-    <div id="error-msg" class="hidden mx-auto max-w-2xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
-        <p id="error-text" class="text-red-600 dark:text-red-400 text-sm mb-4"></p>
-        <button onclick="fetchCalendar(true)" class="px-4 py-2 bg-white dark:bg-red-900 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg text-sm font-bold">重试加载</button>
+    <div id="error-msg" class="hidden mx-auto max-w-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-2xl p-6 text-center mt-10">
+        <p id="error-text" class="text-red-700 dark:text-red-400 text-sm font-bold mb-4"></p>
+        <button onclick="fetchCalendar(true)" class="px-5 py-2 bg-white dark:bg-red-900/50 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 rounded-xl text-sm font-black transition-all">重试</button>
     </div>
 
-    <div id="calendar-grid" class="hidden grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 md:gap-4"></div>
+    <div id="calendar-grid" class="hidden grid grid-cols-1 md:grid-cols-7 gap-y-6 md:gap-x-4 lg:gap-x-5 items-start">
+        </div>
 </div>
 
 <div id="detail-modal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-black/80 backdrop-blur-md" onclick="closeDetails()"></div>
-    
-    <div id="modal-container" class="relative w-full max-w-sm md:max-w-3xl max-h-[90vh] overflow-y-auto custom-scroll transition-all duration-300 ease-out bg-white dark:bg-gray-900 shadow-2xl rounded-2xl md:rounded-3xl scale-95 opacity-0 p-6 md:p-8">
-        
-        <button onclick="closeDetails()" class="absolute top-4 right-4 md:top-6 md:right-6 w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-indigo-500 transition-all z-10">
-            <i class="fa-solid fa-xmark text-lg md:text-xl"></i>
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeDetails()"></div>
+    <div id="modal-container" class="relative w-full max-w-sm md:max-w-3xl overflow-hidden transition-all duration-300 ease-out bg-white dark:bg-gray-900 shadow-2xl rounded-3xl scale-95 opacity-0">
+        <button onclick="closeDetails()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-black/10 dark:bg-white/10 text-gray-600 dark:text-gray-300 hover:bg-black/20 hover:text-indigo-500 transition-all z-20 backdrop-blur-md">
+            <i class="fa-solid fa-xmark"></i>
         </button>
-
-        <div class="flex flex-col md:flex-row gap-6 md:gap-8 mt-2 md:mt-0">
-            <div class="w-32 h-48 md:w-56 md:h-84 flex-shrink-0 mx-auto md:mx-0 overflow-hidden rounded-xl md:rounded-2xl shadow-2xl border-2 md:border-4 border-white dark:border-gray-800">
-                <img id="m-poster" src="" class="w-full h-full object-cover" alt="Poster">
+        <div class="flex flex-col md:flex-row max-h-[85vh] overflow-y-auto custom-scroll">
+            <div class="w-full md:w-2/5 aspect-[2/3] md:aspect-auto relative shrink-0 bg-gray-900">
+                <img id="m-poster" src="" class="absolute inset-0 w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/20 to-transparent md:hidden"></div>
             </div>
-
-            <div class="flex-1 min-w-0 flex flex-col justify-center">
-                <h3 id="m-title" class="text-xl md:text-3xl font-black text-gray-900 dark:text-white truncate pr-6 md:pr-0"></h3>
-                
-                <div class="flex items-center gap-3 mt-2 md:mt-3">
-                    <span id="m-episode-label" class="text-indigo-600 dark:text-indigo-400 font-mono font-bold text-lg md:text-xl"></span>
-                    <span id="m-status-badge" class="px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-widest"></span>
+            <div class="p-6 md:p-8 flex-1 flex flex-col justify-center relative -mt-16 md:mt-0 z-10 bg-white/90 md:bg-transparent dark:bg-gray-900/90 backdrop-blur-xl md:backdrop-blur-none rounded-t-3xl md:rounded-none">
+                <h3 id="m-title" class="text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-tight"></h3>
+                <div class="flex items-center gap-3 mt-3">
+                    <span id="m-episode-label" class="text-indigo-600 dark:text-indigo-400 font-mono font-bold bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-500/30"></span>
+                    <span id="m-status-badge" class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest text-white"></span>
                 </div>
-                
-                <p id="m-air-date" class="text-xs text-gray-500 mt-3 md:mt-4 font-mono flex items-center gap-2">
-                    <i class="fa-regular fa-clock"></i>
-                    播出排期: <span id="m-date-val"></span>
+                <p id="m-air-date" class="text-xs text-gray-500 dark:text-gray-400 mt-4 font-mono flex items-center gap-2">
+                    <i class="fa-regular fa-clock"></i> <span id="m-date-val"></span>
                 </p>
-                
-                <div class="mt-4 md:mt-6 flex-1 overflow-y-auto max-h-[140px] md:max-h-[220px] pr-2 custom-scroll">
-                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 md:mb-2">剧情简介</div>
-                    <p id="m-description" class="text-xs md:text-sm text-gray-600 dark:text-gray-400 leading-relaxed"></p>
+                <div class="mt-5 text-sm text-gray-600 dark:text-gray-300 leading-relaxed max-h-32 md:max-h-48 overflow-y-auto custom-scroll pr-2">
+                    <p id="m-description"></p>
                 </div>
-                
-                <div id="m-actions" class="mt-6 md:mt-8 flex gap-3">
-                    </div>
+                <div id="m-actions" class="mt-8 flex gap-3"></div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-// 全局状态
 let currentOffset = 0;
 let currentServerId = ""; 
 let currentEmbyUrl = "";
-const imgBase = "https://image.tmdb.org/t/p/w500"; // 使用高清海报
+let scrollObserver = null;
+const imgBase = "https://image.tmdb.org/t/p/w500";
 
-document.addEventListener('DOMContentLoaded', () => {
-    fetchCalendar(false);
-});
+document.addEventListener('DOMContentLoaded', () => fetchCalendar(false));
 
 function changeWeek(offset) {
     currentOffset += offset;
     fetchCalendar(false);
 }
 
-// 缓存配置更新
 async function updateTTL(val) {
     try {
         await fetch('/api/calendar/config', {
@@ -133,27 +122,24 @@ async function updateTTL(val) {
             body: JSON.stringify({ ttl: parseInt(val) })
         });
         fetchCalendar(true);
-    } catch (e) { console.error("Update TTL Failed", e); }
+    } catch (e) { console.error(e); }
 }
 
-// 获取日历数据
 async function fetchCalendar(forceRefresh = false) {
     const loadingEl = document.getElementById('loading');
-    const errorEl = document.getElementById('error-msg');
     const gridEl = document.getElementById('calendar-grid');
+    const errorEl = document.getElementById('error-msg');
     
     gridEl.classList.add('hidden');
+    document.getElementById('mobile-day-nav').innerHTML = ''; // 清空导航
     loadingEl.classList.remove('hidden');
     errorEl.classList.add('hidden');
 
     try {
         const res = await fetch(`/api/calendar/weekly?refresh=${forceRefresh}&offset=${currentOffset}`);
-        if (!res.ok) throw new Error("服务器响应异常");
-        
         const data = await res.json();
         if (data.error) throw new Error(data.error);
 
-        // 更新 UI 状态
         document.getElementById('date-range-display').textContent = 
             (currentOffset === 1 ? "下周 " : currentOffset === -1 ? "上周 " : "") + data.date_range;
         
@@ -162,17 +148,17 @@ async function fetchCalendar(forceRefresh = false) {
         currentServerId = data.server_id || ""; 
         currentEmbyUrl = data.emby_url || "";
         
+        renderMobileNav(data.days);
         renderCalendar(data.days);
+        setupScrollSpy(); // 初始化滑动监听
         
         loadingEl.classList.add('hidden');
         gridEl.classList.remove('hidden');
 
-        // 定位到今天
-        if (currentOffset === 0) {
-            setTimeout(() => {
-                const todayCol = document.querySelector('.is-today-column');
-                if (todayCol) todayCol.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 300);
+        // 默认滚动到今天 (如果是本周)
+        if (currentOffset === 0 && window.innerWidth < 768) {
+            const todayIndex = data.days.findIndex(d => d.is_today);
+            if (todayIndex !== -1) scrollToDay(todayIndex, false);
         }
 
     } catch (e) {
@@ -182,160 +168,234 @@ async function fetchCalendar(forceRefresh = false) {
     }
 }
 
-// 渲染主列表 (沉浸式背景卡片 UI)
-function renderCalendar(days) {
-    const container = document.getElementById('calendar-grid');
-    container.innerHTML = '';
-    
-    days.forEach(day => {
-        const isToday = day.is_today;
-        const colClass = isToday 
-            ? 'is-today-column ring-2 ring-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10' 
-            : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700';
-        
-        let html = `
-            <div class="flex flex-col rounded-2xl p-2 md:p-3 ${colClass} shadow-sm transition-all h-full">
-                <div class="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700 mb-2 md:mb-4">
-                    <span class="font-black text-sm md:text-base ${isToday ? 'text-indigo-600' : 'text-gray-700 dark:text-gray-300'}">${day.weekday_cn}</span>
-                    <span class="text-[10px] font-mono opacity-50">${day.date.slice(5)}</span>
-                </div>
-                <div class="flex flex-col gap-2.5">
-        `;
-
-        if (day.items.length === 0) {
-            html += `<div class="py-10 text-center text-[10px] text-gray-400 italic">空闲无排期</div>`;
-        } else {
-            day.items.forEach(item => {
-                const statusMap = {
-                    'ready': { color: 'bg-green-500', text: '已入库' },
-                    'missing': { color: 'bg-red-600', text: '待补货' },
-                    'today': { color: 'bg-red-500 animate-pulse', text: '今日更新' },
-                    'upcoming': { color: 'bg-blue-600', text: '待播出' }
-                };
-                const s = statusMap[item.status] || { color: 'bg-gray-500', text: '未知' };
-                const poster = item.poster_path ? (imgBase + item.poster_path) : 'https://via.placeholder.com/300x450?text=No+Poster';
-
-                // 🔥 方案二：沉浸式背景卡片 UI
-                html += `
-                    <div onclick='showDetails(${JSON.stringify(item).replace(/'/g, "&apos;")})' 
-                         class="group relative w-full aspect-[2/3] flex-shrink-0 rounded-xl md:rounded-2xl overflow-hidden bg-gray-900 cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                         
-                         <img src="${poster}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-90 group-hover:opacity-100" loading="lazy">
-                         
-                         <div class="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent opacity-90 group-hover:opacity-100 transition-opacity"></div>
-                         
-                         <div class="absolute top-0 right-0 px-2 md:px-2.5 py-1 ${s.color} rounded-bl-xl shadow-md border-l border-b border-white/20 backdrop-blur-md z-10">
-                             <span class="text-[8px] md:text-[10px] text-white font-black tracking-widest uppercase shadow-sm">${s.text}</span>
-                         </div>
-                         
-                         <div class="absolute bottom-0 inset-x-0 p-2.5 md:p-3.5 flex flex-col justify-end z-10">
-                             <h4 class="text-xs md:text-sm font-black text-white truncate drop-shadow-lg leading-tight">${item.series_name}</h4>
-                             <div class="flex items-center mt-1 md:mt-1.5">
-                                 <span class="text-[10px] md:text-xs font-mono text-indigo-300 font-bold drop-shadow-md bg-black/40 px-1.5 py-0.5 rounded backdrop-blur-sm">S${String(item.season).padStart(2,'0')}E${String(item.episode).padStart(2,'0')}</span>
-                             </div>
-                         </div>
-                    </div>
-                `;
-            });
-        }
-        container.innerHTML += html + `</div></div>`;
-    });
+// 渲染顶部吸附的日历导航条 (仅手机端可见)
+function renderMobileNav(days) {
+    const navContainer = document.getElementById('mobile-day-nav');
+    navContainer.innerHTML = days.map((day, index) => `
+        <button id="nav-btn-${index}" onclick="scrollToDay(${index}, true)" 
+                class="flex-1 flex flex-col items-center justify-center py-2 px-1 min-w-[52px] border-b-[3px] border-transparent transition-all shrink-0
+                ${day.is_today && currentOffset === 0 ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}">
+            <span id="nav-text-${index}" class="text-xs font-bold ${day.is_today && currentOffset === 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'}">${day.weekday_cn}</span>
+            <span id="nav-date-${index}" class="text-[10px] font-mono ${day.is_today && currentOffset === 0 ? 'text-indigo-500 dark:text-indigo-300' : 'text-gray-400'}">${day.date.slice(5)}</span>
+        </button>
+    `).join('');
 }
 
-// 全平台居中弹出详情
+// 渲染主体网格 (瀑布流 / 多列并排)
+function renderCalendar(days) {
+    const container = document.getElementById('calendar-grid');
+    
+    container.innerHTML = days.map((day, index) => {
+        const isToday = day.is_today && currentOffset === 0;
+        
+        // 生成每一天内部的剧集卡片
+        const itemsHtml = day.items.length === 0 
+            ? `<div class="py-8 text-center bg-gray-50 dark:bg-gray-800/30 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                   <p class="text-xs text-gray-400 font-bold tracking-widest">今日无排期</p>
+               </div>`
+            : day.items.map(item => generateCardHtml(item)).join('');
+
+        return `
+            <div id="day-section-${index}" class="day-section flex flex-col gap-3 md:gap-4 relative">
+                
+                <div class="hidden md:flex justify-between items-end pb-2 border-b-2 ${isToday ? 'border-indigo-500' : 'border-gray-100 dark:border-gray-800'}">
+                    <span class="font-black text-base ${isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-800 dark:text-gray-200'}">${day.weekday_cn}</span>
+                    <span class="text-[10px] font-mono font-bold text-gray-400">${day.date.slice(5)}</span>
+                </div>
+                
+                <div class="md:hidden flex items-center gap-3 pt-4 pb-1 sticky top-[105px] z-30 bg-white/90 dark:bg-gray-950/90 backdrop-blur-md">
+                    <span class="font-black text-lg ${isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-800 dark:text-white'}">${day.weekday_cn}</span>
+                    <span class="text-xs font-mono font-bold text-gray-400">${day.date.slice(5)}</span>
+                    ${isToday ? '<span class="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded text-[10px] font-bold">今天</span>' : ''}
+                    <div class="flex-1 h-px bg-gray-200 dark:bg-gray-800"></div>
+                </div>
+
+                ${itemsHtml}
+            </div>
+        `;
+    }).join('');
+}
+
+// 🔥 核心改进 4: 左侧海报 + 右侧信息的现代卡片排版
+function generateCardHtml(item) {
+    const statusMap = {
+        'ready': { color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800/50', text: '已入库', dot: 'bg-green-500' },
+        'missing': { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800/50', text: '待补货', dot: 'bg-red-500 animate-pulse' },
+        'today': { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800/50', text: '今日更新', dot: 'bg-red-500 animate-pulse' },
+        'upcoming': { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800/50', text: '待播出', dot: 'bg-blue-500' }
+    };
+    const s = statusMap[item.status] || { color: 'bg-gray-100 text-gray-700 border-gray-200', text: '未知', dot: 'bg-gray-500' };
+    const poster = item.poster_path ? (imgBase + item.poster_path) : 'https://via.placeholder.com/300x450?text=No+Poster';
+    const desc = item.series_overview || item.overview || "暂无剧情简介，静待更新...";
+
+    // 注意：flex-row 是手机端左图右文，md:flex-col 是电脑端上图下文
+    return `
+    <div onclick='showDetails(${JSON.stringify(item).replace(/'/g, "&apos;")})' 
+         class="group flex flex-row md:flex-col bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700/60 cursor-pointer hover:-translate-y-1">
+        
+        <div class="relative w-28 sm:w-36 md:w-full shrink-0 aspect-[2/3] bg-gray-100 dark:bg-gray-900 overflow-hidden border-r md:border-r-0 md:border-b border-gray-100 dark:border-gray-700/50">
+            <img src="${poster}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy">
+        </div>
+
+        <div class="p-3 sm:p-4 flex-1 flex flex-col justify-start min-w-0">
+            
+            <div class="flex justify-between items-start gap-2 mb-1">
+                <h3 class="text-sm md:text-base font-black text-gray-900 dark:text-white leading-tight line-clamp-2 md:line-clamp-1 break-all">${item.series_name}</h3>
+                <span class="shrink-0 text-[10px] font-mono font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-1.5 py-0.5 rounded">
+                    S${String(item.season).padStart(2,'0')}E${String(item.episode).padStart(2,'0')}
+                </span>
+            </div>
+
+            <div class="flex items-center gap-1.5 mt-1.5 md:mt-2">
+                <span class="w-1.5 h-1.5 rounded-full ${s.dot}"></span>
+                <span class="text-[10px] md:text-xs font-bold ${s.text === '已入库' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}">${s.text}</span>
+                <span class="text-gray-300 dark:text-gray-600 text-[10px] mx-0.5">|</span>
+                <span class="text-[10px] md:text-xs font-mono text-gray-500 dark:text-gray-400">${item.air_date}</span>
+            </div>
+
+            <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-2 md:mt-3 line-clamp-2 leading-relaxed">
+                ${desc}
+            </p>
+        </div>
+    </div>
+    `;
+}
+
+// ----------------------------------------------------
+// 🔥 交互核心：Intersection Observer (交叉观察器) 实现吸顶联动
+// ----------------------------------------------------
+function setupScrollSpy() {
+    if (scrollObserver) scrollObserver.disconnect();
+    if (window.innerWidth >= 768) return; // 仅手机瀑布流模式开启
+
+    const sections = document.querySelectorAll('.day-section');
+    scrollObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const dayIndex = entry.target.id.split('-')[2];
+                highlightNavBtn(dayIndex);
+            }
+        });
+    }, { 
+        rootMargin: '-120px 0px -60% 0px' // 当区块顶部到达屏幕 120px 时触发
+    });
+
+    sections.forEach(sec => scrollObserver.observe(sec));
+}
+
+function highlightNavBtn(activeIndex) {
+    // 重置所有
+    document.querySelectorAll('[id^="nav-btn-"]').forEach(btn => {
+        btn.classList.remove('border-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/20');
+        btn.classList.add('border-transparent');
+    });
+    document.querySelectorAll('[id^="nav-text-"]').forEach(txt => {
+        txt.classList.remove('text-indigo-600', 'dark:text-indigo-400');
+        txt.classList.add('text-gray-500', 'dark:text-gray-400');
+    });
+    document.querySelectorAll('[id^="nav-date-"]').forEach(date => {
+        date.classList.remove('text-indigo-500', 'dark:text-indigo-300');
+        date.classList.add('text-gray-400');
+    });
+
+    // 高亮当前
+    const activeBtn = document.getElementById(`nav-btn-${activeIndex}`);
+    const activeTxt = document.getElementById(`nav-text-${activeIndex}`);
+    const activeDate = document.getElementById(`nav-date-${activeIndex}`);
+    
+    if (activeBtn) {
+        activeBtn.classList.remove('border-transparent');
+        activeBtn.classList.add('border-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/20');
+        activeTxt.classList.remove('text-gray-500', 'dark:text-gray-400');
+        activeTxt.classList.add('text-indigo-600', 'dark:text-indigo-400');
+        activeDate.classList.remove('text-gray-400');
+        activeDate.classList.add('text-indigo-500', 'dark:text-indigo-300');
+        
+        // 自动将高亮的按钮滚动到导航条中央
+        activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+}
+
+function scrollToDay(index, smooth = true) {
+    const section = document.getElementById(`day-section-${index}`);
+    if (section) {
+        // 计算吸顶 Header 的总高度进行偏移
+        const headerHeight = document.getElementById('sticky-header-container').offsetHeight;
+        const y = section.getBoundingClientRect().top + window.scrollY - headerHeight - 10;
+        window.scrollTo({ top: y, behavior: smooth ? 'smooth' : 'auto' });
+        
+        if(window.innerWidth < 768) { highlightNavBtn(index); }
+    }
+}
+
+// ----------------------------------------------------
+// 模态框与播放器逻辑 (保持不变)
+// ----------------------------------------------------
 function showDetails(item) {
     const modal = document.getElementById('detail-modal');
     const container = document.getElementById('modal-container');
     
-    // 强制信息注入
     document.getElementById('m-title').textContent = item.series_name;
     document.getElementById('m-episode-label').textContent = `S${String(item.season).padStart(2,'0')}E${String(item.episode).padStart(2,'0')}`;
     document.getElementById('m-poster').src = item.poster_path ? (imgBase + item.poster_path) : '';
     document.getElementById('m-date-val').textContent = item.air_date;
-    
-    // 强制显示剧集总简介
-    document.getElementById('m-description').textContent = item.series_overview || item.overview || "暂无相关剧情介绍...";
+    document.getElementById('m-description').textContent = item.series_overview || item.overview || "静待更新...";
 
     const badge = document.getElementById('m-status-badge');
     const actions = document.getElementById('m-actions');
     actions.innerHTML = '';
     
     const isReady = item.status === 'ready';
-    const isMissing = item.status === 'missing' || item.status === 'today';
-    
-    badge.textContent = isReady ? "已入库" : isMissing ? "待补货" : "待播出";
-    const badgeClass = isReady ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" 
-                             : isMissing ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" 
-                             : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400";
-    badge.className = `px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest ${badgeClass}`;
+    badge.textContent = isReady ? "已入库" : item.status === 'upcoming' ? "待播出" : "待补货";
+    badge.className = `px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest text-white ${isReady ? "bg-green-500" : item.status === 'upcoming' ? "bg-blue-500" : "bg-red-500"}`;
 
-    // 按钮逻辑
     if (isReady) {
         actions.innerHTML = `
-            <button onclick="playItem('${item.series_id}')" class="flex-1 py-3 md:py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl md:rounded-2xl font-black shadow-xl shadow-indigo-500/30 active:scale-95 transition-all flex items-center justify-center gap-2">
-                <i class="fa-solid fa-play"></i> 立即播放
-            </button>
-        `;
+            <button onclick="playItem('${item.series_id}')" class="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black shadow-lg shadow-indigo-500/30 active:scale-95 transition-all flex justify-center gap-2">
+                <i class="fa-solid fa-play mt-1"></i> 立即播放
+            </button>`;
     } else {
         const copyTxt = `${item.series_name} S${String(item.season).padStart(2,'0')}E${String(item.episode).padStart(2,'0')}`;
         actions.innerHTML = `
-            <button onclick="copyToClipboard('${copyTxt}')" class="flex-1 py-3 md:py-4 bg-gray-800 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 text-white rounded-xl md:rounded-2xl font-black active:scale-95 transition-all flex items-center justify-center gap-2">
-                <i class="fa-solid fa-copy"></i> 复制排期信息
-            </button>
-        `;
+            <button onclick="copyToClipboard('${copyTxt}')" class="flex-1 py-3.5 bg-gray-800 dark:bg-gray-700 text-white rounded-xl font-black active:scale-95 transition-all flex justify-center gap-2">
+                <i class="fa-solid fa-copy mt-1"></i> 复制排期
+            </button>`;
     }
 
-    // 展现动画：全平台采用缩放+透明度渐变
     modal.classList.remove('hidden');
-    container.offsetHeight; // 强制触发重绘
+    container.offsetHeight; 
     container.classList.remove('scale-95', 'opacity-0');
     container.classList.add('scale-100', 'opacity-100');
 }
 
-// 关闭弹窗
 function closeDetails() {
     const modal = document.getElementById('detail-modal');
     const container = document.getElementById('modal-container');
-    
     container.classList.remove('scale-100', 'opacity-100');
     container.classList.add('scale-95', 'opacity-0');
-    
-    setTimeout(() => {
-        modal.classList.add('hidden');
-    }, 300); // 配合 transition duration
+    setTimeout(() => modal.classList.add('hidden'), 300);
 }
 
-// 播放与复制逻辑
 function playItem(id) {
-    const playUrl = `${currentEmbyUrl}/web/index.html#!/item?id=${id}&serverId=${currentServerId}`;
-    window.open(playUrl, '_blank');
+    window.open(`${currentEmbyUrl}/web/index.html#!/item?id=${id}&serverId=${currentServerId}`, '_blank');
 }
 
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
         const btn = document.querySelector('#m-actions button');
-        const originalHtml = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-check"></i> 复制成功';
-        setTimeout(() => {
-            btn.innerHTML = originalHtml;
-            closeDetails();
-        }, 1200);
-    }).catch(err => {
-        alert("复制失败，请手动操作");
+        const ogHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-check mt-1"></i> 已复制';
+        setTimeout(() => { btn.innerHTML = ogHtml; closeDetails(); }, 1000);
     });
 }
 </script>
 
 <style>
-    /* 极致纤细的滚动条美化 */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     .custom-scroll::-webkit-scrollbar { width: 4px; }
     .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: #6366f1; border-radius: 10px; }
-    .dark .custom-scroll::-webkit-scrollbar-thumb { background: #4f46e5; }
-    
-    /* 模态框特效过渡：贝塞尔曲线确保弹窗更灵动 */
-    #modal-container { 
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .dark .custom-scroll::-webkit-scrollbar-thumb { background: #475569; }
 </style>
 {% endblock %}
