@@ -33,7 +33,7 @@
 
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-4 md:p-5 lg:col-span-2">
             <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-                <i class="fa-solid fa-ranking-star text-amber-500"></i> 历史高频设备 TOP 5 <span class="text-[10px] text-gray-400 font-normal ml-auto">点击图块筛选</span>
+                <i class="fa-solid fa-ranking-star text-amber-500"></i> 历史高频设备 TOP 10 <span class="text-[10px] text-gray-400 font-normal ml-auto">点击图块筛选</span>
             </h3>
             <div class="relative h-[280px] w-full">
                 <canvas id="deviceBarChart" class="cursor-pointer"></canvas>
@@ -59,7 +59,7 @@
                         <th class="px-4 md:px-6 py-3 whitespace-nowrap">最后活动用户</th>
                         <th class="px-4 md:px-6 py-3 whitespace-nowrap">设备名称 / ID</th>
                         <th class="px-4 md:px-6 py-3 whitespace-nowrap">使用软件 (AppName)</th>
-                        <th class="px-4 md:px-6 py-3 whitespace-nowrap">最后活动时间</th>
+                        <th class="px-4 md:px-6 py-3 whitespace-nowrap">最后活动时间 (本地)</th>
                         <th class="px-4 md:px-6 py-3 whitespace-nowrap text-right">授权状态</th>
                     </tr>
                 </thead>
@@ -119,7 +119,7 @@
 <script>
 let pieChartInstance = null;
 let barChartInstance = null;
-let allDevicesData = []; // 缓存在内存中的全量设备数据
+let allDevicesData = []; 
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchClientsData();
@@ -132,17 +132,16 @@ async function fetchClientsData() {
         const data = await res.json();
         if (data.status !== 'success') throw new Error(data.message);
         
-        allDevicesData = data.devices; // 保存全量数据用于筛选
+        allDevicesData = data.devices; 
         renderStatsCards(allDevicesData);
         renderCharts(data.charts);
         renderTable(allDevicesData);
-        clearFilterTag(); // 刷新时清除筛选
+        clearFilterTag(); 
     } catch (e) {
         document.getElementById('devices-tbody').innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-red-500">${e.message}</td></tr>`;
     }
 }
 
-// 渲染顶部数据大盘
 function renderStatsCards(devices) {
     const total = devices.length;
     const online = devices.filter(d => d.is_active).length;
@@ -200,18 +199,12 @@ function renderCharts(charts) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: { 
-                legend: { 
-                    position: 'bottom', // 🔥 图例放到底部，释放空间
-                    labels: { boxWidth: 12, padding: 15, font: { size: 11 }, color: textColor } 
-                },
+                legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15, font: { size: 11 }, color: textColor } },
                 tooltip: { padding: 10, cornerRadius: 8 }
             },
             cutout: '65%',
             onClick: (e, elements, chart) => {
-                if (elements.length > 0) {
-                    const label = chart.data.labels[elements[0].index];
-                    filterTableData('app_name', label);
-                }
+                if (elements.length > 0) filterTableData('app_name', chart.data.labels[elements[0].index]);
             }
         }
     });
@@ -231,30 +224,21 @@ function renderCharts(charts) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { 
-                legend: { display: false },
-                tooltip: { padding: 10, cornerRadius: 8 }
-            },
+            plugins: { legend: { display: false }, tooltip: { padding: 10, cornerRadius: 8 } },
             scales: {
                 y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
                 x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: 25, minRotation: 0, color: textColor } }
             },
             onClick: (e, elements, chart) => {
-                if (elements.length > 0) {
-                    const label = chart.data.labels[elements[0].index];
-                    filterTableData('name', label);
-                }
+                if (elements.length > 0) filterTableData('name', chart.data.labels[elements[0].index]);
             }
         }
     });
 }
 
-// 🔥 核心功能：表格筛选联动
 function filterTableData(filterKey, filterValue) {
     const filtered = allDevicesData.filter(d => d[filterKey] === filterValue);
     renderTable(filtered);
-    
-    // 渲染顶部的筛选提示标签
     const tagContainer = document.getElementById('filter-tag-container');
     const labelName = filterKey === 'app_name' ? '软件' : '设备';
     tagContainer.innerHTML = `
@@ -263,8 +247,6 @@ function filterTableData(filterKey, filterValue) {
             <button onclick="clearFilter()" class="ml-1 text-indigo-400 hover:text-indigo-600 dark:hover:text-white transition-colors"><i class="fa-solid fa-xmark"></i></button>
         </span>
     `;
-    
-    // 平滑滚动到表格区域
     document.getElementById('devices-table-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -273,9 +255,7 @@ function clearFilter() {
     clearFilterTag();
 }
 
-function clearFilterTag() {
-    document.getElementById('filter-tag-container').innerHTML = '';
-}
+function clearFilterTag() { document.getElementById('filter-tag-container').innerHTML = ''; }
 
 function renderTable(devices) {
     const tbody = document.getElementById('devices-tbody');
@@ -317,12 +297,10 @@ async function fetchBlacklist() {
     const res = await fetch('/api/clients/blacklist');
     const data = await res.json();
     const ul = document.getElementById('blacklist-ul');
-    
     if (data.data.length === 0) {
         ul.innerHTML = '<li class="text-center text-xs text-gray-400 py-4">暂无封杀软件</li>';
         return;
     }
-    
     ul.innerHTML = data.data.map(item => `
         <li class="flex justify-between items-center p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/30 rounded-lg group transition-all">
             <span class="font-mono font-bold text-red-700 dark:text-red-400 text-sm"><i class="fa-solid fa-shield-virus mr-2"></i> ${item.app_name}</span>
@@ -335,26 +313,14 @@ async function addBlacklist() {
     const input = document.getElementById('new-block-app');
     const val = input.value.trim();
     if(!val) return;
-    
-    const res = await fetch('/api/clients/blacklist', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({app_name: val})
-    });
+    const res = await fetch('/api/clients/blacklist', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({app_name: val}) });
     const data = await res.json();
-    if(data.status === 'success') {
-        input.value = '';
-        fetchBlacklist();
-        fetchClientsData(); 
-    } else {
-        alert(data.message);
-    }
+    if(data.status === 'success') { input.value = ''; fetchBlacklist(); fetchClientsData(); } else { alert(data.message); }
 }
 
 async function removeBlacklist(appName) {
     await fetch(`/api/clients/blacklist/${appName}`, { method: 'DELETE' });
-    fetchBlacklist();
-    fetchClientsData();
+    fetchBlacklist(); fetchClientsData();
 }
 
 async function executeBlock() {
@@ -362,16 +328,11 @@ async function executeBlock() {
     const ogHtml = btn.innerHTML;
     btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> 扫荡中...';
     btn.disabled = true;
-    
     try {
         const res = await fetch('/api/clients/execute_block', { method: 'POST' });
-        const data = await res.json();
-        alert(data.message);
-        fetchClientsData(); 
+        const data = await res.json(); alert(data.message); fetchClientsData(); 
     } catch(e) { alert("网络异常"); }
-    
-    btn.innerHTML = ogHtml;
-    btn.disabled = false;
+    btn.innerHTML = ogHtml; btn.disabled = false;
 }
 
 function toggleBlacklistModal() {
@@ -379,20 +340,13 @@ function toggleBlacklistModal() {
     const container = document.getElementById('blacklist-container');
     if (modal.classList.contains('hidden')) {
         modal.classList.remove('hidden');
-        setTimeout(() => {
-            container.classList.remove('scale-95', 'opacity-0');
-            container.classList.add('scale-100', 'opacity-100');
-        }, 10);
+        setTimeout(() => { container.classList.remove('scale-95', 'opacity-0'); container.classList.add('scale-100', 'opacity-100'); }, 10);
     } else {
-        container.classList.remove('scale-100', 'opacity-100');
-        container.classList.add('scale-95', 'opacity-0');
+        container.classList.remove('scale-100', 'opacity-100'); container.classList.add('scale-95', 'opacity-0');
         setTimeout(() => modal.classList.add('hidden'), 300);
     }
 }
-
-document.getElementById('new-block-app').addEventListener('keypress', function (e) {
-    if (e.key === 'Enter') addBlacklist();
-});
+document.getElementById('new-block-app').addEventListener('keypress', function (e) { if (e.key === 'Enter') addBlacklist(); });
 </script>
 
 <style>
@@ -400,13 +354,7 @@ document.getElementById('new-block-app').addEventListener('keypress', function (
     .custom-scroll::-webkit-scrollbar-track { background: transparent; }
     .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     .dark .custom-scroll::-webkit-scrollbar-thumb { background: #475569; }
-    
-    /* 筛选标签出现的微动画 */
-    @keyframes pulse-once {
-        0% { transform: scale(0.95); opacity: 0.5; }
-        50% { transform: scale(1.05); opacity: 1; }
-        100% { transform: scale(1); opacity: 1; }
-    }
+    @keyframes pulse-once { 0% { transform: scale(0.95); opacity: 0.5; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
     .animate-pulse-once { animation: pulse-once 0.3s ease-out forwards; }
 </style>
 {% endblock %}
