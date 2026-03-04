@@ -80,6 +80,11 @@
                         </button>
                     </div>
                 </div>
+                <div class="col-span-1 md:col-span-2 flex justify-end mt-2">
+                    <button type="button" onclick="testMPConnection(this)" class="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800/50 rounded-xl text-sm font-bold shadow-sm transition-all active:scale-95">
+                        <i class="fa-solid fa-plug"></i> 测试 MP 连通性
+                    </button>
+                </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Pulse 审批回跳地址</label>
                     <input type="text" id="pulse_url" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all placeholder-gray-400" placeholder="https://yj.esa.cchmm.cn">
@@ -149,8 +154,11 @@
     </div>
 </div>
 
+<div id="settings-toast" class="fixed top-10 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-2xl border backdrop-blur-xl flex items-center gap-2 font-bold transition-all duration-300 transform -translate-y-20 opacity-0 pointer-events-none text-sm">
+    <span id="settings-toast-msg"></span>
+</div>
+
 <script>
-// --- JS 逻辑保持不变 ---
 let allUsers = [];
 let hiddenUsers = [];
 
@@ -235,6 +243,33 @@ function updateWebhookPreview() {
 
 document.getElementById('webhook_token').addEventListener('input', updateWebhookPreview);
 
+// 🔥 新增：自定义极简 Toast 提示
+function showToast(msg, type = 'success') {
+    const toast = document.getElementById('settings-toast');
+    const toastMsg = document.getElementById('settings-toast-msg');
+    toastMsg.textContent = msg;
+    
+    // 移除旧颜色
+    toast.className = toast.className.replace(/bg-white.*?border-\w+-300 text-\w+-600/g, '');
+    
+    // 注入新颜色
+    if (type === 'success') {
+        toast.classList.add('bg-white/90', 'dark:bg-zinc-800/90', 'border-green-300', 'text-green-600', 'dark:border-green-500/30', 'dark:text-green-400');
+    } else {
+        toast.classList.add('bg-white/90', 'dark:bg-zinc-800/90', 'border-red-300', 'text-red-600', 'dark:border-red-500/30', 'dark:text-red-400');
+    }
+    
+    // 动画入场
+    toast.classList.remove('-translate-y-20', 'opacity-0');
+    toast.classList.add('translate-y-0', 'opacity-100');
+    
+    // 3秒后退场
+    setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('-translate-y-20', 'opacity-0');
+    }, 3000);
+}
+
 async function saveSettings() {
     const data = {
         emby_host: document.getElementById('emby_host').value,
@@ -271,6 +306,7 @@ async function saveSettings() {
         textSpan.textContent = "保存成功";
         btnBtn.classList.replace('bg-indigo-600', 'bg-emerald-500');
         btnBtn.classList.replace('hover:bg-indigo-700', 'hover:bg-emerald-600');
+        showToast('设置保存成功', 'success');
         
         setTimeout(() => {
             icon.className = "fa-solid fa-floppy-disk";
@@ -281,7 +317,7 @@ async function saveSettings() {
         }, 1500);
         
     } catch(e) {
-        alert("网络请求失败");
+        showToast("网络请求失败", 'error');
         icon.className = "fa-solid fa-floppy-disk";
         textSpan.textContent = "保存配置";
         btnBtn.disabled = false;
@@ -299,6 +335,42 @@ function toggleShow(id) {
         input.type = 'password';
         icon.classList.remove('fa-eye-slash');
         icon.classList.add('fa-eye');
+    }
+}
+
+// 🔥 新增：测试 MP 连通性
+async function testMPConnection(btn) {
+    const mpUrl = document.getElementById('moviepilot_url').value; 
+    const mpToken = document.getElementById('moviepilot_token').value;
+
+    if (!mpUrl || !mpToken) {
+        showToast('请先填写 MoviePilot 地址和 Token', 'error');
+        return;
+    }
+
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> 测试中...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/settings/test_mp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mp_url: mpUrl, mp_token: mpToken })
+        });
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.message, 'error');
+        }
+        
+    } catch (e) {
+        showToast('请求失败，网络异常或地址错误', 'error');
+    } finally {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
     }
 }
 </script>

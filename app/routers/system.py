@@ -77,3 +77,33 @@ def api_test_tmdb(request: Request):
         return {"status": "error", "message": f"连接失败: {res.status_code}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+@router.post("/api/settings/test_mp")
+async def test_moviepilot(request: Request):
+    if not request.session.get("user"): 
+        return {"status": "error", "message": "权限不足"}
+        
+    data = await request.json()
+    mp_url = data.get("mp_url", "").strip().rstrip('/')
+    mp_token = data.get("mp_token", "").strip().strip("'\"")
+
+    if not mp_url or not mp_token:
+        return {"status": "error", "message": "请先填写 MoviePilot 地址和 Token"}
+
+    try:
+        # 请求 MoviePilot 的基础接口来验证 Token 有效性
+        res = requests.get(
+            f"{mp_url}/api/v1/site/", 
+            headers={"X-API-KEY": mp_token}, 
+            timeout=5
+        )
+        
+        if res.status_code == 200:
+            return {"status": "success", "message": "🎉 MoviePilot 连通测试成功！"}
+        elif res.status_code in [401, 403]:
+            return {"status": "error", "message": "❌ Token 认证失败，请检查 API Key 是否正确"}
+        else:
+            return {"status": "success", "message": f"⚠️ 服务器已连通 (状态码: {res.status_code})，但建议检查地址是否指向 API 根路径"}
+            
+    except requests.exceptions.RequestException as e:
+        return {"status": "error", "message": f"❌ 无法连接到 MoviePilot，请检查地址或服务器网络。"}
