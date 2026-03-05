@@ -26,23 +26,23 @@
 
     <div class="flex items-center justify-between mb-6">
         <button onclick="window.history.back()" class="text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center font-bold text-sm md:text-base">
-            <i class="fa-solid fa-arrow-left mr-2"></i> 返回列表
+            <i class="fa-solid fa-arrow-left mr-2"></i> 返回上一页
         </button>
         <h1 class="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500 tracking-tight">
-            用户数据洞察
+            Pulse 深度洞察
         </h1>
         <div class="w-20"></div> </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-[24px] p-6 shadow-sm border border-gray-100 dark:border-gray-700/50 mb-6 flex flex-col md:flex-row items-center md:items-start justify-between transition-all hover:shadow-md">
         <div class="flex flex-col md:flex-row items-center gap-6 z-10 w-full md:w-auto">
             <div class="relative group shrink-0">
-                <img id="user-avatar" src="" class="w-24 h-24 md:w-20 md:h-20 rounded-[20px] object-cover shadow-sm border-2 border-white dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
+                <img id="user-avatar" src="/static/img/logo-app.png" onerror="this.src='https://api.dicebear.com/9.x/shapes/png?seed=pulse'" class="w-24 h-24 md:w-20 md:h-20 rounded-[20px] object-cover shadow-sm border-2 border-white dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-2">
                 <div class="absolute inset-0 rounded-[20px] ring-4 ring-indigo-500/20 group-hover:ring-indigo-500/50 transition-all"></div>
             </div>
             <div class="text-center md:text-left flex-1 min-w-0">
                 <h2 id="user-name" class="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight truncate">加载中...</h2>
-                <p class="text-gray-500 dark:text-gray-400 mt-1 font-medium text-sm flex items-center justify-center md:justify-start">
-                    <i class="fa-solid fa-rocket mr-1.5 opacity-70"></i> 已入驻 <span id="account-age" class="mx-1.5 font-bold text-indigo-500">0</span> 天
+                <p id="user-meta-desc" class="text-gray-500 dark:text-gray-400 mt-1 font-medium text-sm flex items-center justify-center md:justify-start">
+                    <i class="fa-solid fa-rocket mr-1.5 opacity-70"></i> 记录跨度 <span id="account-age" class="mx-1.5 font-bold text-indigo-500">0</span> 天
                 </p>
                 <div id="badges-container" class="flex flex-wrap justify-center md:justify-start gap-2 mt-3 min-h-[28px]"></div>
             </div>
@@ -188,6 +188,8 @@
 <script>
     const urlParams = new URLSearchParams(window.location.search);
     const userId = urlParams.get('user_id');
+    const isGlobal = !userId; // 🔥 核心修复：如果没有 userId，则认定为查看全服大盘
+    
     let myTrendChart, myDeviceChart, myHourlyChart;
 
     // ECharts 响应式适配
@@ -210,16 +212,20 @@
 
     // 初始化
     async function init() {
-        if (!userId) {
-            alert("未提供用户 ID！"); return;
+        const queryStr = userId ? `?user_id=${userId}` : '';
+        
+        // 预加载头像：区分个人和全服
+        const avatarImg = document.getElementById('user-avatar');
+        if (!isGlobal) {
+            avatarImg.src = `/api/proxy/user_image/${userId}?tag=${Date.now()}`;
+            avatarImg.onerror = () => { avatarImg.src = 'https://api.dicebear.com/9.x/notionists/png?seed=user' };
+            avatarImg.classList.remove('p-2', 'bg-gray-50', 'dark:bg-gray-900'); // 移除全服logo的背景垫底
         }
-        // 预加载头像
-        document.getElementById('user-avatar').src = `/api/proxy/user_image/${userId}?tag=${Date.now()}`;
         
         // 并发获取数据提速
         Promise.all([
-            fetch(`/api/stats/user_details?user_id=${userId}`).then(r => r.json()),
-            fetch(`/api/stats/badges?user_id=${userId}`).then(r => r.json())
+            fetch(`/api/stats/user_details${queryStr}`).then(r => r.json()),
+            fetch(`/api/stats/badges${queryStr}`).then(r => r.json())
         ]).then(([detailsRes, badgesRes]) => {
             if(detailsRes.status === 'success') {
                 renderOverview(detailsRes.data);
@@ -239,9 +245,16 @@
 
     function renderOverview(data) {
         const ov = data.overview;
-        const logName = data.logs && data.logs.length > 0 ? data.logs[0].UserName : '神秘访客';
-        document.getElementById('user-name').textContent = logName;
-        document.getElementById('account-age').textContent = ov.account_age_days || 1;
+        
+        // 🔥 核心修复：区分全服和单人的标题与描述
+        if (isGlobal) {
+            document.getElementById('user-name').textContent = '全服数据洞察大盘';
+            document.getElementById('user-meta-desc').innerHTML = `<i class="fa-solid fa-server mr-1.5 opacity-70"></i> 记录跨度 <span id="account-age" class="mx-1.5 font-bold text-indigo-500">${ov.account_age_days || 1}</span> 天`;
+        } else {
+            const logName = data.logs && data.logs.length > 0 ? data.logs[0].UserName : '神秘访客';
+            document.getElementById('user-name').textContent = logName;
+            document.getElementById('account-age').textContent = ov.account_age_days || 1;
+        }
         
         // 数字跳动动画
         animateValue('total-plays', 0, ov.total_plays, 1000);
@@ -261,9 +274,9 @@
                 document.getElementById('tv-bar').style.width = tp + '%';
             }, 100);
 
-            let desc = "此人涉猎广泛，影视双修。";
-            if(mp > 70) desc = "妥妥的电影发烧友，沉浸式两小时的艺术。";
-            else if(tp > 70) desc = "追剧狂魔本魔，一集接一集根本停不下来。";
+            let desc = isGlobal ? "全服用户涉猎广泛，影视双修。" : "此人涉猎广泛，影视双修。";
+            if(mp > 70) desc = isGlobal ? "全服总体偏向电影，沉浸式两小时的艺术。" : "妥妥的电影发烧友，沉浸式两小时的艺术。";
+            else if(tp > 70) desc = isGlobal ? "全服用户追剧成瘾，一集接一集根本停不下来。" : "追剧狂魔本魔，一集接一集根本停不下来。";
             document.getElementById('preference-desc').innerHTML = `<i class="fa-solid fa-quote-left mr-1 opacity-50"></i> ${desc} <i class="fa-solid fa-quote-right ml-1 opacity-50"></i>`;
         }
     }
@@ -280,14 +293,14 @@
                 <div class="flex-1 min-w-0 flex flex-col justify-center pl-2">
                     <h4 class="font-black text-gray-900 dark:text-white text-base line-clamp-2 leading-tight drop-shadow-sm mb-2">${fav.ItemName}</h4>
                     <div class="text-[11px] text-gray-600 dark:text-gray-300 font-bold space-y-1.5">
-                        <p class="flex items-center bg-gray-50/80 dark:bg-black/20 w-max px-2 py-0.5 rounded backdrop-blur-sm border border-gray-100 dark:border-gray-700/50"><i class="fa-solid fa-repeat mr-1.5 text-indigo-500"></i>N刷了 ${fav.c} 次</p>
+                        <p class="flex items-center bg-gray-50/80 dark:bg-black/20 w-max px-2 py-0.5 rounded backdrop-blur-sm border border-gray-100 dark:border-gray-700/50"><i class="fa-solid fa-repeat mr-1.5 text-indigo-500"></i>${isGlobal ? '全服' : ''}N刷了 ${fav.c} 次</p>
                         <p class="flex items-center bg-gray-50/80 dark:bg-black/20 w-max px-2 py-0.5 rounded backdrop-blur-sm border border-gray-100 dark:border-gray-700/50"><i class="fa-regular fa-clock mr-1.5 text-rose-500"></i>沉迷 ${Math.round(fav.d/3600)} 小时</p>
                     </div>
                 </div>
             `;
             bg.style.backgroundImage = `url('${imgUrl}')`;
         } else {
-            container.innerHTML = `<p class="text-gray-400 text-xs font-bold w-full text-center py-8"><i class="fa-solid fa-ghost mr-2 opacity-50"></i>暂无执念</p>`;
+            container.innerHTML = `<p class="text-gray-400 text-xs font-bold w-full text-center py-8"><i class="fa-solid fa-ghost mr-2 opacity-50"></i>暂无执念数据</p>`;
             bg.style.backgroundImage = 'none';
         }
     }
@@ -296,7 +309,7 @@
     function renderBadges(badges) {
         const container = document.getElementById('badges-container');
         if(!badges || badges.length === 0) {
-            container.innerHTML = '<span class="text-xs text-gray-400 font-bold px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg">萌新上路</span>';
+            container.innerHTML = '<span class="text-xs text-gray-400 font-bold px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg">系统运转中</span>';
             return;
         }
         container.innerHTML = badges.map(b => `
@@ -345,8 +358,8 @@
                 name: '播放终端', type: 'pie',
                 radius: ['50%', '75%'], center: ['50%', '42%'],
                 itemStyle: {
-                    borderRadius: 8, // 圆角切片
-                    borderColor: borderColor, // 切割线跟随背景
+                    borderRadius: 8,
+                    borderColor: borderColor,
                     borderWidth: 2
                 },
                 label: { show: false },
@@ -409,12 +422,17 @@
         tbody.innerHTML = logs.map((log, index) => {
             let dateStr = log.DateCreated ? log.DateCreated.split('.')[0].replace('T', ' ') : '-';
             const bgClass = index % 2 === 0 ? 'bg-transparent' : 'bg-gray-50/50 dark:bg-gray-800/30';
+            // 如果是全服数据，额外显示用户名
+            const userTag = isGlobal ? `<span class="mr-2 text-[10px] bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded font-mono">${log.UserName}</span>` : '';
+            
             return `
             <tr class="${bgClass} hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 transition-colors group">
-                <td class="py-3 pl-2 text-gray-500 text-xs font-mono group-hover:text-indigo-500 transition-colors">${dateStr}</td>
-                <td class="py-3 text-gray-900 dark:text-gray-100 font-bold max-w-[150px] md:max-w-[300px] truncate pr-4" title="${log.ItemName}">${log.ItemName}</td>
-                <td class="py-3 text-indigo-500 font-mono font-bold text-xs">${formatDuration(log.PlayDuration)}</td>
-                <td class="py-3 text-gray-500 text-xs"><span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded border border-gray-200 dark:border-gray-600 font-medium shadow-sm">${log.Device}</span></td>
+                <td class="py-3 pl-2 text-gray-500 text-[10px] md:text-xs font-mono group-hover:text-indigo-500 transition-colors">${dateStr}</td>
+                <td class="py-3 text-gray-900 dark:text-gray-100 font-bold max-w-[120px] md:max-w-[300px] truncate pr-4 text-xs md:text-sm" title="${log.ItemName}">
+                    ${userTag}${log.ItemName}
+                </td>
+                <td class="py-3 text-indigo-500 font-mono font-bold text-[10px] md:text-xs">${formatDuration(log.PlayDuration)}</td>
+                <td class="py-3 text-gray-500 text-[10px] md:text-xs"><span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded border border-gray-200 dark:border-gray-600 font-medium shadow-sm">${log.Device}</span></td>
             </tr>
         `}).join('');
     }
@@ -424,7 +442,11 @@
         document.getElementById('btn-day').className = dim === 'day' ? 'px-3 py-1.5 rounded-md bg-white dark:bg-gray-600 shadow-sm text-indigo-600 dark:text-indigo-400 font-bold transition-all border border-gray-200 dark:border-gray-500' : 'px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all';
         document.getElementById('btn-month').className = dim === 'month' ? 'px-3 py-1.5 rounded-md bg-white dark:bg-gray-600 shadow-sm text-indigo-600 dark:text-indigo-400 font-bold transition-all border border-gray-200 dark:border-gray-500' : 'px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all';
 
-        const endpoint = dim === 'month' ? `/api/stats/monthly_stats?user_id=${userId}` : `/api/stats/trend?user_id=${userId}&dimension=day`;
+        const queryStr = userId ? `?user_id=${userId}` : '';
+        const endpoint = dim === 'month' 
+            ? `/api/stats/monthly_stats${queryStr}` 
+            : `/api/stats/trend${queryStr ? queryStr + '&dimension=day' : '?dimension=day'}`;
+
         try {
             const res = await fetch(endpoint).then(r => r.json());
             if(res.status === 'success') {
@@ -438,7 +460,7 @@
         if (!myTrendChart) myTrendChart = echarts.init(dom, null, { renderer: 'svg' });
         
         const keys = Object.keys(dataObj);
-        const values = Object.values(dataObj).map(v => Math.round(v / 3600)); // 转小时
+        const values = Object.values(dataObj).map(v => Math.round(v / 3600)); 
         
         const isDark = document.documentElement.classList.contains('dark');
 
@@ -476,7 +498,6 @@
         myTrendChart.setOption(option);
     }
 
-    // 极简数字动画
     function animateValue(id, start, end, duration) {
         if (start === end) { document.getElementById(id).innerHTML = end; return; }
         var range = end - start;
