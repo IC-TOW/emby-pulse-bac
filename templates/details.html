@@ -27,8 +27,8 @@
             <div class="absolute -right-10 -bottom-10 opacity-10 pointer-events-none transform rotate-12"><i class="fa-solid fa-fingerprint text-[180px]"></i></div>
             
             <div class="flex items-center gap-5 z-10 w-full md:w-auto">
-                <div class="w-16 h-16 md:w-20 md:h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border-2 border-white/40 text-2xl md:text-3xl font-black shadow-inner">
-                    <span id="hero-avatar">U</span>
+                <div class="w-16 h-16 md:w-20 md:h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border-2 border-white/40 text-2xl md:text-3xl font-black shadow-inner overflow-hidden shrink-0" id="hero-avatar-container">
+                    <span id="hero-avatar-text">U</span>
                 </div>
                 <div>
                     <h2 class="text-2xl md:text-3xl font-black drop-shadow-md" id="hero-name">User Name</h2>
@@ -144,6 +144,7 @@
 
     async function init() {
         await loadUsers();
+        
         const targetUid = getUrlParams();
         if (targetUid) {
             const select = document.getElementById('user-select');
@@ -179,9 +180,24 @@
         loading.classList.remove('hidden'); content.classList.add('hidden');
 
         try {
-            // Update Hero Card UI before fetching to feel responsive
-            document.getElementById('hero-name').innerText = userId === 'all' ? '全服综合大盘' : selectText.replace('👤 ', '');
-            document.getElementById('hero-avatar').innerText = userId === 'all' ? 'E' : selectText.replace('👤 ', '').charAt(0).toUpperCase();
+            // 🔥 更新头像和名称
+            const avatarContainer = document.getElementById('hero-avatar-container');
+            const nameEl = document.getElementById('hero-name');
+            
+            if (userId === 'all') {
+                nameEl.innerText = '全服综合大盘';
+                // 全服显示科技感系统图标
+                avatarContainer.innerHTML = '<i class="fa-solid fa-server text-3xl text-white/90 drop-shadow-md"></i>';
+            } else {
+                const cleanName = selectText.replace('👤 ', '');
+                nameEl.innerText = cleanName;
+                // 个人显示真实头像，带有 onerror 降级为文字首字母
+                const userImgUrl = `/api/proxy/user_image/${userId}?v=${new Date().getTime()}`;
+                avatarContainer.innerHTML = `
+                    <img src="${userImgUrl}" class="w-full h-full object-cover" 
+                         onerror="this.onerror=null; this.parentNode.innerHTML='<span class=\\'drop-shadow-md\\'>${cleanName.charAt(0).toUpperCase()}</span>';">
+                `;
+            }
 
             await fetchUserDetails(userId);
             await fetchBadges(userId);
@@ -201,7 +217,6 @@
         initTrendChart(document.getElementById('user-select').value, dim);
     }
 
-    // 🔥 渲染极简柱状趋势图
     async function initTrendChart(userId, dimension = 'month') {
         const ctx = document.getElementById('trendChart').getContext('2d');
         if(charts.trend) charts.trend.destroy();
@@ -253,31 +268,20 @@
             if (json.status === 'success') {
                 const d = json.data;
                 
-                // 1. 更新顶部名片
                 document.getElementById('hero-plays').innerText = d.overview.total_plays;
                 document.getElementById('hero-hours').innerText = Math.round(d.overview.total_duration / 3600);
                 document.getElementById('hero-avg').innerText = Math.round(d.overview.avg_duration / 60);
                 document.getElementById('hero-days').innerText = d.overview.account_age_days;
 
-                // 2. 渲染 24H 生物钟
                 renderHourChart(d.hourly);
-                
-                // 3. 渲染设备图
                 renderDeviceChart(d.devices);
-                
-                // 4. 渲染偏好天平
                 renderPreference(d.preference);
-
-                // 5. 渲染最爱
                 renderTopFav(d.top_fav);
-
-                // 6. 渲染日志
                 renderLogs(d.logs);
             }
         } catch(e){}
     }
 
-    // 🔥 抛弃雷达图，使用精美的 24小时柱状生物钟
     function renderHourChart(dataObj) {
         const ctx = document.getElementById('hourChart').getContext('2d');
         if(charts.hour) charts.hour.destroy();
@@ -293,7 +297,6 @@
             if(val > maxVal) { maxVal = val; maxHour = i; }
         }
 
-        // 计算热词
         let word = "尚无数据分析";
         if (maxVal > 0) {
             if (maxHour >= 6 && maxHour < 12) word = `🌅 早间活跃型 (峰值 ${maxHour}:00)`;
@@ -311,15 +314,11 @@
             data: { labels: labels, datasets: [{ data: values, backgroundColor: isDark ? '#818cf8' : '#6366f1', borderRadius: 4, hoverBackgroundColor: '#f59e0b' }] },
             options: { 
                 responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip:{callbacks:{label: c => c.parsed.y + ' 次'}} },
-                scales: { 
-                    y: { display: false }, 
-                    x: { grid: { display: false }, ticks: { color: textColor, font: {family: 'monospace', size: 9}, maxRotation: 0, maxTicksLimit: 12 } } 
-                }
+                scales: { y: { display: false }, x: { grid: { display: false }, ticks: { color: textColor, font: {family: 'monospace', size: 9}, maxRotation: 0, maxTicksLimit: 12 } } }
             }
         });
     }
 
-    // 渲染偏好天平
     function renderPreference(pref) {
         const total = pref.movie_plays + pref.episode_plays;
         let mPct = 0, ePct = 0;
@@ -340,7 +339,6 @@
         document.getElementById('pref-desc').innerText = desc;
     }
 
-    // 渲染最爱
     function renderTopFav(fav) {
         const container = document.getElementById('top-fav-container');
         const bg = document.getElementById('top-fav-bg');
