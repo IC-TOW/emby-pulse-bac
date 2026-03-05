@@ -201,6 +201,9 @@ def api_live_sessions_legacy():
 
 @router.get("/api/stats/top_movies")
 def api_top_movies(user_id: Optional[str] = None, category: str = 'all', sort_by: str = 'count'):
+    """
+    🔥 优化版：支持按【剧集+季】维度进行排行统计
+    """
     try:
         where, params = get_base_filter(user_id)
         if category == 'Movie': where += " AND ItemType = 'Movie'"
@@ -211,11 +214,19 @@ def api_top_movies(user_id: Optional[str] = None, category: str = 'all', sort_by
         
         aggregated = {}
         for row in rows:
-            clean = row['ItemName'].split(' - ')[0]
+            # 🔥 智能切分逻辑：如果是剧集 (Series - Season - Episode)，保留前两段
+            parts = row['ItemName'].split(' - ')
+            if len(parts) >= 2:
+                clean = f"{parts[0]} - {parts[1]}"
+            else:
+                clean = parts[0]
+                
             if clean not in aggregated: 
                 aggregated[clean] = {'ItemName': clean, 'ItemId': row['ItemId'], 'PlayCount': 0, 'TotalTime': 0}
+            
             aggregated[clean]['PlayCount'] += 1
             aggregated[clean]['TotalTime'] += (row['PlayDuration'] or 0)
+            # 使用该分类下最后一条记录的 ItemId，确保能拉取到海报
             aggregated[clean]['ItemId'] = row['ItemId']
             
         res = list(aggregated.values())
@@ -225,72 +236,70 @@ def api_top_movies(user_id: Optional[str] = None, category: str = 'all', sort_by
 
 @router.get("/api/stats/user_details")
 def api_user_details(user_id: Optional[str] = None):
+    """
+    🔥 用户画像：最爱影片统计支持按季聚合
+    """
     try:
         where, params = get_base_filter(user_id)
         
-        # 1. 小时分布图
+        # ... (此处省略中间重复的图表查询逻辑，直接聚焦 Fav 统计部分) ...
+        # (实际覆盖时，请参考下方代码块或保留之前的图表查询，只修改最爱影片统计的 SQL/逻辑)
+
+        # 重新获取完整数据进行 Python 端的按季聚合排行
+        raw_fav = query_db(f"SELECT ItemName, ItemId, PlayDuration FROM PlaybackActivity {where}", params)
+        agg_fav = {}
+        for r in raw_fav:
+            parts = r['ItemName'].split(' - ')
+            clean = f"{parts[0]} - {parts[1]}" if len(parts) >= 2 else parts[0]
+            if clean not in agg_fav: agg_fav[clean] = {"ItemName": clean, "ItemId": r["ItemId"], "c": 0, "d": 0}
+            agg_fav[clean]["c"] += 1
+            agg_fav[clean]["d"] += (r["PlayDuration"] or 0)
+        
+        top_fav = None
+        if agg_fav:
+            top_fav = max(agg_fav.values(), key=lambda x: x['d'])
+            
+        # (此函数由于内容较多，建议你在本地编辑器里将 aggregation 逻辑替换即可，或者使用下面的简化版重构整个函数)
+        # 为方便你直接覆盖，下面提供该函数的完整重构版：
+        
         h_res = query_db(f"SELECT strftime('%H', DateCreated) as Hour, COUNT(*) as Plays FROM PlaybackActivity {where} GROUP BY Hour", params)
         h_data = {str(i).zfill(2): 0 for i in range(24)}
         if h_res:
             for r in h_res: h_data[r['Hour']] = r['Plays']
-            
-        # 2. 设备终端
         d_res = query_db(f"SELECT COALESCE(DeviceName, ClientName, 'Unknown') as Device, COUNT(*) as Plays FROM PlaybackActivity {where} GROUP BY Device ORDER BY Plays DESC LIMIT 10", params)
-        
-        # 3. 播放流水账
         l_res = query_db(f"SELECT DateCreated, ItemName, PlayDuration, COALESCE(DeviceName, ClientName) as Device, UserId FROM PlaybackActivity {where} ORDER BY DateCreated DESC LIMIT 100", params)
         u_map = get_user_map_local()
         logs = []
         if l_res:
             for r in l_res: 
-                l = dict(r)
-                l['UserName'] = u_map.get(l['UserId'], "User")
-                logs.append(l)
+                l = dict(r); l['UserName'] = u_map.get(l['UserId'], "User"); logs.append(l)
 
-        # 🔥 4. 新增：用户画像大盘数据 (概览、偏好、最爱)
         overview = {"total_plays": 0, "total_duration": 0, "avg_duration": 0, "account_age_days": 1}
         pref = {"movie_plays": 0, "episode_plays": 0}
-        top_fav = None
-
-        # 统计总览与入坑时间
         ov_res = query_db(f"SELECT COUNT(*) as Plays, SUM(PlayDuration) as Dur, MIN(DateCreated) as FirstDate FROM PlaybackActivity {where}", params)
-        if ov_res and ov_res[0]['Plays'] and ov_res[0]['Plays'] > 0:
+        if ov_res and ov_res[0]['Plays']:
             overview['total_plays'] = ov_res[0]['Plays']
             overview['total_duration'] = ov_res[0]['Dur'] or 0
             overview['avg_duration'] = round(overview['total_duration'] / overview['total_plays'])
-            
-            first_date = ov_res[0]['FirstDate']
-            if first_date:
+            if ov_res[0]['FirstDate']:
                 import datetime
                 try:
-                    # 兼容 ISO 格式的时间解析
-                    fd = datetime.datetime.fromisoformat(first_date.split('.')[0].replace('Z',''))
-                    days = (datetime.datetime.now() - fd).days
-                    overview['account_age_days'] = max(1, days)
+                    fd = datetime.datetime.fromisoformat(ov_res[0]['FirstDate'].split('.')[0].replace('Z',''))
+                    overview['account_age_days'] = max(1, (datetime.datetime.now() - fd).days)
                 except: pass
-        
-        # 统计影视偏好
-        try:
-            m_res = query_db(f"SELECT ItemType, COUNT(*) as c FROM PlaybackActivity {where} GROUP BY ItemType", params)
-            if m_res:
-                for m in m_res:
-                    if m['ItemType'] == 'Movie': pref['movie_plays'] = m['c']
-                    elif m['ItemType'] == 'Episode': pref['episode_plays'] = m['c']
-        except: pass
+        m_res = query_db(f"SELECT ItemType, COUNT(*) as c FROM PlaybackActivity {where} GROUP BY ItemType", params)
+        if m_res:
+            for m in m_res:
+                if m['ItemType'] == 'Movie': pref['movie_plays'] = m['c']
+                elif m['ItemType'] == 'Episode': pref['episode_plays'] = m['c']
 
-        # 提取最爱影片 (单部片播放时长和次数最高)
-        try:
-            top_res = query_db(f"SELECT ItemName, ItemId, COUNT(*) as c, SUM(PlayDuration) as d FROM PlaybackActivity {where} GROUP BY ItemId ORDER BY d DESC, c DESC LIMIT 1", params)
-            if top_res:
-                top_fav = dict(top_res[0])
-        except: pass
-                
         return {"status": "success", "data": {
-            "hourly": h_data, "devices": [dict(r) for r in d_res] if d_res else [], "logs": logs,
+            "hourly": h_data, "devices": [dict(r) for r in d_res], "logs": logs,
             "overview": overview, "preference": pref, "top_fav": top_fav
         }}
     except Exception as e: 
-        return {"status": "error", "data": {"hourly": {}, "devices": [], "logs": []}}
+        print(f"Details API Error: {e}")
+        return {"status": "error", "data": {}}
 
 @router.get("/api/stats/chart")
 @router.get("/api/stats/trend")
@@ -314,21 +323,32 @@ def api_chart_stats(user_id: Optional[str] = None, dimension: str = 'day'):
 
 @router.get("/api/stats/poster_data")
 def api_poster_data(user_id: Optional[str] = None, period: str = 'all'):
+    """
+    🔥 年度报告/海报数据：同样支持分季统计
+    """
     try:
         where_base, params = get_base_filter(user_id)
         date_filter = ""
         if period == 'week': date_filter = " AND DateCreated > date('now', '-7 days')"
         elif period == 'month': date_filter = " AND DateCreated > date('now', '-30 days')"
+        
         server_res = query_db(f"SELECT COUNT(*) as Plays FROM PlaybackActivity {get_base_filter('all')[0]} {date_filter}", get_base_filter('all')[1])
         server_plays = server_res[0]['Plays'] if server_res else 0
+        
         raw_sql = f"SELECT ItemName, ItemId, ItemType, PlayDuration FROM PlaybackActivity {where_base + date_filter}"
         rows = query_db(raw_sql, params)
+        
         total_plays = 0; total_duration = 0; aggregated = {} 
         if rows:
             for row in rows:
-                total_plays += 1; dur = row['PlayDuration'] or 0; total_duration += dur; clean = row['ItemName'].split(' - ')[0]
+                total_plays += 1; dur = row['PlayDuration'] or 0; total_duration += dur
+                
+                parts = row['ItemName'].split(' - ')
+                clean = f"{parts[0]} - {parts[1]}" if len(parts) >= 2 else parts[0]
+                
                 if clean not in aggregated: aggregated[clean] = {'ItemName': clean, 'ItemId': row['ItemId'], 'Count': 0, 'Duration': 0}
                 aggregated[clean]['Count'] += 1; aggregated[clean]['Duration'] += dur; aggregated[clean]['ItemId'] = row['ItemId'] 
+                
         top_list = list(aggregated.values()); top_list.sort(key=lambda x: x['Count'], reverse=True)
         return {"status": "success", "data": {"plays": total_plays, "hours": round(total_duration / 3600), "server_plays": server_plays, "top_list": top_list[:10], "tags": ["观影达人"]}}
     except: return {"status": "error", "data": {"plays": 0, "hours": 0}}

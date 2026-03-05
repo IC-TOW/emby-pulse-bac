@@ -344,14 +344,17 @@
         const bg = document.getElementById('top-fav-bg');
         if (fav && fav.ItemId) {
             const imgUrl = `/api/proxy/smart_image?item_id=${fav.ItemId}&name=${encodeURIComponent(fav.ItemName)}&type=Primary`;
-            const cleanName = fav.ItemName.split(' - ')[0];
+            
+            // 🔥 修改点：不再使用 split(' - ')[0]，直接使用后端传来的聚合名称
+            const displayName = fav.ItemName; 
+            
             container.innerHTML = `
                 <img src="${imgUrl}" class="w-14 h-20 md:w-16 md:h-24 rounded-lg shadow-md object-cover bg-gray-100 dark:bg-gray-800 shrink-0 border border-gray-200/50 dark:border-gray-700">
                 <div class="flex-1 min-w-0 flex flex-col justify-center">
-                    <h4 class="font-black text-gray-900 dark:text-white text-sm md:text-base line-clamp-2 leading-tight group-hover:text-rose-500 transition-colors drop-shadow-sm">${cleanName}</h4>
+                    <h4 class="font-black text-gray-900 dark:text-white text-sm md:text-base line-clamp-2 leading-tight group-hover:text-rose-500 transition-colors drop-shadow-sm">${displayName}</h4>
                     <div class="mt-2 text-[10px] md:text-xs text-gray-500 font-mono font-bold space-y-1">
-                        <p class="flex items-center"><i class="fa-solid fa-repeat mr-1.5 opacity-60"></i>播放 ${fav.c} 次</p>
-                        <p class="flex items-center text-indigo-500"><i class="fa-regular fa-clock mr-1.5 opacity-60"></i>投入 ${Math.round(fav.d/60)} 分钟</p>
+                        <p class="flex items-center"><i class="fa-solid fa-repeat mr-1.5 opacity-60"></i>累计播放 ${fav.c} 次</p>
+                        <p class="flex items-center text-indigo-500"><i class="fa-regular fa-clock mr-1.5 opacity-60"></i>总计投入 ${Math.round(fav.d/3600)} 小时</p>
                     </div>
                 </div>
             `;
