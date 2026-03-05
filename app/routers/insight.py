@@ -17,7 +17,6 @@ CACHE_EXPIRE_SECONDS = 86400
 
 def get_emby_auth(): return cfg.get("emby_host"), cfg.get("emby_api_key")
 
-# 数据模型定义
 class IgnoreModel(BaseModel):
     item_id: str
     item_name: str
@@ -27,7 +26,6 @@ class BatchIgnoreModel(BaseModel):
 
 class BatchUnignoreModel(BaseModel):
     item_ids: list[str]
-
 
 # --- 单条忽略 ---
 @router.post("/api/insight/ignore")
@@ -102,7 +100,6 @@ def scan_library_quality(request: Request):
             new_stats["movies"][k] = [m for m in v if m["Id"] not in ignore_set]
         return new_stats
 
-    # 命中缓存
     if not force_refresh and GLOBAL_CACHE["quality_stats"] and (current_time - GLOBAL_CACHE["last_scan_time"] < CACHE_EXPIRE_SECONDS):
         return {"status": "success", "data": get_filtered_stats(GLOBAL_CACHE["quality_stats"])}
 
@@ -140,7 +137,6 @@ def scan_library_quality(request: Request):
             width = video_stream.get('Width', 0)
             height = video_stream.get('Height', 0)
             
-            # 自动过滤没有分辨率的幽灵影片
             if width == 0 or height == 0: continue
 
             movie_obj = {
@@ -173,7 +169,6 @@ def scan_library_quality(request: Request):
         GLOBAL_CACHE["last_scan_time"] = current_time
         
         return {"status": "success", "data": get_filtered_stats(stats)}
-
     except Exception as e:
         logger.error(f"质量盘点错误: {str(e)}")
         return {"status": "error"}

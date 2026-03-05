@@ -29,7 +29,7 @@
             <div>
                 <div class="flex items-center gap-2">
                     <h1 class="text-xl font-black text-gray-900 dark:text-white">全景画质盘点</h1>
-                    <span class="text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800/50 shadow-sm" id="total-count-badge">总计: 0 部</span>
+                    <span class="text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800 shadow-sm" id="total-count-badge">总计: 0 部</span>
                 </div>
                 <p class="text-xs text-gray-500 mt-0.5" id="scan-time">点击卡片切换视图，探索媒体库质量</p>
             </div>
@@ -139,8 +139,7 @@
                 <span class="text-xs font-mono font-bold text-gray-500 bg-white dark:bg-gray-900 px-3 py-1 rounded-md shadow-sm border border-gray-200 dark:border-gray-700" id="list-count">0 部</span>
             </div>
         </div>
-        <div id="movie-list" class="divide-y divide-gray-100 dark:divide-gray-700/50 max-h-[600px] overflow-y-auto custom-scrollbar p-2">
-        </div>
+        <div id="movie-list" class="divide-y divide-gray-100 dark:divide-gray-700/50 max-h-[600px] overflow-y-auto custom-scrollbar p-2"></div>
     </div>
 </div>
 
@@ -162,9 +161,7 @@
             </button>
         </div>
         
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-2" id="ignore-list-content">
-            <div class="text-center py-20 text-gray-400 text-sm">回收站是空的</div>
-        </div>
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-2" id="ignore-list-content"></div>
     </div>
 </div>
 
@@ -175,7 +172,7 @@
     let globalMoviesData = {};
     let currentView = '4k';
     let selectedIgnores = new Set();
-    let selectedListView = new Set(); 
+    let selectedListView = new Set(); // 列表界面的多选集合保存了对象 {id, name}
     
     const viewNames = {
         '4k': 'Ultra HD (4K)', '1080p': 'Full HD (1080P)', '720p': 'HD (720P)', 'sd': '标清/远古画质 (需洗版)',
@@ -210,6 +207,8 @@
                 updateStatCounts();
 
                 loading.classList.add('hidden'); dash.classList.remove('hidden'); listC.classList.remove('hidden');
+                
+                // 重新渲染列表，不强制清空选中项
                 renderListView(currentView);
             }
         } catch(e) {} finally {
@@ -248,12 +247,15 @@
     function switchView(viewKey, cardElement) {
         document.querySelectorAll('.bento-card').forEach(el => el.classList.remove('bento-active'));
         cardElement.classList.add('bento-active');
+        if (currentView !== viewKey) {
+            selectedListView.clear(); // 只有真正切换分类时，才清空选中池
+        }
         renderListView(viewKey);
     }
 
     function renderListView(viewKey) {
         currentView = viewKey;
-        selectedListView.clear(); 
+        // 关键修复：不要在这里清空 selectedListView
         
         document.getElementById('list-title').innerHTML = viewNames[viewKey];
         
@@ -262,14 +264,20 @@
         if (viewKey === 'sd') {
             batchCheckbox.classList.remove('hidden');
             batchBtn.classList.remove('hidden');
-            batchCheckbox.querySelector('input').checked = false;
+            // 如果所有本页可见的项都被选中了，就勾选全选框
+            batchCheckbox.querySelector('input').checked = false; 
         } else {
             batchCheckbox.classList.add('hidden');
             batchBtn.classList.add('hidden');
         }
         updateBatchIgnoreBtn();
 
-        const movies = globalMoviesData[viewKey] || [];
+        // 🔥 核心过滤：剔除没有分辨率数据的幽灵影片
+        let rawMovies = globalMoviesData[viewKey] || [];
+        if (['4k', '1080p', '720p', 'sd'].includes(viewKey)) {
+            rawMovies = rawMovies.filter(m => m.Resolution && m.Resolution !== '0x0' && m.Resolution !== 'x');
+        }
+        const movies = rawMovies;
         
         document.getElementById('list-count').innerText = `${movies.length} 部`;
         const container = document.getElementById('movie-list');
@@ -282,8 +290,15 @@
         let html = '';
         movies.forEach(m => {
             const imgUrl = `/api/proxy/smart_image?item_id=${m.Id}&name=${encodeURIComponent(m.Name)}&type=Primary`;
+            
+            // 列表复选框 (保留选中状态)
+            let isChecked = false;
+            for(let item of selectedListView) {
+                if(item.id === m.Id) { isChecked = true; break; }
+            }
             const checkHtml = viewKey === 'sd' 
-                ? `<input type="checkbox" value="${m.Id}" data-name="${m.Name.replace(/"/g, '&quot;')}" class="list-checkbox w-4 h-4 text-rose-500 rounded focus:ring-rose-500 cursor-pointer mr-3" onchange="toggleSelectList(this)">` : ``;
+                ? `<input type="checkbox" value="${m.Id}" data-name="${m.Name.replace(/"/g, '&quot;')}" class="list-checkbox w-4 h-4 text-rose-500 rounded focus:ring-rose-500 cursor-pointer mr-3" onchange="toggleSelectList(this)" ${isChecked ? 'checked' : ''}>`
+                : ``;
 
             html += `
             <label class="flex items-center p-2.5 md:p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition rounded-xl group cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-600">
@@ -336,21 +351,21 @@
     async function batchIgnore() {
         if(selectedListView.size === 0) return;
         const btn = document.getElementById('batch-ignore-btn');
-        btn.innerText = '写入数据库中...';
+        btn.innerText = '写入中...';
         btn.disabled = true;
         
         try {
             // 将 Set 转为后端需要的数组格式
             const payload = Array.from(selectedListView).map(i => ({item_id: i.id, item_name: i.name}));
             
-            // 一次性发给后端，告别并发锁死
+            // 一次性发给后端
             await fetch('/api/insight/ignore_batch', {
                 method: 'POST', 
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ items: payload })
             });
             
-            // 写入完成后，前端瞬间抹除本地数据
+            // 前端瞬间抹除本地数据
             selectedListView.forEach(item => removeLocalItem(item.id));
             
             selectedListView.clear();
@@ -434,6 +449,7 @@
             });
             selectedIgnores.clear();
             document.getElementById('select-all-ignores').checked = false;
+            
             await loadQualityData(false);  
             closeIgnoreModal();
         } catch(e){}
