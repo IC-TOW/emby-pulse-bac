@@ -304,7 +304,9 @@
                     </div>
 
                     <div x-show="!isStatsLoading">
+                        
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                            
                             <div class="lg:col-span-1 glass-panel p-6 sm:p-8 rounded-3xl flex flex-col items-center justify-center gap-3 relative overflow-hidden text-center border-t border-white/40 dark:border-white/10 shadow-lg">
                                 <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full shadow-xl overflow-hidden shrink-0 bg-slate-200 ring-4 ring-white dark:ring-[#18181b] z-10">
                                     <img :src="'/api/proxy/user_image/' + userId" class="w-full h-full object-cover" onerror="this.src='https://api.dicebear.com/9.x/notionists/png?seed=User'">
@@ -518,7 +520,8 @@
                         <span x-show="!isSubmitting && !isCheckingLocal && activeItem?.local_status === 2 && activeItem?.media_type !== 'tv'">✅ 该电影已在库中</span>
                         <span x-show="!isSubmitting && !isCheckingLocal && !(activeItem?.local_status === 2 && activeItem?.media_type !== 'tv')">🚀 发送求片心愿</span>
                     </button>
-                    <button x-show="!isCheckingLocal && !isLoadingSeasons && activeItem?.local_status === 2" 
+                    
+                    <button x-show="(!isCheckingLocal && !isLoadingSeasons) && (activeItem?.local_status === 2 || (activeItem?.media_type === 'tv' && tvSeasons.some(s => s.exists_locally)))" 
                             @click="openFeedbackModal(activeItem.title, activeItem.poster_path)" 
                             class="px-6 py-4 rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white font-bold transition-all shadow-md flex items-center justify-center">
                         <i class="fa-solid fa-triangle-exclamation text-xl"></i>
@@ -746,9 +749,9 @@
                     return "「雨露均沾，电影与剧集我全都要」";
                 },
 
-                // 🔥 核心修复：为所有榜单加入 localStorage 无感缓存 (1小时)
+                // 🔥 核心缓存系统：一小时内访问直接秒开榜单
                 async loadTrending() {
-                    const cacheKey = 'ep_trending_cache_v2';
+                    const cacheKey = 'ep_trending_cache_v3';
                     const cached = localStorage.getItem(cacheKey);
                     if (cached) {
                         const parsed = JSON.parse(cached);
@@ -757,7 +760,7 @@
                             this.trendingTv = parsed.data.tv || [];
                             this.topMovies = parsed.data.top_movies || [];
                             this.topTv = parsed.data.top_tv || [];
-                            return; // 如果缓存在一小时内，直接秒开不再发请求
+                            return;
                         }
                     }
                     try {
@@ -768,7 +771,6 @@
                             this.trendingTv = data.data.tv || [];
                             this.topMovies = data.data.top_movies || []; 
                             this.topTv = data.data.top_tv || [];
-                            // 存入缓存
                             localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: data.data }));
                         }
                     } catch (e) {}
@@ -802,9 +804,9 @@
                             const data = await res.json(); 
                             if (data.status === 'success') { 
                                 this.tvSeasons = data.seasons; 
-                                // 🔥 如果任何一季在库，判定当前剧集允许报错
+                                // 🔥 解决电视剧报错限制：只要有一季在库，就能报错！
                                 if (this.tvSeasons.some(s => s.exists_locally)) {
-                                    this.activeItem.local_status = 2;
+                                    this.activeItem = { ...this.activeItem, local_status: 2 };
                                 }
                             } 
                         } catch (e) {}

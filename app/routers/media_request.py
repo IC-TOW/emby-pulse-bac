@@ -358,10 +358,14 @@ def get_pending_notify(request: Request):
         c.execute("SELECT COUNT(*) as cnt FROM media_feedback WHERE status = 0")
         feed_count = (c.fetchone() or {'cnt': 0})['cnt']
         
-        # 🔥 完美覆盖：优先取表里自带的海报，没有的话去求片库里智能反查同名影视海报！
+        # 🔥 终极海报匹配 SQL：如果本身没海报，去求片库查；由于电视剧是单集名(如 权游 S01E01)，用 LIKE 智能模糊匹配主剧集名！
         c.execute("""
             SELECT f.id, f.item_name, f.username, f.issue_type, f.created_at,
-                   COALESCE(f.poster_path, (SELECT poster_path FROM media_requests m WHERE m.title = f.item_name LIMIT 1)) as poster
+                   COALESCE(
+                       NULLIF(f.poster_path, ''), 
+                       (SELECT poster_path FROM media_requests m WHERE m.title = f.item_name LIMIT 1),
+                       (SELECT poster_path FROM media_requests m WHERE f.item_name LIKE m.title || '%' LIMIT 1)
+                   ) as poster
             FROM media_feedback f 
             WHERE f.status = 0 ORDER BY f.created_at DESC LIMIT 5
         """)
@@ -422,7 +426,12 @@ def submit_feedback(data: FeedbackSubmitModel, request: Request):
          {"text": "💻 网页处理", "url": f"{admin_url}/requests_admin"}]
     ]}
     
+    # 🔥 修复相对路径海报在 Telegram 无法下载的 Bug
     img_url = data.poster_path or REPORT_COVER_URL
+    if img_url.startswith("/"):
+        port = request.url.port or 10307 # 取不到 port 默认兜底 10307
+        img_url = f"http://127.0.0.1:{port}{img_url}"
+        
     bot.send_photo("sys_notify", img_url, msg, reply_markup=keyboard, platform="all")
     return {"status": "success", "message": "反馈已提交，感谢您的协助！"}
 
