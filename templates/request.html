@@ -15,14 +15,28 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: { extend: { colors: { brand: { 50: '#f0fdfa', 100: '#ccfbf1', 500: '#14b8a6', 600: '#0d9488', 900: '#134e4a' } } } }
         }
     </script>
+
+    <script>
+        if (localStorage.getItem('ep_theme') === 'dark' || (!localStorage.getItem('ep_theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* 🔥 核心修复：直接强制干预 html 根画布的背景色，杜绝边缘回弹露出白底 */
+        html { background-color: #f8fafc; }
+        html.dark { background-color: #000000; }
+
         html, body {
             overscroll-behavior-y: none; 
             padding-top: env(safe-area-inset-top);
@@ -35,7 +49,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', system-ui, sans-serif; }
         
-        /* 🔥 升级的顶级毛玻璃质感，暗色模式使用纯黑高定搭配 */
         .glass-panel { background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
         .dark .glass-panel { background: rgba(15, 15, 15, 0.75); border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
         
@@ -50,7 +63,7 @@
 </head>
 
 <body class="antialiased min-h-screen relative pb-20 sm:pb-0 transition-colors duration-500 bg-slate-50 text-slate-800 dark:bg-black dark:text-zinc-100" 
-      x-data="requestApp()" :class="{'dark': isDarkMode}" x-init="initTheme()"
+      x-data="requestApp()" x-init="initTheme()"
       @scroll.window="handleScroll()">
     
     <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
@@ -454,13 +467,13 @@
                 <div class="absolute inset-y-1.5 left-1.5 w-[calc(33.33%-4px)] bg-slate-100 dark:bg-[#1f1f1f] rounded-full transition-transform duration-300 ease-out shadow-sm border border-slate-200/50 dark:border-white/5" 
                      :class="currentTab === 'explore' ? 'translate-x-0' : (currentTab === 'queue' ? 'translate-x-full' : 'translate-x-[200%]')"></div>
                 
-                <button @click="switchTab('explore');" class="flex-1 relative z-10 py-3 text-sm font-bold transition-colors flex justify-center items-center gap-2" :class="currentTab === 'explore' ? 'text-brand-600 dark:text-brand-400' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-300 dark:hover:text-white'">
+                <button @click="switchTab('explore'); window.scrollTo(0, 0)" class="flex-1 relative z-10 py-3 text-sm font-bold transition-colors flex justify-center items-center gap-2" :class="currentTab === 'explore' ? 'text-brand-600 dark:text-brand-400' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-300 dark:hover:text-white'">
                     <i class="fa-solid fa-film text-lg"></i> 找片大厅
                 </button>
-                <button @click="switchTab('queue');" class="flex-1 relative z-10 py-3 text-sm font-bold transition-colors flex justify-center items-center gap-2" :class="currentTab === 'queue' ? 'text-brand-600 dark:text-brand-400' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-300 dark:hover:text-white'">
+                <button @click="switchTab('queue'); window.scrollTo(0, 0)" class="flex-1 relative z-10 py-3 text-sm font-bold transition-colors flex justify-center items-center gap-2" :class="currentTab === 'queue' ? 'text-brand-600 dark:text-brand-400' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-300 dark:hover:text-white'">
                     <i class="fa-solid fa-list-check text-lg"></i> 进度与反馈
                 </button>
-                <button @click="switchTab('profile');" class="flex-1 relative z-10 py-3 text-sm font-bold transition-colors flex justify-center items-center gap-2" :class="currentTab === 'profile' ? 'text-brand-600 dark:text-brand-400' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-300 dark:hover:text-white'">
+                <button @click="switchTab('profile'); window.scrollTo(0, 0)" class="flex-1 relative z-10 py-3 text-sm font-bold transition-colors flex justify-center items-center gap-2" :class="currentTab === 'profile' ? 'text-brand-600 dark:text-brand-400' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-300 dark:hover:text-white'">
                     <i class="fa-solid fa-user-astronaut text-lg"></i> 我的画像
                 </button>
             </div>
@@ -620,13 +633,13 @@
                 handleScroll() {
                     const st = window.pageYOffset || document.documentElement.scrollTop;
                     this.scrolled = st > 50;
+                    // 🔥 判断向上还是向下滚动
                     this.isScrollingDown = st > this.lastScrollTop && st > 50;
                     this.lastScrollTop = st <= 0 ? 0 : st;
                 },
 
                 async initTheme() {
-                    const savedTheme = localStorage.getItem('ep_theme');
-                    this.isDarkMode = savedTheme === 'dark';
+                    this.isDarkMode = document.documentElement.classList.contains('dark');
                     try {
                         const res = await fetch('/api/requests/check');
                         const data = await res.json();
@@ -644,6 +657,11 @@
                 toggleTheme() {
                     this.isDarkMode = !this.isDarkMode;
                     localStorage.setItem('ep_theme', this.isDarkMode ? 'dark' : 'light');
+                    if (this.isDarkMode) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
                     if (this.currentTab === 'profile' && this.statsLoaded) { setTimeout(() => this.renderCharts(), 150); }
                 },
 
@@ -674,6 +692,7 @@
 
                 switchTab(tab) {
                     this.currentTab = tab;
+                    // 🔥 瞬间置顶，彻底解决 iOS 滚动漂移 Bug
                     this.$nextTick(() => { window.scrollTo(0, 0); });
                     if (tab === 'queue') { this.loadQueue(); this.loadMyFeedback(); }
                     if (tab === 'profile') {
