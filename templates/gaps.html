@@ -28,7 +28,7 @@
             </div>
             <div>
                 <h2 class="text-lg sm:text-xl font-black text-gray-900 dark:text-white tracking-tight">媒体库光谱扫描</h2>
-                <p class="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">防卡顿分页引擎与无损载荷传输已激活</p>
+                <p class="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">防卡顿引擎与精确靶向下载已就绪</p>
             </div>
         </div>
 
@@ -106,7 +106,6 @@
                                     </div>
                                     
                                     <div class="flex flex-wrap gap-1 sm:gap-1.5 flex-1 items-center">
-                                        
                                         <template x-for="ep in seasonGroup.episodes" :key="ep.episode">
                                             <button @click="openResolver(series, ep)" 
                                                     class="px-2 py-1 rounded text-[10px] sm:text-[11px] font-bold transition-colors shadow-sm relative overflow-hidden border"
@@ -116,7 +115,6 @@
                                                 <span class="relative z-10" x-text="ep.episode"></span>
                                             </button>
                                         </template>
-
                                         <button @click="openResolverMulti(series, seasonGroup.season_num, seasonGroup.episodes)" class="hidden sm:flex px-1.5 py-1 rounded text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-500 hover:text-white transition-colors shadow-sm items-center gap-1 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800" title="一键搜索季包并提取所有缺失集"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
                                     </div>
                                 </div>
@@ -204,7 +202,7 @@
                                     
                                     <template x-if="res.is_pack">
                                         <div class="mt-1 mb-0.5 inline-block text-[9px] px-1.5 py-0.5 rounded font-black border bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30">
-                                            📦 包含目标集的整季包 (将自动向 MP 注射提取指令)
+                                            📦 包含目标集的整季包 (将向 MP 发送手术刀指令，仅提取缺失集)
                                         </div>
                                     </template>
 
@@ -237,7 +235,7 @@
                 <button x-show="resolver.targetType === 'single'" @click="ignoreGap()" class="px-4 py-2.5 rounded-xl text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 transition shadow-sm flex items-center justify-center gap-2"><i class="fa-solid fa-eye-slash"></i> <span class="hidden sm:inline">忽略单集</span></button>
                 <button @click="sendToMP()" :disabled="resolver.selectedIndex === null || resolver.isSubmitting" class="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" :class="resolver.selectedIndex !== null ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-400 dark:bg-gray-600 shadow-none'">
                     <span x-show="resolver.isSubmitting" class="animate-spin w-4 h-4 border-2 border-white/30 border-t-white dark:border-black/30 dark:border-t-black rounded-full"></span>
-                    <span x-show="!resolver.isSubmitting">提交 MP 免填单</span>
+                    <span x-show="!resolver.isSubmitting">提交 MP 精确提取</span>
                 </button>
             </div>
         </div>
@@ -368,7 +366,6 @@ document.addEventListener('alpine:init', () => {
             } catch(e) {}
         },
 
-        // 🔥 解除了 ep.status === 2 时不可点击的限制，现在蓝色方块也能唤起它！
         async openResolver(series, ep) {
             this.resolver.open = true; this.resolver.isLoading = true; this.resolver.targetType = 'single';
             this.resolver.tmdbId = series.tmdb_id; 
@@ -388,7 +385,6 @@ document.addEventListener('alpine:init', () => {
             this.resolver.isLoading = false;
         },
 
-        // 🔥 批量提取时，允许把已经变蓝(status=2)的集数也一起带上，重新下发！
         async openResolverMulti(series, season_num, epsArray) {
             const missingEps = epsArray.filter(e => e.status === 0 || e.status === 2).map(e => e.episode);
             if(missingEps.length === 0) return;
@@ -434,14 +430,11 @@ document.addEventListener('alpine:init', () => {
                 });
                 const data = await res.json();
                 if (data.status === 'success') { 
-                    if(this.resolver.targetType === 'single' && this.resolver.sourceEpObj) {
-                        this.resolver.sourceEpObj.status = 2; 
-                    } else if (this.resolver.targetType === 'multi') {
-                        this.resolver.sourceEpsArray.forEach(e => {
-                            if(this.resolver.episodes.includes(e.episode)) e.status = 2;
-                        });
-                    }
                     this.closeResolver(); 
+                    
+                    // 🔥 绝杀动作：下发成功后，强制触发一次全局重绘！解决数字消失和不变蓝的死角！
+                    await this.checkStatus();
+                    alert(data.message);
                 } else { 
                     alert(data.message); 
                 }
@@ -453,7 +446,11 @@ document.addEventListener('alpine:init', () => {
             try {
                 const res = await fetch('/api/gaps/ignore', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ series_id: this.resolver.seriesId, series_name: this.resolver.seriesName, season_number: this.resolver.season, episode_number: this.resolver.episodes[0] }) });
                 const data = await res.json();
-                if (data.status === 'success') { if (this.resolver.sourceEpObj) this.resolver.sourceEpObj.status = 1; this.closeResolver(); }
+                if (data.status === 'success') { 
+                    this.closeResolver(); 
+                    // 同样强制全局重绘
+                    await this.checkStatus();
+                }
             } catch(e) {}
         },
 

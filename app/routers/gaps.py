@@ -354,23 +354,27 @@ def download_gap_item(payload: dict):
     clean_token = mp_token.strip().strip("'\"") if mp_token else ""
     headers = {"X-API-KEY": clean_token, "Content-Type": "application/json"}
     
+    # 获取原始带 Cookie 的种子对象
     pure_torrent_in = torrent_info.get("org_payload", torrent_info)
     
-    # 🔥 双管齐下激活文件过滤：既传 episode 也传 episodes，确保 MP 底层下载器 100% 拦截其余文件！
-    if torrent_info.get("is_pack", False) or len(episodes) > 1:
-        pure_torrent_in["season"] = int(season) if season else 1
-        pure_torrent_in["episode"] = [int(e) for e in episodes] 
-        pure_torrent_in["episodes"] = [int(e) for e in episodes] 
-
-    mp_payload = {"torrent_in": pure_torrent_in}
-    if tmdbid:
-        try: mp_payload["tmdbid"] = int(tmdbid)
-        except: pass
+    # 🔥 绝杀动作：调用正规 /api/v1/download/ 接口！
+    # 把过滤指令塞在专门的 media_in 参数中，MP 的底层下载引擎就会严格按此提取！
+    mp_payload = {
+        "media_in": {
+            "tmdbid": int(tmdbid) if tmdbid else None,
+            "title": series_name,
+            "type": "电视剧",
+            "season": int(season) if season else 1,
+            # 这是 MP 识别过滤的唯一密码：复数的 episodes，传入数组
+            "episodes": [int(e) for e in episodes] 
+        },
+        "torrent_in": pure_torrent_in
+    }
 
     try:
-        add_url = f"{mp_url.rstrip('/')}/api/v1/download/add"
-        # 超时放宽至 60 秒，等待 MP 下载字幕
-        res = requests.post(add_url, headers=headers, json=mp_payload, timeout=60)
+        # 使用精确下发根接口
+        post_url = f"{mp_url.rstrip('/')}/api/v1/download/"
+        res = requests.post(post_url, headers=headers, json=mp_payload, timeout=60)
         
         if res.status_code in [200, 201]:
             try:
@@ -379,9 +383,11 @@ def download_gap_item(payload: dict):
                     return {"status": "error", "message": res_data.get("message") or "MP 拒绝下载"}
             except: pass
 
+            # 把这几个集数的状态存入数据库为 2
             for ep in episodes:
                 query_db("INSERT INTO gap_records (series_id, series_name, season_number, episode_number, status) VALUES (?, ?, ?, ?, 2) ON CONFLICT(series_id, season_number, episode_number) DO UPDATE SET status = 2", (series_id, series_name, int(season), int(ep)))
             
+            # 同时更新后端的缓存池
             with state_lock:
                 for s in scan_state["results"]:
                     if s.get("series_id") == series_id:
@@ -389,7 +395,7 @@ def download_gap_item(payload: dict):
                             if ep_obj["season"] == int(season) and ep_obj["episode"] in [int(e) for e in episodes]:
                                 ep_obj["status"] = 2
 
-            return {"status": "success", "message": f"成功下发，已触发 MP 过滤下载 {len(episodes)} 集！"}
+            return {"status": "success", "message": f"成功下发，MP 将严格过滤并下载指定的 {len(episodes)} 集！"}
             
         return {"status": "error", "message": f"MP 接口拒绝 (HTTP {res.status_code})"}
     except Exception as e: 
