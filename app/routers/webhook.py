@@ -110,6 +110,33 @@ async def emby_webhook(request: Request, background_tasks: BackgroundTasks):
                     if series_id and season is not None and episode is not None:
                         from app.services.calendar_service import calendar_service
                         calendar_service.mark_episode_ready(series_id, season, episode)
+                        
+                        # ==========================================
+                        # 🔥 缺集联动：实时抹除已入库的缺集记录！
+                        # ==========================================
+                        try:
+                            from app.routers.gaps import state_lock, scan_state
+                            from app.core.database import query_db
+                            import json
+                            
+                            # 1. 从数据库中彻底删除该集的缺集记录
+                            query_db("DELETE FROM gap_records WHERE series_id=? AND season_number=? AND episode_number=?", (str(series_id), int(season), int(episode)))
+                            
+                            # 2. 从内存池中瞬间抹除该集，保证前端刷新即消失
+                            with state_lock:
+                                for s in scan_state.get("results", []):
+                                    if str(s.get("series_id")) == str(series_id):
+                                        s["gaps"] = [ep for ep in s.get("gaps", []) if not (int(ep.get("season", -1)) == int(season) and int(ep.get("episode", -1)) == int(episode))]
+                                
+                                # 过滤掉所有集数都已经补齐的剧集空壳
+                                scan_state["results"] = [s for s in scan_state.get("results", []) if len(s.get("gaps", [])) > 0]
+                                
+                                # 3. 同步更新数据库快照，防止重启后“幽灵复现”
+                                query_db("INSERT OR REPLACE INTO gap_scan_cache (id, result_json, updated_at) VALUES (1, ?, datetime('now', 'localtime'))", (json.dumps(scan_state["results"]),))
+                                
+                            logger.info(f"🎉 [缺集联动] 检测到 S{season}E{episode} 成功入库，已瞬间完成扫尾剔除！")
+                        except Exception as e:
+                            logger.error(f"缺集联动处理失败: {e}")
 
         # 播放状态推送
         elif event == "playback.start":
