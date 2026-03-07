@@ -211,6 +211,17 @@
                                     <div class="flex flex-wrap items-center gap-2 mt-1">
                                         <span class="text-[9px] px-1.5 py-0.5 rounded font-black border" :class="res.match_score >= 50 ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30' : (res.match_score > 0 ? 'bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/30' : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600')">Score: <span x-text="res.match_score"></span></span>
                                         <span class="text-[9px] text-gray-500 font-medium" x-text="formatBytes(res.ui_size)"></span>
+                                        
+                                        <div class="h-3 w-px bg-gray-300 dark:bg-gray-600"></div>
+                                        <span class="text-[9px] text-teal-600 dark:text-teal-400 font-bold flex items-center gap-1">
+                                            <i class="fa-solid fa-server"></i> <span x-text="res.ui_site"></span>
+                                        </span>
+                                        
+                                        <div class="h-3 w-px bg-gray-300 dark:bg-gray-600"></div>
+                                        <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                                            <i class="fa-solid fa-seedling"></i> <span x-text="res.ui_seeders"></span>
+                                        </span>
+
                                         <div class="h-3 w-px bg-gray-300 dark:bg-gray-600"></div>
                                         <template x-for="tag in res.extracted_tags" :key="tag"><span class="text-[9px] text-indigo-600 dark:text-indigo-400 font-bold" x-text="tag"></span></template>
                                     </div>
@@ -226,7 +237,7 @@
                 <button x-show="resolver.targetType === 'single'" @click="ignoreGap()" class="px-4 py-2.5 rounded-xl text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 transition shadow-sm flex items-center justify-center gap-2"><i class="fa-solid fa-eye-slash"></i> <span class="hidden sm:inline">忽略单集</span></button>
                 <button @click="sendToMP()" :disabled="resolver.selectedIndex === null || resolver.isSubmitting" class="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" :class="resolver.selectedIndex !== null ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-400 dark:bg-gray-600 shadow-none'">
                     <span x-show="resolver.isSubmitting" class="animate-spin w-4 h-4 border-2 border-white/30 border-t-white dark:border-black/30 dark:border-t-black rounded-full"></span>
-                    <span x-show="!resolver.isSubmitting">提交 MP 免填单</span>
+                    <span x-show="!resolver.isSubmitting">提交 MP 免填单提取</span>
                 </button>
             </div>
         </div>
@@ -256,7 +267,6 @@ document.addEventListener('alpine:init', () => {
         displayLimit: 24, 
         ignoreModal: { open: false, items: [] },
         
-        // 🔥 将 selectedTorrent 替换为安全的 selectedIndex
         resolver: { open: false, isLoading: false, isSubmitting: false, tmdbId: null, seriesId: '', seriesName: '', season: 0, episodes: [], targetDesc: '', targetType: 'single', genes: [], results: [], selectedIndex: null, sourceEpObj: null, sourceEpsArray: [] },
 
         init() { this.checkStatus(); this.fetchAutoScan(); },
@@ -372,7 +382,7 @@ document.addEventListener('alpine:init', () => {
                 const data = await res.json();
                 if (data.status === 'success') {
                     this.resolver.genes = data.data.genes; this.resolver.results = data.data.results;
-                    if(this.resolver.results.length > 0) this.resolver.selectedIndex = 0; // 默认选中第一个索引
+                    if(this.resolver.results.length > 0) this.resolver.selectedIndex = 0; 
                 } else { alert(data.message); }
             } catch(e) { alert('网络请求异常'); }
             this.resolver.isLoading = false;
@@ -405,7 +415,6 @@ document.addEventListener('alpine:init', () => {
         async sendToMP() {
             if(this.resolver.selectedIndex === null) return;
             
-            // 🔥 绝杀动作：从数组里安全地把那个完美字典对象取出来，告别 [object Object]！
             const perfectTorrentObject = this.resolver.results[this.resolver.selectedIndex];
             
             this.resolver.isSubmitting = true;
@@ -419,7 +428,7 @@ document.addEventListener('alpine:init', () => {
                         tmdbid: this.resolver.tmdbId,
                         season: this.resolver.season, 
                         episodes: this.resolver.episodes, 
-                        torrent_info: perfectTorrentObject // 完美的字典流入后端！
+                        torrent_info: perfectTorrentObject 
                     }) 
                 });
                 const data = await res.json();
@@ -432,7 +441,7 @@ document.addEventListener('alpine:init', () => {
                         });
                     }
                     this.closeResolver(); 
-                    alert(data.message);
+                    // 这里不用弹出成功，给用户无感知的极速体验，按钮变蓝即可
                 } else { 
                     alert(data.message); 
                 }
