@@ -28,7 +28,7 @@
             </div>
             <div>
                 <h2 class="text-lg sm:text-xl font-black text-gray-900 dark:text-white tracking-tight">媒体库光谱扫描</h2>
-                <p class="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">防卡顿分页引擎与 qB 底层接管已激活</p>
+                <p class="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">宗师级底层截胡引擎已挂载</p>
             </div>
         </div>
 
@@ -42,10 +42,10 @@
             </div>
             
             <button @click="openIgnoreModal()" class="flex-1 md:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition shadow-sm border border-transparent hover:border-gray-300 dark:hover:border-gray-500 whitespace-nowrap">
-                <i class="fa-solid fa-trash-can-arrow-up"></i> <span>回收站</span>
+                <i class="fa-solid fa-trash-can-arrow-up"></i> <span class="hidden sm:inline">回收站</span>
             </button>
             
-            <button @click="openConfigModal()" class="flex-1 md:flex-none flex items-center justify-center px-3 sm:px-3 py-2 rounded-xl text-xs sm:text-sm text-gray-500 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition shadow-sm border border-gray-200 dark:border-gray-700">
+            <button @click="openConfigModal()" class="flex-1 md:flex-none flex items-center justify-center px-3 sm:px-3 py-2 rounded-xl text-xs sm:text-sm text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-800 transition shadow-sm border border-indigo-200 dark:border-indigo-700">
                 <i class="fa-solid fa-gear"></i>
             </button>
 
@@ -140,23 +140,33 @@
         <div @click.away="closeConfigModal()" class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md flex flex-col" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-10 scale-95" x-transition:enter-end="opacity-100 translate-y-0 scale-100">
             <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/80 rounded-t-2xl">
                 <h3 class="font-black text-gray-900 dark:text-white flex items-center gap-2">
-                    <i class="fa-solid fa-wand-magic-sparkles text-indigo-500"></i> qBittorrent 底层接管配置
+                    <i class="fa-solid fa-wand-magic-sparkles text-indigo-500"></i> 下载器底层截胡配置
                 </h3>
                 <button @click="closeConfigModal()" class="text-gray-400 hover:text-rose-500 transition w-8 h-8 flex items-center justify-center bg-white dark:bg-gray-700 rounded-full shadow-sm border border-gray-200 dark:border-gray-600"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="p-6 space-y-4">
-                <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">配置后，系统将在 MP 添加种子时隐秘连入 qB，精准剔除不需要的集数，实现完美补全。</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">配置后，系统将在向 MP 发送整季包种子后，秘密潜入下载器中精确切除非必要集数。</p>
+                
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">qBittorrent 地址 (带端口)</label>
-                    <input type="text" x-model="configModal.qb_host" placeholder="http://192.168.31.2:8080" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">下载器类型</label>
+                    <select x-model="configModal.client_type" class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option value="">（不启用截胡，让 MP 处理）</option>
+                        <option value="qbittorrent">qBittorrent</option>
+                        <option value="transmission">Transmission</option>
+                    </select>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">账号</label>
-                    <input type="text" x-model="configModal.qb_user" placeholder="admin" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                
+                <div x-show="configModal.client_type !== ''">
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">下载器地址 (带端口)</label>
+                    <input type="text" x-model="configModal.client_url" placeholder="http://192.168.31.2:8080" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">密码</label>
-                    <input type="password" x-model="configModal.qb_pass" placeholder="••••••••" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                <div x-show="configModal.client_type !== ''">
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">账号 (没有留空)</label>
+                    <input type="text" x-model="configModal.client_user" placeholder="admin" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div x-show="configModal.client_type !== ''">
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">密码 (没有留空)</label>
+                    <input type="password" x-model="configModal.client_pass" placeholder="••••••••" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                 </div>
             </div>
             <div class="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 rounded-b-2xl flex justify-end gap-3">
@@ -202,7 +212,7 @@
                                     
                                     <template x-if="res.is_pack">
                                         <div class="mt-1 mb-0.5 inline-block text-[9px] px-1.5 py-0.5 rounded font-black border bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30">
-                                            📦 包含目标集的整季包 (将自动向 qB 发送底层截胡指令)
+                                            📦 包含目标集的整季包 (将自动向下载器发送底层截胡指令)
                                         </div>
                                     </template>
 
@@ -265,8 +275,7 @@ document.addEventListener('alpine:init', () => {
         displayLimit: 24, 
         ignoreModal: { open: false, items: [] },
         
-        // 🔥 qB 截胡配置的变量
-        configModal: { open: false, qb_host: '', qb_user: '', qb_pass: '' },
+        configModal: { open: false, client_type: '', client_url: '', client_user: '', client_pass: '' },
         
         resolver: { open: false, isLoading: false, isSubmitting: false, tmdbId: null, seriesId: '', seriesName: '', season: 0, episodes: [], targetDesc: '', targetType: 'single', genes: [], results: [], selectedIndex: null, sourceEpObj: null, sourceEpsArray: [] },
 
@@ -275,15 +284,15 @@ document.addEventListener('alpine:init', () => {
         get displayedGaps() { return this.gapData.slice(0, this.displayLimit); },
         loadMore() { this.displayLimit += 24; },
 
-        // 加载或打开配置框
         async openConfigModal() {
             try {
                 const res = await fetch('/api/gaps/config');
                 const data = await res.json();
                 if (data.status === 'success') {
-                    this.configModal.qb_host = data.data.qb_host || '';
-                    this.configModal.qb_user = data.data.qb_user || '';
-                    this.configModal.qb_pass = data.data.qb_pass || '';
+                    this.configModal.client_type = data.data.client_type || '';
+                    this.configModal.client_url = data.data.client_url || '';
+                    this.configModal.client_user = data.data.client_user || '';
+                    this.configModal.client_pass = data.data.client_pass || '';
                 }
             } catch(e) {}
             this.configModal.open = true;
@@ -296,15 +305,15 @@ document.addEventListener('alpine:init', () => {
                     method: 'POST', 
                     headers: {'Content-Type': 'application/json'}, 
                     body: JSON.stringify({ 
-                        qb_host: this.configModal.qb_host,
-                        qb_user: this.configModal.qb_user,
-                        qb_pass: this.configModal.qb_pass
+                        client_type: this.configModal.client_type,
+                        client_url: this.configModal.client_url,
+                        client_user: this.configModal.client_user,
+                        client_pass: this.configModal.client_pass
                     }) 
                 });
                 const data = await res.json();
                 if (data.status === 'success') {
                     this.closeConfigModal();
-                    alert("底层接管配置已保存，下发种子时将自动启动截胡！");
                 }
             } catch(e) { alert('保存失败'); }
         },
@@ -469,7 +478,8 @@ document.addEventListener('alpine:init', () => {
                 if (data.status === 'success') { 
                     this.closeResolver(); 
                     await this.checkStatus();
-                    // 这里去掉了弹窗 alert，给用户如丝般顺滑的无感体验，只要按钮变蓝就是成功
+                    // 🔥 把截胡反馈直接弹窗告诉用户！
+                    alert(data.message);
                 } else { 
                     alert(data.message); 
                 }

@@ -15,7 +15,6 @@ from app.routers.search import get_emby_sys_info, is_new_emby_router
 
 router = APIRouter(prefix="/api/gaps", tags=["gaps"])
 
-# ----------------- 异步状态机 -----------------
 scan_state = {"is_scanning": False, "progress": 0, "total": 0, "current_item": "系统准备中...", "results": [], "error": None}
 state_lock = threading.Lock()
 
@@ -41,7 +40,6 @@ def get_admin_user_id():
 def process_single_series(series, lock_map, host, key, tmdb_key, proxies, today, global_inventory, server_id, use_new_route):
     series_id = series.get("Id"); series_name = series.get("Name", "未知剧集")
     tmdb_id = series.get("ProviderIds", {}).get("Tmdb")
-    
     if not tmdb_id or lock_map.get(f"{series_id}_-1_-1", 0) == 1:
         update_progress(series_name)
         return None
@@ -60,11 +58,8 @@ def process_single_series(series, lock_map, host, key, tmdb_key, proxies, today,
         if not s_num or season.get("episode_count", 0) == 0: continue
         local_season_inventory = local_inventory.get(s_num, set())
         if len(local_season_inventory) >= season.get("episode_count", 0): continue
-        
-        try:
-            tmdb_episodes = requests.get(f"https://api.themoviedb.org/3/tv/{tmdb_id}/season/{s_num}?language=zh-CN&api_key={tmdb_key}", proxies=proxies, timeout=10).json().get("episodes", [])
+        try: tmdb_episodes = requests.get(f"https://api.themoviedb.org/3/tv/{tmdb_id}/season/{s_num}?language=zh-CN&api_key={tmdb_key}", proxies=proxies, timeout=10).json().get("episodes", [])
         except: continue
-        
         for tmdb_ep in tmdb_episodes:
             e_num = tmdb_ep.get("episode_number"); air_date = tmdb_ep.get("air_date")
             if not air_date or air_date > today: continue
@@ -72,7 +67,6 @@ def process_single_series(series, lock_map, host, key, tmdb_key, proxies, today,
                 series_gaps.append({"season": s_num, "episode": e_num, "title": tmdb_ep.get("name", f"第 {e_num} 集"), "status": lock_map.get(f"{series_id}_{s_num}_{e_num}", 0)})
     
     update_progress(series_name) 
-    
     if series_gaps:
         public_host = (cfg.get("emby_public_url") or cfg.get("emby_external_url") or cfg.get("emby_public_host") or host).rstrip('/')
         emby_url = f"{public_host}/web/index.html#!/item?id={series_id}&serverId={server_id}" if use_new_route else f"{public_host}/web/index.html#!/item/details.html?id={series_id}&serverId={server_id}"
@@ -87,11 +81,9 @@ def run_scan_task():
     try:
         host = cfg.get("emby_host"); key = cfg.get("emby_api_key"); tmdb_key = cfg.get("tmdb_api_key"); admin_id = get_admin_user_id()
         proxies = _get_proxies(); today = datetime.now().strftime("%Y-%m-%d")
-        
         try:
             sys_info = requests.get(f"{host}/emby/System/Info/Public", timeout=5).json()
-            server_id = sys_info.get("Id", "")
-            use_new_route = is_new_emby_router(sys_info)
+            server_id = sys_info.get("Id", ""); use_new_route = is_new_emby_router(sys_info)
         except: server_id = ""; use_new_route = True
 
         query_db("CREATE TABLE IF NOT EXISTS gap_perfect_series (series_id TEXT PRIMARY KEY, tmdb_id TEXT, series_name TEXT, marked_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
@@ -137,18 +129,6 @@ def run_scan_task():
     finally:
         with state_lock: scan_state["is_scanning"] = False; scan_state["current_item"] = "扫描完成"
 
-def daily_scan_scheduler():
-    while True:
-        try:
-            now = datetime.now()
-            if now.hour == 3 and now.minute == 0:
-                res = query_db("SELECT status FROM gap_records WHERE series_id='SYSTEM' AND season_number=-99")
-                if res and res[0]['status'] == 1 and not scan_state["is_scanning"]: run_scan_task()
-            time.sleep(60)
-        except: time.sleep(60)
-
-threading.Thread(target=daily_scan_scheduler, daemon=True).start()
-
 @router.post("/scan/start")
 def start_scan(bg_tasks: BackgroundTasks):
     with state_lock:
@@ -166,13 +146,11 @@ def get_progress():
                     row = query_db("SELECT result_json FROM gap_scan_cache WHERE id = 1")
                     if row: scan_state["results"] = json.loads(row[0]['result_json'])
                 except: pass
-            
             try:
                 ignores = query_db("SELECT series_id FROM gap_records WHERE status=1 AND season_number=-1")
                 ignore_ids = set([r['series_id'] for r in ignores]) if ignores else set()
                 scan_state["results"] = [s for s in scan_state["results"] if s.get('series_id') not in ignore_ids]
             except: pass
-            
         return {"status": "success", "data": scan_state}
 
 @router.post("/scan/auto_toggle")
@@ -189,17 +167,12 @@ def get_auto_status():
 @router.post("/ignore")
 def ignore_gap(payload: dict):
     try:
-        s_id = payload.get("series_id")
-        s_num = int(payload.get("season_number", 0))
-        e_num = int(payload.get("episode_number", 0))
+        s_id = payload.get("series_id"); s_num = int(payload.get("season_number", 0)); e_num = int(payload.get("episode_number", 0))
         query_db("INSERT INTO gap_records (series_id, series_name, season_number, episode_number, status) VALUES (?, ?, ?, ?, 1) ON CONFLICT(series_id, season_number, episode_number) DO UPDATE SET status = 1", (s_id, payload.get("series_name", ""), s_num, e_num))
-        
         with state_lock:
             for s in scan_state["results"]:
-                if s.get("series_id") == s_id:
-                    s["gaps"] = [ep for ep in s.get("gaps", []) if not (ep["season"] == s_num and ep["episode"] == e_num)]
+                if s.get("series_id") == s_id: s["gaps"] = [ep for ep in s.get("gaps", []) if not (ep["season"] == s_num and ep["episode"] == e_num)]
             scan_state["results"] = [s for s in scan_state["results"] if len(s.get("gaps", [])) > 0]
-            
         return {"status": "success"}
     except Exception as e: return {"status": "error"}
 
@@ -208,10 +181,7 @@ def ignore_entire_series(payload: dict):
     try:
         s_id = payload.get("series_id")
         query_db("INSERT INTO gap_records (series_id, series_name, season_number, episode_number, status) VALUES (?, ?, -1, -1, 1) ON CONFLICT(series_id, season_number, episode_number) DO UPDATE SET status = 1", (s_id, payload.get("series_name", "")))
-        
-        with state_lock:
-            scan_state["results"] = [s for s in scan_state["results"] if s.get("series_id") != s_id]
-            
+        with state_lock: scan_state["results"] = [s for s in scan_state["results"] if s.get("series_id") != s_id]
         return {"status": "success"}
     except Exception as e: return {"status": "error"}
 
@@ -222,9 +192,7 @@ def get_ignored_list():
         perfects = query_db("SELECT series_id, series_name, marked_at FROM gap_perfect_series")
         data = []
         if records:
-            for r in records:
-                typ = "全剧集" if r['season_number'] == -1 else f"S{str(r['season_number']).zfill(2)}E{str(r['episode_number']).zfill(2)}"
-                data.append({"type": "record", "id": r['id'], "series_name": r['series_name'], "target": typ, "time": r['created_at']})
+            for r in records: data.append({"type": "record", "id": r['id'], "series_name": r['series_name'], "target": "全剧集" if r['season_number'] == -1 else f"S{str(r['season_number']).zfill(2)}E{str(r['episode_number']).zfill(2)}", "time": r['created_at']})
         if perfects:
             for r in perfects: data.append({"type": "perfect", "id": r['series_id'], "series_name": r['series_name'], "target": "完结免检金牌", "time": r['marked_at']})
         data.sort(key=lambda x: x['time'], reverse=True)
@@ -239,10 +207,6 @@ def unignore_item(payload: dict):
         return {"status": "success"}
     except Exception as e: return {"status": "error"}
 
-
-# ==========================================
-# 🔥 UI 动态配置库 (读写 qB 参数)
-# ==========================================
 @router.get("/config")
 def get_gap_config():
     query_db("CREATE TABLE IF NOT EXISTS gap_config (key TEXT PRIMARY KEY, value TEXT)")
@@ -257,90 +221,71 @@ def save_gap_config(payload: dict):
         query_db("INSERT OR REPLACE INTO gap_config (key, value) VALUES (?, ?)", (k, str(v).strip()))
     return {"status": "success"}
 
-
 @router.post("/search_mp")
 def search_mp_for_gap(payload: dict):
-    series_id = payload.get("series_id")
-    series_name = payload.get("series_name")
-    season = payload.get("season")
-    episodes = payload.get("episodes", [])
-
-    host = cfg.get("emby_host")
-    key = cfg.get("emby_api_key")
-    mp_url = cfg.get("moviepilot_url")
-    mp_token = cfg.get("moviepilot_token")
-    
+    series_id = payload.get("series_id"); series_name = payload.get("series_name")
+    season = payload.get("season"); episodes = payload.get("episodes", [])
+    mp_url = cfg.get("moviepilot_url"); mp_token = cfg.get("moviepilot_token")
     if not mp_url or not mp_token: return {"status": "error", "message": "未配置 MP"}
     
-    admin_id = get_admin_user_id()
-    genes = []
+    admin_id = get_admin_user_id(); genes = []
     if admin_id:
         try:
-            items = requests.get(f"{host}/emby/Users/{admin_id}/Items?ParentId={series_id}&IncludeItemTypes=Episode&Recursive=true&Limit=1&Fields=MediaSources&api_key={key}", timeout=5).json().get("Items", [])
+            items = requests.get(f"{cfg.get('emby_host')}/emby/Users/{admin_id}/Items?ParentId={series_id}&IncludeItemTypes=Episode&Recursive=true&Limit=1&Fields=MediaSources&api_key={cfg.get('emby_api_key')}", timeout=5).json().get("Items", [])
             if items and items[0].get("MediaSources"):
-                video = next((s for s in items[0]["MediaSources"][0].get("MediaStreams", []) if s.get("Type") == "Video"), None)
-                if video:
-                    if video.get("Width", 0) >= 3800: genes.append("4K")
-                    elif video.get("Width", 0) >= 1900: genes.append("1080P")
-                    d_title = video.get("DisplayTitle", "").upper()
-                    if "HDR" in video.get("VideoRange", "") or "HDR" in d_title: genes.append("HDR")
-                    if "DOVI" in d_title or "DOLBY VISION" in d_title: genes.append("DoVi")
+                v = next((s for s in items[0]["MediaSources"][0].get("MediaStreams", []) if s.get("Type") == "Video"), None)
+                if v:
+                    if v.get("Width", 0) >= 3800: genes.append("4K")
+                    elif v.get("Width", 0) >= 1900: genes.append("1080P")
+                    if "HDR" in v.get("VideoRange", "") or "HDR" in v.get("DisplayTitle", "").upper(): genes.append("HDR")
+                    if "DOVI" in v.get("DisplayTitle", "").upper() or "DOLBY VISION" in v.get("DisplayTitle", "").upper(): genes.append("DoVi")
         except: pass
     if not genes: genes = ["无明显特效"]
     
-    clean_token = mp_token.strip().strip("'\"")
-    headers = {"X-API-KEY": clean_token, "User-Agent": "Mozilla/5.0", "Accept": "application/json"}
+    headers = {"X-API-KEY": mp_token.strip().strip("'\""), "User-Agent": "Mozilla/5.0", "Accept": "application/json"}
     
     def deep_extract(d, keys):
         for k in keys:
             if d.get(k) is not None and str(d.get(k)).strip() != "": return d.get(k)
-        for nested in ["torrent", "torrent_info", "detail", "data", "info"]:
-            if isinstance(d.get(nested), dict):
+        for n in ["torrent", "torrent_info", "detail", "data", "info"]:
+            if isinstance(d.get(n), dict):
                 for k in keys:
-                    if d[nested].get(k) is not None and str(d[nested].get(k)).strip() != "": return d[nested].get(k)
+                    if d[n].get(k) is not None and str(d[n].get(k)).strip() != "": return d[n].get(k)
         return None
 
     try:
-        results = []
-        is_pack = False
-        
-        if episodes and len(episodes) == 1:
-            keyword = f"{series_name} S{str(season).zfill(2)}E{str(episodes[0]).zfill(2)}"
-            mp_res = requests.get(f"{mp_url.rstrip('/')}/api/v1/search/title?keyword={urllib.parse.quote(keyword)}", headers=headers, timeout=20)
-            res_data = mp_res.json() if mp_res.status_code == 200 else []
+        results = []; is_pack = False
+        if len(episodes) == 1:
+            kw = f"{series_name} S{str(season).zfill(2)}E{str(episodes[0]).zfill(2)}"
+            res_data = requests.get(f"{mp_url.rstrip('/')}/api/v1/search/title?keyword={urllib.parse.quote(kw)}", headers=headers, timeout=20).json()
             if isinstance(res_data, dict): res_data = res_data.get("data") or res_data.get("results") or []
             if isinstance(res_data, list): results = res_data
         
         if len(results) == 0:
-            fallback_kw = f"{series_name} S{str(season).zfill(2)}"
-            mp_res2 = requests.get(f"{mp_url.rstrip('/')}/api/v1/search/title?keyword={urllib.parse.quote(fallback_kw)}", headers=headers, timeout=20)
-            res_data2 = mp_res2.json() if mp_res2.status_code == 200 else []
+            kw2 = f"{series_name} S{str(season).zfill(2)}"
+            res_data2 = requests.get(f"{mp_url.rstrip('/')}/api/v1/search/title?keyword={urllib.parse.quote(kw2)}", headers=headers, timeout=20).json()
             if isinstance(res_data2, dict): res_data2 = res_data2.get("data") or res_data2.get("results") or []
-            if isinstance(res_data2, list): 
-                results = res_data2
-                is_pack = True
+            if isinstance(res_data2, list): results = res_data2; is_pack = True
 
-        processed_results = []
+        processed = []
         for r in results:
             score = 0
-            title_str = str(deep_extract(r, ["name", "title", "torrent_name"]) or "未提取到种名")
-            desc_str = str(deep_extract(r, ["description", "desc", "detail", "subtitle"]) or "")
-            combined_text = title_str.upper() + " " + desc_str.upper()
+            title = str(deep_extract(r, ["name", "title", "torrent_name"]) or "未提取到种名")
+            desc = str(deep_extract(r, ["description", "desc", "detail", "subtitle"]) or "")
+            text = (title + " " + desc).upper()
             size_val = deep_extract(r, ["size", "enclosure_size", "torrent_size"]) or 0
-            
             site_val = deep_extract(r, ["site_name", "site", "indexer"]) or "未知站点"
             seeders_val = deep_extract(r, ["seeders", "seeder"]) or 0
             
-            if "4K" in genes: score += 50 if ("2160P" in combined_text or "4K" in combined_text) else -20
-            if "1080P" in genes and "1080P" in combined_text: score += 50
-            if "DoVi" in genes and ("DOVI" in combined_text or "VISION" in combined_text): score += 30
-            if "HDR" in genes and "HDR" in combined_text: score += 20
-            if "WEB" in combined_text: score += 10
+            if "4K" in genes: score += 50 if ("2160P" in text or "4K" in text) else -20
+            if "1080P" in genes and "1080P" in text: score += 50
+            if "DoVi" in genes and ("DOVI" in text or "VISION" in text): score += 30
+            if "HDR" in genes and "HDR" in text: score += 20
+            if "WEB" in text: score += 10
             
-            r["ui_title"] = title_str  
+            r["ui_title"] = title; r["ui_site"] = str(site_val)
             try: r["ui_size"] = float(size_val)
             except: r["ui_size"] = 0
-            r["ui_site"] = str(site_val)
             try: r["ui_seeders"] = int(seeders_val)
             except: r["ui_seeders"] = 0
             
@@ -349,111 +294,196 @@ def search_mp_for_gap(payload: dict):
             r["org_payload"] = r.get("torrent_info", r) 
             
             tags = []
-            if "2160P" in combined_text or "4K" in combined_text: tags.append("4K")
-            elif "1080P" in combined_text: tags.append("1080P")
-            if "DOVI" in combined_text or "VISION" in combined_text: tags.append("DoVi")
-            elif "HDR" in combined_text: tags.append("HDR")
-            if "WEB" in combined_text: tags.append("WEB-DL")
+            if "2160P" in text or "4K" in text: tags.append("4K")
+            elif "1080P" in text: tags.append("1080P")
+            if "DOVI" in text or "VISION" in text: tags.append("DoVi")
+            elif "HDR" in text: tags.append("HDR")
+            if "WEB" in text: tags.append("WEB-DL")
             r["extracted_tags"] = tags
-            processed_results.append(r)
+            processed.append(r)
 
-        processed_results.sort(key=lambda x: x["match_score"], reverse=True)
-        return {"status": "success", "data": {"genes": genes, "results": processed_results[:10]}}
+        processed.sort(key=lambda x: x["match_score"], reverse=True)
+        return {"status": "success", "data": {"genes": genes, "results": processed[:10]}}
     except Exception as e: return {"status": "error", "message": str(e)}
 
 # ==========================================
-# 🔥 qB 截胡操作
+# 🔥 宗师级：文件名集数提取正则引擎
 # ==========================================
-def qb_login(qb_host, qb_user, qb_pass):
-    try:
-        session = requests.Session()
-        res = session.post(f"{qb_host.rstrip('/')}/api/v2/auth/login", data={"username": qb_user, "password": qb_pass}, timeout=5)
-        if res.status_code == 200 and "Ok" in res.text: return session
-        return None
-    except: return None
-
-def qb_hook_files(session, qb_host, torrent_name, episodes):
-    try:
-        res = session.get(f"{qb_host.rstrip('/')}/api/v2/torrents/info?filter=all", timeout=5)
-        if res.status_code != 200: return False
+def extract_episodes_from_filename(filename: str) -> set:
+    eps = set()
+    fname = filename.upper()
+    
+    # 1. 匹配 S01E08, S01E08-E09, S01E08-09
+    s_e = re.findall(r'S\d{1,2}E(\d{1,3})(?:-E?(\d{1,3}))?', fname)
+    for e1, e2 in s_e:
+        eps.add(int(e1))
+        if e2: eps.update(range(int(e1), int(e2)+1))
         
-        torrents = res.json()
-        target_hash = None
-        for t in torrents:
-            if torrent_name.replace(".", " ")[:15] in t.get("name", "").replace(".", " "):
-                target_hash = t.get("hash")
-                break
+    # 2. 匹配 EP08, E08, EPISODE 08, EP08-09
+    ep = re.findall(r'(?:EPISODE|EP|E)[\s\.\-]*(\d{1,3})(?:-E?(\d{1,3}))?', fname)
+    for e1, e2 in ep:
+        eps.add(int(e1))
+        if e2: eps.update(range(int(e1), int(e2)+1))
         
-        if not target_hash: return False
-
-        files_res = session.get(f"{qb_host.rstrip('/')}/api/v2/torrents/files?hash={target_hash}", timeout=5)
-        if files_res.status_code != 200: return False
-        files = files_res.json()
-
-        unwanted_ids = []
-        wanted_ids = []
+    # 3. 匹配 中文 第08集, 第8-9集
+    zh = re.findall(r'第\s*(\d{1,3})\s*(?:-|至|到)\s*(\d{1,3})\s*集', filename) # 原文匹配防upper破坏
+    for e1, e2 in zh:
+        eps.update(range(int(e1), int(e2)+1))
+    zh_single = re.findall(r'第\s*(\d{1,3})\s*集', filename)
+    for e in zh_single: eps.add(int(e))
         
-        ep_patterns = [re.compile(r"(?i)[e|ep|episode]?\s*0?" + str(e) + r"\b") for e in episodes]
-
-        for i, f in enumerate(files):
-            file_name = f.get("name", "")
-            if not file_name.lower().endswith(('.mp4', '.mkv', '.avi', '.ts', '.iso')):
-                unwanted_ids.append(str(i))
-                continue
+    # 4. 保底机制：匹配裸露的数字（比如 [08], .08., - 08）
+    # 仅在上面都没有匹配到时启用，防止把 1080P 或 2024 年份误认为集数
+    if not eps:
+        naked = re.findall(r'(?:\[|\s-?\s|\.)(\d{2,4})(?:\]|\s|\.)', fname)
+        for e in naked:
+            num = int(e)
+            if num not in (480, 720, 1080, 2160, 264, 265, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027):
+                eps.add(num)
                 
-            is_wanted = False
-            for p in ep_patterns:
-                if p.search(file_name):
-                    is_wanted = True
-                    break
-                    
-            if is_wanted: wanted_ids.append(str(i))
-            else: unwanted_ids.append(str(i))
+    return eps
 
-        if unwanted_ids:
-            session.post(f"{qb_host.rstrip('/')}/api/v2/torrents/filePrio", data={"hash": target_hash, "id": "|".join(unwanted_ids), "priority": 0}, timeout=5)
+# ==========================================
+# 🔥 截胡引擎：qBittorrent
+# ==========================================
+def hook_qbittorrent(host, user, password, expected_size, target_episodes):
+    try:
+        s = requests.Session()
+        login = s.post(f"{host.rstrip('/')}/api/v2/auth/login", data={"username": user, "password": password}, timeout=5)
+        if login.status_code != 200 or "Ok" not in login.text: return False, "qBittorrent 登录失败，请检查账号密码"
         
-        return True
+        target_hash = None
+        # 轮询 20 次，每次 3 秒，共等待 60 秒（给 MP 添加、下发、获取 Metadata 的时间）
+        for _ in range(20):
+            time.sleep(3)
+            res = s.get(f"{host.rstrip('/')}/api/v2/torrents/info?filter=all", timeout=5)
+            if res.status_code == 200:
+                for t in res.json():
+                    # 匹配规则：5分钟内添加 且 大小误差小于 10MB，天然的指纹锁定！
+                    if time.time() - t.get("added_on", 0) < 300: 
+                        if expected_size > 0 and abs(t.get("total_size", 0) - expected_size) < 10 * 1024 * 1024:
+                            target_hash = t.get("hash"); break
+                        # 如果没抓到 size（某些特殊包），退化为名字匹配
+                        elif expected_size == 0:
+                            target_hash = t.get("hash"); break
+            
+            # 找到种子后，尝试获取文件列表
+            if target_hash:
+                f_res = s.get(f"{host.rstrip('/')}/api/v2/torrents/files?hash={target_hash}", timeout=5)
+                files = f_res.json() if f_res.status_code == 200 else []
+                # 如果文件列表已经加载出来了（大于0个，且第一个有体积）
+                if files and len(files) > 0 and files[0].get("size", 0) > 0:
+                    wanted, unwanted = [], []
+                    for i, f in enumerate(files):
+                        fname = f.get("name", "")
+                        if not fname.lower().endswith(('.mp4', '.mkv', '.avi', '.ts', '.iso')):
+                            unwanted.append(str(i)); continue
+                        
+                        f_eps = extract_episodes_from_filename(fname)
+                        # 只要文件包含我们请求的任意一集，就保留
+                        if any(e in target_episodes for e in f_eps): wanted.append(str(i))
+                        else: unwanted.append(str(i))
+                        
+                    if not wanted:
+                        return False, "⚠️ 正则未匹配到视频集数，为防止误杀，已放行全包下载"
+                    
+                    # 绝对优先级控制：先踢，再保
+                    if unwanted: s.post(f"{host.rstrip('/')}/api/v2/torrents/filePrio", data={"hash": target_hash, "id": "|".join(unwanted), "priority": 0}, timeout=5)
+                    if wanted: s.post(f"{host.rstrip('/')}/api/v2/torrents/filePrio", data={"hash": target_hash, "id": "|".join(wanted), "priority": 1}, timeout=5)
+                    
+                    return True, f"🔪 精准截胡！保留 {len(wanted)} 集，踢掉 {len(unwanted)} 个多余文件"
+                    
+        return False, "轮询 60 秒超时：未锁定种子，或资源卡在下载 Metadata"
     except Exception as e:
-        return False
+        return False, f"qB 交互异常: {str(e)}"
+
+# ==========================================
+# 🔥 截胡引擎：Transmission
+# ==========================================
+def hook_transmission(host, user, password, expected_size, target_episodes):
+    try:
+        rpc_url = f"{host.rstrip('/')}/transmission/rpc"
+        auth = (user, password) if user else None
+        s = requests.Session()
+        
+        # TR 的反 CSRF 机制：第一次获取 Session-Id
+        res = s.post(rpc_url, auth=auth, timeout=5)
+        session_id = res.headers.get('X-Transmission-Session-Id')
+        if not session_id: return False, "Transmission 认证失败"
+        s.headers.update({'X-Transmission-Session-Id': session_id})
+        
+        target_id = None
+        for _ in range(20):
+            time.sleep(3)
+            payload = {"method": "torrent-get", "arguments": {"fields": ["id", "addedDate", "totalSize", "files"]}}
+            r = s.post(rpc_url, json=payload, auth=auth, timeout=5)
+            if r.status_code == 200:
+                torrents = r.json().get("arguments", {}).get("torrents", [])
+                for t in torrents:
+                    if time.time() - t.get("addedDate", 0) < 300:
+                        if expected_size > 0 and abs(t.get("totalSize", 0) - expected_size) < 10 * 1024 * 1024:
+                            target_id = t.get("id"); files = t.get("files", []); break
+            
+            if target_id and files and len(files) > 0 and files[0].get("length", 0) > 0:
+                wanted, unwanted = [], []
+                for i, f in enumerate(files):
+                    fname = f.get("name", "")
+                    if not fname.lower().endswith(('.mp4', '.mkv', '.avi', '.ts', '.iso')):
+                        unwanted.append(i); continue
+                        
+                    f_eps = extract_episodes_from_filename(fname)
+                    if any(e in target_episodes for e in f_eps): wanted.append(i)
+                    else: unwanted.append(i)
+                    
+                if not wanted: return False, "⚠️ 正则未匹配到视频集数，为防止误杀，已放行全包下载"
+                    
+                set_payload = {"method": "torrent-set", "arguments": {"id": target_id}}
+                if unwanted: set_payload["arguments"]["files-unwanted"] = unwanted
+                if wanted: set_payload["arguments"]["files-wanted"] = wanted
+                
+                s.post(rpc_url, json=set_payload, auth=auth, timeout=5)
+                return True, f"🔪 精准截胡！保留 {len(wanted)} 集，踢掉 {len(unwanted)} 个多余文件"
+                
+        return False, "轮询 60 秒超时：未锁定种子"
+    except Exception as e:
+        return False, f"TR 交互异常: {str(e)}"
+
 
 @router.post("/download")
 def download_gap_item(payload: dict):
-    series_id = payload.get("series_id")
-    series_name = payload.get("series_name")
-    season = payload.get("season")
-    episodes = payload.get("episodes", [])
-    torrent_info = payload.get("torrent_info", {})
+    series_id = payload.get("series_id"); series_name = payload.get("series_name")
+    tmdbid = payload.get("tmdbid"); season = payload.get("season")
+    episodes = payload.get("episodes", []); torrent_info = payload.get("torrent_info", {})
 
-    mp_url = cfg.get("moviepilot_url")
-    mp_token = cfg.get("moviepilot_token")
-    clean_token = mp_token.strip().strip("'\"") if mp_token else ""
-    headers = {"X-API-KEY": clean_token, "Content-Type": "application/json"}
+    mp_url = cfg.get("moviepilot_url"); mp_token = cfg.get("moviepilot_token")
+    headers = {"X-API-KEY": mp_token.strip().strip("'\"") if mp_token else "", "Content-Type": "application/json"}
     
-    # 动态从数据库读取用户配置的 qB 参数
     query_db("CREATE TABLE IF NOT EXISTS gap_config (key TEXT PRIMARY KEY, value TEXT)")
-    db_rows = query_db("SELECT key, value FROM gap_config")
-    ui_conf = {r['key']: r['value'] for r in db_rows} if db_rows else {}
+    ui_conf = {r['key']: r['value'] for r in query_db("SELECT key, value FROM gap_config")} if query_db("SELECT key, value FROM gap_config") else {}
     
-    qb_host = ui_conf.get("qb_host", "")
-    qb_user = ui_conf.get("qb_user", "")
-    qb_pass = ui_conf.get("qb_pass", "")
+    client_type = ui_conf.get("client_type", "")
+    client_url = ui_conf.get("client_url", "")
+    client_user = ui_conf.get("client_user", "")
+    client_pass = ui_conf.get("client_pass", "")
     
     pure_torrent_in = torrent_info.get("org_payload", torrent_info)
     mp_payload = {"torrent_in": pure_torrent_in}
 
     try:
-        add_url = f"{mp_url.rstrip('/')}/api/v1/download/add"
-        res = requests.post(add_url, headers=headers, json=mp_payload, timeout=20)
+        res = requests.post(f"{mp_url.rstrip('/')}/api/v1/download/add", headers=headers, json=mp_payload, timeout=20)
         
+        hook_msg = ""
         if res.status_code in [200, 201]:
-            # 只有用户配置了 qB 地址，并且是多集提取时，才执行手术刀截胡
-            if qb_host and len(episodes) > 0 and torrent_info.get("is_pack", False):
-                time.sleep(3) # 等待 MP 把种子推送到 qB
-                qb_session = qb_login(qb_host, qb_user, qb_pass)
-                if qb_session:
-                    torrent_title = pure_torrent_in.get("title", "")
-                    qb_hook_files(qb_session, qb_host, torrent_title, episodes)
+            # 🔥 当配置了下载器且为多集季包时，发动截胡引擎！
+            if client_type and client_url and len(episodes) > 0 and torrent_info.get("is_pack", False):
+                expected_size = int(pure_torrent_in.get("size", 0))
+                
+                if client_type == "qbittorrent":
+                    success, hook_msg = hook_qbittorrent(client_url, client_user, client_pass, expected_size, episodes)
+                elif client_type == "transmission":
+                    success, hook_msg = hook_transmission(client_url, client_user, client_pass, expected_size, episodes)
+                
+                hook_msg = f"\n{hook_msg}"
 
             for ep in episodes:
                 query_db("INSERT INTO gap_records (series_id, series_name, season_number, episode_number, status) VALUES (?, ?, ?, ?, 2) ON CONFLICT(series_id, season_number, episode_number) DO UPDATE SET status = 2", (series_id, series_name, int(season), int(ep)))
@@ -465,7 +495,7 @@ def download_gap_item(payload: dict):
                             if ep_obj["season"] == int(season) and ep_obj["episode"] in [int(e) for e in episodes]:
                                 ep_obj["status"] = 2
 
-            return {"status": "success", "message": f"成功下发！"}
+            return {"status": "success", "message": f"成功下发指令！{hook_msg}"}
             
         return {"status": "error", "message": f"MP 接口拒绝 (HTTP {res.status_code})"}
     except Exception as e: 
