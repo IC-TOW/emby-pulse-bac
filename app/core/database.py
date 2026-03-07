@@ -105,6 +105,19 @@ def init_db():
                 ignored_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        # 7. 🔥 新增：缺集管理记录表 (gap_records)
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS gap_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                series_id TEXT,
+                series_name TEXT,
+                season_number INTEGER,
+                episode_number INTEGER,
+                status INTEGER DEFAULT 0, -- 1: 永久忽略(屏蔽), 2: MP处理中(蓝灯)
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(series_id, season_number, episode_number)
+            )
+        ''')
 
         conn.commit()
         conn.close()

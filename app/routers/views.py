@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 from app.core.config import cfg
 from app.core.database import query_db
 import logging
+import random
 
 logger = logging.getLogger("uvicorn")
 templates = Jinja2Templates(directory="templates")
@@ -159,7 +160,11 @@ async def about_page(request: Request):
     if not check_login(request): return RedirectResponse("/login")
     return templates.TemplateResponse("about.html", {"request": request, "active_page": "about", "version": APP_VERSION})
 
-import random
+@router.get("/gaps", response_class=HTMLResponse)
+async def gaps_page(request: Request):
+    # 缺集管理页面，注意这里传递的是 active_page
+    return templates.TemplateResponse("gaps.html", {"request": request, "active_page": "gaps"})
+
 @router.get("/api/wallpaper")
 async def get_wallpaper():
     fallback_wallpapers = [

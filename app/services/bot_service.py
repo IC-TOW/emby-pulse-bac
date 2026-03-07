@@ -853,6 +853,25 @@ class TelegramBot:
         except: return None
 
     def _push_episode_group(self, series_id, episodes):
+        # ----------------- [缺集管理：自动核销闭环] -----------------
+        try:
+            for ep in episodes:
+                s_idx = ep.get('ParentIndexNumber')
+                e_idx = ep.get('IndexNumber')
+                if s_idx is None or e_idx is None: continue
+                # 检查该集是否是“处理中(status=2)”的缺集工单
+                res = query_db("SELECT id FROM gap_records WHERE series_id=? AND season_number=? AND episode_number=? AND status=2", (series_id, s_idx, e_idx))
+                if res:
+                    # 发现目标！删除缺集记录（核销）
+                    query_db("DELETE FROM gap_records WHERE id=?", (res[0]['id'],))
+                    # 发送专属捷报给服主
+                    success_msg = (f"🎉 <b>残卷补全成功！</b>\n\n"
+                                   f"📺 剧集已刮削：<b>S{str(s_idx).zfill(2)}E{str(e_idx).zfill(2)}</b>\n"
+                                   f"✅ 状态：缺集工单已自动核销闭环\n"
+                                   f"<i>拼图已圆满，强迫症得到治愈。</i>")
+                    self.send_message("sys_notify", success_msg, platform="all")
+        except Exception as e: pass
+
         key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
         admin_id = self._get_admin_id()
         
