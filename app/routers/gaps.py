@@ -153,6 +153,68 @@ def get_progress():
             except: pass
         return {"status": "success", "data": scan_state}
 
+# ==========================================
+# 🔥 新增：主动核验引擎 (摆脱对Webhook的依赖)
+# ==========================================
+def run_verify_task():
+    try:
+        with state_lock:
+            if scan_state["is_scanning"] or not scan_state.get("results"): return
+            # 深度拷贝，防止在验证时被前端篡改
+            results_copy = json.loads(json.dumps(scan_state["results"]))
+            
+        host = cfg.get("emby_host")
+        key = cfg.get("emby_api_key")
+        admin_id = get_admin_user_id()
+        if not host or not key or not admin_id: return
+        
+        changed = False
+        for s in results_copy:
+            s_id = s.get("series_id")
+            if not s.get("gaps"): continue
+            
+            try:
+                # 仅针对“当前存在缺集”的剧集，向Emby极速点名查岗（毫秒级）
+                eps_data = requests.get(f"{host}/emby/Users/{admin_id}/Items?ParentId={s_id}&IncludeItemTypes=Episode&Recursive=true&Fields=IndexNumberEnd&api_key={key}", timeout=5).json().get("Items", [])
+                local_eps = set()
+                for ep in eps_data:
+                    s_num = ep.get("ParentIndexNumber")
+                    e_num = ep.get("IndexNumber")
+                    e_end = ep.get("IndexNumberEnd")
+                    if s_num is None or e_num is None: continue
+                    for i in range(e_num, (e_end if e_end else e_num) + 1):
+                        local_eps.add(f"{s_num}_{i}")
+                
+                original_len = len(s["gaps"])
+                new_gaps = []
+                for gap in s["gaps"]:
+                    if f"{gap['season']}_{gap['episode']}" in local_eps:
+                        # 这集已经入库了！剔除它。
+                        changed = True
+                        try: query_db("DELETE FROM gap_records WHERE series_id=? AND season_number=? AND episode_number=?", (s_id, gap['season'], gap['episode']))
+                        except: pass
+                    else:
+                        new_gaps.append(gap)
+                s["gaps"] = new_gaps
+            except: pass
+                
+        if changed:
+            with state_lock:
+                if not scan_state["is_scanning"]:
+                    scan_state["results"] = [s for s in results_copy if len(s.get("gaps", [])) > 0]
+                    try: query_db("INSERT OR REPLACE INTO gap_scan_cache (id, result_json, updated_at) VALUES (1, ?, datetime('now', 'localtime'))", (json.dumps(scan_state["results"]),))
+                    except: pass
+    except: pass
+
+@router.post("/scan/verify")
+def trigger_verify_gaps(bg_tasks: BackgroundTasks):
+    """前端焦点唤醒时，主动触发极速核验"""
+    with state_lock:
+        if scan_state["is_scanning"]: return {"status": "success"}
+    bg_tasks.add_task(run_verify_task)
+    return {"status": "success"}
+# ==========================================
+
 @router.post("/scan/auto_toggle")
 def toggle_auto_scan(payload: dict):
     enabled = 1 if payload.get("enabled") else 0
@@ -195,7 +257,7 @@ def get_ignored_list():
             for r in records: data.append({"type": "record", "id": r['id'], "series_name": r['series_name'], "target": "全剧集" if r['season_number'] == -1 else f"S{str(r['season_number']).zfill(2)}E{str(r['episode_number']).zfill(2)}", "time": r['created_at']})
         if perfects:
             for r in perfects: data.append({"type": "perfect", "id": r['series_id'], "series_name": r['series_name'], "target": "完结免检金牌", "time": r['marked_at']})
-        data.sort(key=lambda x: x['time'], reverse=True)
+        data.sort(key=lambda x: str(x['time'] or '0000-00-00'), reverse=True)
         return {"status": "success", "data": data}
     except Exception as e: return {"status": "error"}
 
@@ -220,7 +282,6 @@ def save_gap_config(payload: dict):
     for k, v in payload.items():
         query_db("INSERT OR REPLACE INTO gap_config (key, value) VALUES (?, ?)", (k, str(v).strip()))
     return {"status": "success"}
-
 
 @router.post("/search_mp")
 def search_mp_for_gap(payload: dict):
@@ -307,136 +368,77 @@ def search_mp_for_gap(payload: dict):
         return {"status": "success", "data": {"genes": genes, "results": processed[:10]}}
     except Exception as e: return {"status": "error", "message": str(e)}
 
-# ==========================================
-# 🔥 宗师级：文件名集数提取正则引擎
-# ==========================================
 def extract_episodes_from_filename(filename: str) -> set:
     eps = set()
     fname = filename.upper()
-    
-    # 1. 匹配 S01E08, S01E08-E09, S01E08-09
     s_e = re.findall(r'S\d{1,2}E(\d{1,3})(?:-E?(\d{1,3}))?', fname)
     for e1, e2 in s_e:
         eps.add(int(e1))
         if e2: eps.update(range(int(e1), int(e2)+1))
-        
-    # 2. 匹配 EP08, E08, EPISODE 08, EP08-09 (使用非捕获组 ?:)
     ep = re.findall(r'(?:EPISODE|EP|E)[\s\.\-]*(\d{1,3})(?:-E?(\d{1,3}))?', fname)
     for e1, e2 in ep:
         eps.add(int(e1))
         if e2: eps.update(range(int(e1), int(e2)+1))
-        
-    # 3. 匹配 中文 第08集, 第8-9集
     zh = re.findall(r'第\s*(\d{1,3})\s*(?:-|至|到)\s*(\d{1,3})\s*集', filename)
     for e1, e2 in zh:
         eps.update(range(int(e1), int(e2)+1))
     zh_single = re.findall(r'第\s*(\d{1,3})\s*集', filename)
     for e in zh_single: eps.add(int(e))
-        
-    # 4. 保底机制：匹配裸露的数字（比如 [08], .08., - 08）
     if not eps:
         naked = re.findall(r'(?:\[|\s-?\s|\.)(\d{2,4})(?:\]|\s|\.)', fname)
         for e in naked:
             num = int(e)
             if num not in (480, 720, 1080, 2160, 264, 265, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027):
                 eps.add(num)
-                
     return eps
 
-# ==========================================
-# 🔥 截胡引擎：qBittorrent (核弹级日志版)
-# ==========================================
 def hook_qbittorrent(host, user, password, expected_size, target_episodes):
-    print(f"\n==============================================")
-    print(f"[qB 截胡引擎] 🚀 启动特种兵潜入任务")
-    print(f"[qB 截胡引擎] 目标: {host} | 目标大小: {expected_size} Bytes | 需求集数: {target_episodes}")
     try:
         s = requests.Session()
         login = s.post(f"{host.rstrip('/')}/api/v2/auth/login", data={"username": user, "password": password}, timeout=10)
-        if login.status_code != 200 or "Ok" not in login.text: 
-            print("[qB 截胡引擎] ❌ 登录失败，检查账号密码")
-            return False, "qBittorrent 登录失败"
-        
-        print("[qB 截胡引擎] ✅ 登录成功！开始轮询监控新种子下发...")
+        if login.status_code != 200 or "Ok" not in login.text: return False, "qBittorrent 登录失败"
         target_hash = None
-        
-        # 轮询 20 次，每次 3 秒，共等待 60 秒
         for attempt in range(20):
-            print(f"[qB 截胡引擎] ⏳ 轮询第 {attempt+1}/20 次...")
             time.sleep(3)
             res = s.get(f"{host.rstrip('/')}/api/v2/torrents/info?filter=all", timeout=10)
             if res.status_code == 200:
                 for t in res.json():
-                    # 匹配规则：5分钟内添加 且 大小误差小于 10MB，天然的指纹锁定！
                     if time.time() - t.get("added_on", 0) < 300: 
                         if expected_size > 0 and abs(t.get("total_size", 0) - expected_size) < 10 * 1024 * 1024:
-                            target_hash = t.get("hash")
-                            print(f"[qB 截胡引擎] 🎯 指纹锁定种子 Hash: {target_hash} (大小: {t.get('total_size')})")
-                            break
+                            target_hash = t.get("hash"); break
                         elif expected_size == 0:
-                            target_hash = t.get("hash")
-                            break
-            
-            # 如果抓到种子，尝试获取文件列表
+                            target_hash = t.get("hash"); break
             if target_hash:
                 f_res = s.get(f"{host.rstrip('/')}/api/v2/torrents/files?hash={target_hash}", timeout=10)
                 files = f_res.json() if f_res.status_code == 200 else []
-                # 只有当 qB 真正把元数据(Metadata)下载完，文件列表才会出来
                 if files and len(files) > 0 and files[0].get("size", 0) > 0:
-                    print(f"[qB 截胡引擎] 📂 获取到 {len(files)} 个文件，开始逐一验明正身...")
                     wanted, unwanted = [], []
                     for i, f in enumerate(files):
                         fname = f.get("name", "")
                         if not fname.lower().endswith(('.mp4', '.mkv', '.avi', '.ts', '.iso')):
-                            unwanted.append(str(i))
-                            continue
-                        
-                        # 调用正则引擎
+                            unwanted.append(str(i)); continue
                         f_eps = extract_episodes_from_filename(fname)
                         is_wanted = any(e in target_episodes for e in f_eps)
-                        
-                        print(f"  --> 文件: {fname[:30]}... | 识别出集数: {f_eps} | 保留: {is_wanted}")
-                        
                         if is_wanted: wanted.append(str(i))
                         else: unwanted.append(str(i))
-                        
-                    if not wanted:
-                        print("[qB 截胡引擎] ⚠️ 警告：正则未匹配到任何需要的集数，取消截胡，放行全包。")
-                        return False, "⚠️ 正则未能识别出视频集数，为防误杀已放行"
-                    
-                    # 绝对优先级控制：先全部踢掉，再把需要的拉回来！
-                    print(f"[qB 截胡引擎] 🔪 执行手术：踢除 {len(unwanted)} 个文件，提权 {len(wanted)} 个文件")
+                    if not wanted: return False, "⚠️ 正则未能识别出视频集数，为防误杀已放行"
                     if unwanted: s.post(f"{host.rstrip('/')}/api/v2/torrents/filePrio", data={"hash": target_hash, "id": "|".join(unwanted), "priority": 0}, timeout=10)
                     if wanted: s.post(f"{host.rstrip('/')}/api/v2/torrents/filePrio", data={"hash": target_hash, "id": "|".join(wanted), "priority": 1}, timeout=10)
-                    
-                    print("[qB 截胡引擎] 🎉 截胡行动圆满成功！\n==============================================")
                     return True, f"🔪 截胡成功！保留 {len(wanted)} 集，剔除 {len(unwanted)} 个多余文件"
-                    
-        print("[qB 截胡引擎] ❌ 轮询 60 秒超时，未锁定种子或卡在 Metadata\n==============================================")
         return False, "轮询 60 秒超时：未锁定种子或未获取到文件列表"
-    except Exception as e:
-        print(f"[qB 截胡引擎] 崩溃: {e}\n==============================================")
-        return False, f"qB 交互异常: {str(e)}"
+    except Exception as e: return False, f"qB 交互异常: {str(e)}"
 
-# ==========================================
-# 🔥 截胡引擎：Transmission
-# ==========================================
 def hook_transmission(host, user, password, expected_size, target_episodes):
-    print(f"\n==============================================")
-    print(f"[TR 截胡引擎] 🚀 启动特种兵潜入任务")
     try:
         rpc_url = f"{host.rstrip('/')}/transmission/rpc"
         auth = (user, password) if user else None
         s = requests.Session()
-        
         res = s.post(rpc_url, auth=auth, timeout=10)
         session_id = res.headers.get('X-Transmission-Session-Id')
         if not session_id: return False, "Transmission 认证失败"
         s.headers.update({'X-Transmission-Session-Id': session_id})
-        
         target_id = None
         for attempt in range(20):
-            print(f"[TR 截胡引擎] ⏳ 轮询第 {attempt+1}/20 次...")
             time.sleep(3)
             payload = {"method": "torrent-get", "arguments": {"fields": ["id", "addedDate", "totalSize", "files"]}}
             r = s.post(rpc_url, json=payload, auth=auth, timeout=10)
@@ -445,89 +447,57 @@ def hook_transmission(host, user, password, expected_size, target_episodes):
                 for t in torrents:
                     if time.time() - t.get("addedDate", 0) < 300:
                         if expected_size > 0 and abs(t.get("totalSize", 0) - expected_size) < 10 * 1024 * 1024:
-                            target_id = t.get("id"); files = t.get("files", [])
-                            print(f"[TR 截胡引擎] 🎯 锁定种子 ID: {target_id}")
-                            break
-            
+                            target_id = t.get("id"); files = t.get("files", []); break
             if target_id and files and len(files) > 0 and files[0].get("length", 0) > 0:
                 wanted, unwanted = [], []
                 for i, f in enumerate(files):
                     fname = f.get("name", "")
                     if not fname.lower().endswith(('.mp4', '.mkv', '.avi', '.ts', '.iso')):
                         unwanted.append(i); continue
-                        
                     f_eps = extract_episodes_from_filename(fname)
                     if any(e in target_episodes for e in f_eps): wanted.append(i)
                     else: unwanted.append(i)
-                    
                 if not wanted: return False, "⚠️ 正则未匹配到视频集数，为防止误杀，已放行全包下载"
-                    
                 set_payload = {"method": "torrent-set", "arguments": {"id": target_id}}
                 if unwanted: set_payload["arguments"]["files-unwanted"] = unwanted
                 if wanted: set_payload["arguments"]["files-wanted"] = wanted
-                
                 s.post(rpc_url, json=set_payload, auth=auth, timeout=10)
-                print("[TR 截胡引擎] 🎉 截胡行动圆满成功！\n==============================================")
                 return True, f"🔪 TR 截胡成功！保留 {len(wanted)} 集，剔除 {len(unwanted)} 个文件"
-                
         return False, "轮询 60 秒超时：未锁定种子"
-    except Exception as e:
-        return False, f"TR 交互异常: {str(e)}"
+    except Exception as e: return False, f"TR 交互异常: {str(e)}"
 
-# ==========================================
-# 🔥 下载分发总控中心
-# ==========================================
 @router.post("/download")
 def download_gap_item(payload: dict):
-    series_id = payload.get("series_id")
-    series_name = payload.get("series_name")
-    season = payload.get("season")
-    episodes = payload.get("episodes", [])
+    series_id = payload.get("series_id"); series_name = payload.get("series_name")
+    season = payload.get("season"); episodes = payload.get("episodes", [])
     torrent_info = payload.get("torrent_info", {})
 
-    print(f"\n[中央分发] 收到 {series_name} S{season} 提取请求: {episodes}")
-
-    mp_url = cfg.get("moviepilot_url")
-    mp_token = cfg.get("moviepilot_token")
+    mp_url = cfg.get("moviepilot_url"); mp_token = cfg.get("moviepilot_token")
     clean_token = mp_token.strip().strip("'\"") if mp_token else ""
     headers = {"X-API-KEY": clean_token, "Content-Type": "application/json"}
     
     query_db("CREATE TABLE IF NOT EXISTS gap_config (key TEXT PRIMARY KEY, value TEXT)")
     ui_conf = {r['key']: r['value'] for r in query_db("SELECT key, value FROM gap_config")} if query_db("SELECT key, value FROM gap_config") else {}
     
-    client_type = ui_conf.get("client_type", "")
-    client_url = ui_conf.get("client_url", "")
-    client_user = ui_conf.get("client_user", "")
-    client_pass = ui_conf.get("client_pass", "")
+    client_type = ui_conf.get("client_type", ""); client_url = ui_conf.get("client_url", "")
+    client_user = ui_conf.get("client_user", ""); client_pass = ui_conf.get("client_pass", "")
     
     pure_torrent_in = torrent_info.get("org_payload", torrent_info)
-    
-    # 强制将 size 转换为 int (避免 float 报错)
-    try:
-        pure_torrent_in["size"] = int(float(pure_torrent_in.get("size", 0)))
-    except:
-        pure_torrent_in["size"] = 0
+    try: pure_torrent_in["size"] = int(float(pure_torrent_in.get("size", 0)))
+    except: pure_torrent_in["size"] = 0
 
     mp_payload = {"torrent_in": pure_torrent_in}
 
     try:
-        print("[中央分发] 正在呼叫 MP /add 接口，等待 MP 响应 (超时限制 90 秒)...")
-        # 🔥 将这里的 timeout 彻底放宽到 90 秒，避免被 MP 的找字幕、下种子等阻塞拖死
         res = requests.post(f"{mp_url.rstrip('/')}/api/v1/download/add", headers=headers, json=mp_payload, timeout=90)
-        print(f"[中央分发] 收到 MP 响应，状态码: {res.status_code}")
-        
         hook_msg = ""
         if res.status_code in [200, 201]:
-            # 🔥 只要 MP 接单成功，立刻发动底层下载器截胡引擎！
             if client_type and client_url and len(episodes) > 0 and torrent_info.get("is_pack", False):
                 expected_size = pure_torrent_in.get("size", 0)
-                if client_type == "qbittorrent":
-                    success, hook_msg = hook_qbittorrent(client_url, client_user, client_pass, expected_size, episodes)
-                elif client_type == "transmission":
-                    success, hook_msg = hook_transmission(client_url, client_user, client_pass, expected_size, episodes)
+                if client_type == "qbittorrent": success, hook_msg = hook_qbittorrent(client_url, client_user, client_pass, expected_size, episodes)
+                elif client_type == "transmission": success, hook_msg = hook_transmission(client_url, client_user, client_pass, expected_size, episodes)
                 hook_msg = f"\n{hook_msg}"
 
-            # 写数据库
             for ep in episodes:
                 query_db("INSERT INTO gap_records (series_id, series_name, season_number, episode_number, status) VALUES (?, ?, ?, ?, 2) ON CONFLICT(series_id, season_number, episode_number) DO UPDATE SET status = 2", (series_id, series_name, int(season), int(ep)))
             
@@ -535,15 +505,9 @@ def download_gap_item(payload: dict):
                 for s in scan_state["results"]:
                     if s.get("series_id") == series_id:
                         for ep_obj in s.get("gaps", []):
-                            if ep_obj["season"] == int(season) and ep_obj["episode"] in [int(e) for e in episodes]:
-                                ep_obj["status"] = 2
+                            if ep_obj["season"] == int(season) and ep_obj["episode"] in [int(e) for e in episodes]: ep_obj["status"] = 2
 
             return {"status": "success", "message": f"种子已推给 MP！{hook_msg}"}
-            
         return {"status": "error", "message": f"MP 接口拒绝 (HTTP {res.status_code})"}
-    except requests.exceptions.ReadTimeout:
-        print("[中央分发] ❌ MP 响应超时 (90秒)，可能是网络拥堵或 MP 在找字幕。")
-        return {"status": "error", "message": "推送超时，但 MP 可能仍在后台处理，请稍后检查 qB。"}
-    except Exception as e: 
-        print(f"[中央分发] 请求发生崩溃异常: {e}")
-        return {"status": "error", "message": str(e)}
+    except requests.exceptions.ReadTimeout: return {"status": "error", "message": "推送超时，但 MP 可能仍在后台处理，请稍后检查 qB。"}
+    except Exception as e: return {"status": "error", "message": str(e)}

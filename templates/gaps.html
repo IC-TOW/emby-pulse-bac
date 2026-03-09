@@ -42,7 +42,7 @@
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <i class="fa-solid fa-magnifying-glass text-gray-400 group-focus-within:text-indigo-500 transition-colors"></i>
             </div>
-            <input type="text" x-model="searchQuery" placeholder="搜索缺失的剧集名称..." class="w-full pl-10 pr-10 py-2.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all dark:text-white placeholder-gray-400">
+            <input type="text" x-model="searchQuery" name="gap_search_ignore_autofill" autocomplete="off" spellcheck="false" placeholder="搜索缺失的剧集名称..." class="w-full pl-10 pr-10 py-2.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all dark:text-white placeholder-gray-400">
             <button x-show="searchQuery" @click="searchQuery = ''" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" x-cloak>
                 <i class="fa-solid fa-circle-xmark"></i>
             </button>
@@ -344,15 +344,15 @@ document.addEventListener('alpine:init', () => {
         isScanning: false, hasScanned: false, autoScan: false,
         scanProgress: 0, scanTotal: 0, scanItem: '等待启航...',
         pollInterval: null, 
-        silentPollInterval: null, // 🔥 静默刷新定时器
-        _lastResultsJson: '',     // 🔥 用于比对数据是否真正发生变化的快照
+        silentPollInterval: null, 
+        _lastResultsJson: '',     
         
         gapData: [],
-        searchQuery: '',          // 🔥 本地搜索词
+        searchQuery: '',          
         displayLimit: 24, 
         
         ignoreModal: { open: false, items: [] },
-        ignoreFilter: 'all',      // 🔥 回收站筛选 (all, perfect, ignored)
+        ignoreFilter: 'all',      
         
         configModal: { open: false, client_type: '', client_url: '', client_user: '', client_pass: '' },
         resolver: { open: false, isLoading: false, isSubmitting: false, tmdbId: null, seriesId: '', seriesName: '', season: 0, episodes: [], targetDesc: '', targetType: 'single', genes: [], results: [], selectedIndex: null, sourceEpObj: null, sourceEpsArray: [] },
@@ -361,52 +361,56 @@ document.addEventListener('alpine:init', () => {
             this.checkStatus(); 
             this.fetchAutoScan(); 
             this.startSilentPolling();
+            this.triggerVerify(); // 🔥 页面刚加载时，主动核验一次
             
-            // 🔥 焦点唤醒：当用户从 qB 切回本网页时，顺手无感刷新一次
+            // 🔥 焦点唤醒：当用户从别的软件(如 qB)切回本网页时，主动向后端发核验信号
             document.addEventListener('visibilitychange', () => {
                 if (!document.hidden && !this.isScanning) {
+                    this.triggerVerify();
                     this.checkStatusSilent();
                 }
             });
         },
 
-        // 🔥 动态计算属性：过滤后的缺集数据
         get filteredGaps() {
             if (!this.searchQuery) return this.gapData;
             const q = this.searchQuery.toLowerCase();
             return this.gapData.filter(s => s.series_name.toLowerCase().includes(q));
         },
 
-        // 最终展示在页面上的数据 (应用了过滤和分页)
         get displayedGaps() { 
             return this.filteredGaps.slice(0, this.displayLimit); 
         },
         
         loadMore() { this.displayLimit += 24; },
 
-        // 🔥 动态计算属性：回收站过滤
         get filteredIgnoreItems() {
             if (this.ignoreFilter === 'perfect') return this.ignoreModal.items.filter(i => i.type === 'perfect');
             if (this.ignoreFilter === 'ignored') return this.ignoreModal.items.filter(i => i.type === 'record');
             return this.ignoreModal.items;
         },
+        
+        // 🔥 发送核验信号，让后端不用等 Webhook，直接去查 Emby 数据库核实
+        async triggerVerify() {
+            try { await fetch('/api/gaps/scan/verify', { method: 'POST' }); } catch(e) {}
+        },
 
-        // 🔥 静默轮询系统：每10秒在后台悄悄检查一次，如果 Emby 已经入库，页面上的缺集会自动消失
         startSilentPolling() {
             if (this.silentPollInterval) clearInterval(this.silentPollInterval);
+            // 轮询时间缩短到 8 秒，反应更灵敏
             this.silentPollInterval = setInterval(() => {
                 if (document.hidden || this.isScanning) return;
                 this.checkStatusSilent();
-            }, 10000);
+            }, 8000); 
         },
 
         async checkStatusSilent() {
             try {
-                const res = await fetch('/api/gaps/scan/progress');
+                // 🔥 终极防缓存机制：加上 ?_t=时间戳 和 no-store，绝不读取浏览器的旧数据
+                const res = await fetch(`/api/gaps/scan/progress?_t=${new Date().getTime()}`, { cache: 'no-store' });
                 const data = await res.json();
                 if (data.status === 'success' && !data.data.is_scanning) {
                     const newJson = JSON.stringify(data.data.results);
-                    // 只有当数据真正发生改变时（比如某集被剔除了），才触发 Vue 的重渲染
                     if (this._lastResultsJson !== newJson) {
                         this._lastResultsJson = newJson;
                         this.mountData(data.data.results);
@@ -417,7 +421,7 @@ document.addEventListener('alpine:init', () => {
 
         async openConfigModal() {
             try {
-                const res = await fetch('/api/gaps/config');
+                const res = await fetch(`/api/gaps/config?_t=${new Date().getTime()}`);
                 const data = await res.json();
                 if (data.status === 'success') {
                     this.configModal.client_type = data.data.client_type || '';
@@ -444,7 +448,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         async fetchAutoScan() {
-            try { const res = await fetch('/api/gaps/scan/auto_status'); const data = await res.json(); if (data.status === 'success') { this.autoScan = data.enabled; } } catch(e) {}
+            try { const res = await fetch(`/api/gaps/scan/auto_status?_t=${new Date().getTime()}`); const data = await res.json(); if (data.status === 'success') { this.autoScan = data.enabled; } } catch(e) {}
         },
 
         async toggleAutoScan() {
@@ -453,7 +457,7 @@ document.addEventListener('alpine:init', () => {
 
         async checkStatus() {
             try {
-                const res = await fetch('/api/gaps/scan/progress');
+                const res = await fetch(`/api/gaps/scan/progress?_t=${new Date().getTime()}`, { cache: 'no-store' });
                 const data = await res.json();
                 if (data.status === 'success') {
                     if (data.data.is_scanning) { this.startPolling(); } 
@@ -477,7 +481,7 @@ document.addEventListener('alpine:init', () => {
             this.isScanning = true;
             this.pollInterval = setInterval(async () => {
                 try {
-                    const res = await fetch('/api/gaps/scan/progress');
+                    const res = await fetch(`/api/gaps/scan/progress?_t=${new Date().getTime()}`, { cache: 'no-store' });
                     const data = await res.json();
                     if (data.status === 'success') {
                         const state = data.data;
@@ -516,7 +520,7 @@ document.addEventListener('alpine:init', () => {
         async openIgnoreModal() {
             this.ignoreModal.open = true;
             try {
-                const res = await fetch('/api/gaps/ignores');
+                const res = await fetch(`/api/gaps/ignores?_t=${new Date().getTime()}`);
                 const data = await res.json();
                 if (data.status === 'success') { this.ignoreModal.items = data.data; }
             } catch(e) {}
