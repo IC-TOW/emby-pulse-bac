@@ -62,7 +62,10 @@ def process_single_series(series, lock_map, host, key, tmdb_key, proxies, today,
         except: continue
         for tmdb_ep in tmdb_episodes:
             e_num = tmdb_ep.get("episode_number"); air_date = tmdb_ep.get("air_date")
-            if not air_date or air_date > today: continue
+            
+            # 🔥 核心修复点：将 > 改为 >=，今天排期播出的剧集不再催促，留给资源组压制时间
+            if not air_date or air_date >= today: continue
+                
             if e_num not in local_season_inventory and lock_map.get(f"{series_id}_{s_num}_{e_num}", 0) != 1:
                 series_gaps.append({"season": s_num, "episode": e_num, "title": tmdb_ep.get("name", f"第 {e_num} 集"), "status": lock_map.get(f"{series_id}_{s_num}_{e_num}", 0)})
     
@@ -70,7 +73,6 @@ def process_single_series(series, lock_map, host, key, tmdb_key, proxies, today,
     if series_gaps:
         public_host = (cfg.get("emby_public_url") or cfg.get("emby_external_url") or cfg.get("emby_public_host") or host).rstrip('/')
         emby_url = f"{public_host}/web/index.html#!/item?id={series_id}&serverId={server_id}" if use_new_route else f"{public_host}/web/index.html#!/item/details.html?id={series_id}&serverId={server_id}"
-        # 🔥 将 tmdb_status 写入内存，让查岗引擎知道这剧完结了没
         return {"series_id": series_id, "series_name": series_name, "tmdb_id": tmdb_id, "tmdb_status": tmdb_status, "poster": f"/api/library/image/{series_id}?type=Primary&width=300", "emby_url": emby_url, "gaps": series_gaps}
     else:
         if tmdb_status in ["Ended", "Canceled"]:
@@ -192,7 +194,6 @@ def run_verify_task():
                         new_gaps.append(gap)
                 s["gaps"] = new_gaps
                 
-                # 🔥 修复逻辑：查岗完毕如果缺集清零了，且剧集已完结，立刻当场发金牌送入回收站！
                 if len(new_gaps) == 0 and changed:
                     if s.get("tmdb_status") in ["Ended", "Canceled"]:
                         try: query_db("INSERT OR IGNORE INTO gap_perfect_series (series_id, tmdb_id, series_name) VALUES (?, ?, ?)", (s_id, s.get("tmdb_id"), s.get("series_name")))
