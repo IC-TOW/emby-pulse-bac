@@ -91,13 +91,7 @@
     .user-info h1 { font-size: 24px; font-weight: 900; margin: 0; padding: 4px 0; color: var(--theme-text); transition: color 0.3s;}
     .user-info p { font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; margin: 0; padding-bottom: 2px; color: var(--theme-text); transition: color 0.3s;}
     
-    /* 🔥 修复全服总播下掉：放弃 flex 居中，直接用 block 和显式的 padding 控制 */
-    .server-pill { 
-        background: var(--theme-card); padding: 5px 12px; border-radius: 20px; 
-        font-size: 10px; border: 1px solid rgba(255,255,255,0.1); 
-        text-align: center; color: var(--theme-text); transition: color 0.3s, background 0.3s;
-        display: block; line-height: 1.2;
-    }
+    .server-pill { background: var(--theme-card); padding: 5px 12px; border-radius: 20px; font-size: 10px; border: 1px solid rgba(255,255,255,0.1); text-align: center; color: var(--theme-text); transition: color 0.3s, background 0.3s; display: block; line-height: 1.2; }
     .server-pill span { display: block; font-weight: 900; font-size: 13px; color: #4ade80; margin-bottom: 2px; }
     
     .stats-row { display: flex; gap: 10px; margin-bottom: 25px; }
@@ -110,28 +104,14 @@
     .podium-item.rank-2, .podium-item.rank-3 { width: 95px; }
     .podium-item.rank-1 { width: 115px; z-index: 10; }
     
-    .podium-cover { 
-        width: 100%; aspect-ratio: 2/3; border-radius: 8px; 
-        background-color: #333; box-shadow: 0 10px 20px rgba(0,0,0,0.3); 
-        position: relative; border: 2px solid transparent; 
-        object-fit: cover; display: block;
-    }
+    .podium-cover { width: 100%; aspect-ratio: 2/3; border-radius: 8px; background-color: #333; box-shadow: 0 10px 20px rgba(0,0,0,0.3); position: relative; border: 2px solid transparent; object-fit: cover; display: block; }
     .podium-item.rank-1 .podium-cover { border-color: #eab308; box-shadow: 0 0 20px rgba(234, 179, 8, 0.4); }
     .podium-item.rank-2 .podium-cover { border-color: #94a3b8; }
     .podium-item.rank-3 .podium-cover { border-color: #b45309; }
     
-    /* 🔥 修复皇冠下掉：使用绝对物理定位取代 transform 负值，增加 padding */
-    .medal { 
-        position: absolute; top: -10px; left: calc(50% - 12px); width: 24px; height: 24px; 
-        border-radius: 50%; text-align: center; font-size: 12px; font-weight: bold; 
-        color: white; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
-        line-height: 24px; box-sizing: border-box;
-    }
-    .medal.rank-1 { 
-        background: linear-gradient(135deg, #fcd34d, #b45309); 
-        width: 32px; height: 32px; top: -16px; left: calc(50% - 16px); 
-        font-size: 14px; line-height: 32px;
-    }
+    .medal { position: absolute; top: -10px; left: calc(50% - 12px); width: 24px; height: 24px; border-radius: 50%; text-align: center; font-size: 12px; font-weight: bold; color: white; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.3); line-height: 24px; box-sizing: border-box; }
+    .medal.rank-1 { background: linear-gradient(135deg, #fcd34d, #b45309); width: 32px; height: 32px; top: -16px; left: calc(50% - 16px); font-size: 14px; line-height: 32px; }
+    .medal i { display: block; margin-top: 1px; }
     .medal.rank-2 { background: linear-gradient(135deg, #e2e8f0, #64748b); }
     .medal.rank-3 { background: linear-gradient(135deg, #fdba74, #9a3412); }
     
@@ -147,20 +127,27 @@
     .rank-name { font-size: 12px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-bottom: 4px; margin-bottom: -2px; }
     .rank-meta-row { font-size: 9px; opacity: 0.7; display: flex; gap: 8px; }
     
-    .mood-area { margin-top: 25px; display: flex; flex-direction: column; gap: 15px; }
-    .mood-card { background: linear-gradient(135deg, var(--theme-card), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 15px; position: relative; overflow: hidden; color: var(--theme-text); transition: color 0.3s, background 0.3s;}
+    /* 🔥 史诗级重构：彻底抛弃内联混排，采用结构化数据看板引擎！ */
+    .mood-area { margin-top: 25px; display: flex; flex-direction: column; gap: 12px; }
+    .mood-card { background: linear-gradient(135deg, var(--theme-card), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px; position: relative; overflow: hidden; color: var(--theme-text); transition: color 0.3s, background 0.3s;}
     .mood-icon { position: absolute; right: -10px; bottom: -15px; font-size: 60px; opacity: 0.08; transform: rotate(-15deg); }
-    .mood-title { font-size: 10px; font-weight: 900; letter-spacing: 1px; color: var(--theme-highlight); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; transition: color 0.3s;}
-    .mood-text { font-size: 12px; line-height: 1.6; opacity: 0.9; }
+    .mood-title { font-size: 11px; font-weight: 900; letter-spacing: 1px; color: var(--theme-highlight); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; transition: color 0.3s; line-height: 1;}
+    .mood-title i { font-size: 14px; }
     
-    /* 🔥 修复字块背景被狗啃：强制设置为 inline-block 并在内部精细控制 padding */
-    .mood-highlight { 
-        display: inline-block; font-weight: bold; color: var(--theme-pill-text); 
-        background: var(--theme-pill-bg); padding: 2px 6px; border-radius: 4px; 
-        transition: color 0.3s, background 0.3s; line-height: 1.2; margin: 0 2px;
-    }
+    /* 大结构化色块容器 */
+    .mood-data-container { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+    .mood-data-box { background: var(--theme-pill-bg); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; justify-content: center; border: 1px solid rgba(255,255,255,0.05); min-width: 80px; }
+    .mood-data-val { font-size: 16px; font-weight: 900; color: var(--theme-pill-text); line-height: 1; margin-bottom: 4px; }
+    .mood-data-sub { font-size: 9px; opacity: 0.7; text-transform: uppercase; font-weight: bold; }
     
-    .p-footer { margin-top: 30px; text-align: center; opacity: 0.4; font-size: 10px; letter-spacing: 2px; color: var(--theme-text); transition: color 0.3s;}
+    /* 胶囊体流派标签 */
+    .mood-tags-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    .mood-tag-pill { background: var(--theme-pill-bg); color: var(--theme-pill-text); font-size: 12px; font-weight: bold; padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 6px; }
+    
+    .mood-desc { font-size: 11px; line-height: 1.5; opacity: 0.7; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; margin-top: 4px; }
+
+    /* 物理级字体锁定颜色，脱离全局 CSS 变量的魔爪 */
+    .p-footer { margin-top: 30px; text-align: center; font-size: 10px; letter-spacing: 2px; font-weight: bold; }
     .empty-box { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.4; min-height: 200px; text-align: center; color: var(--theme-text); transition: color 0.3s;}
     
     .ctrl-label { font-size: 12px; font-weight: bold; color: #666; margin-bottom: 8px; display: block; }
@@ -190,7 +177,6 @@
 {% block content %}
 <script>
     window.tmdbCache = {};
-    
     window.fallbackReportPoster = async function(imgEl, title, isTop1 = false) {
         if(imgEl.getAttribute('data-fallback-done')) return;
         imgEl.setAttribute('data-fallback-done', 'true');
@@ -303,7 +289,7 @@
                     </div>
                     
                     <div id="empty-area" class="empty-box" style="display:none;"><i class="fa-solid fa-ghost" style="font-size: 40px; margin-bottom: 10px;"></i><p>该时段暂无记录</p></div>
-                    <div class="p-footer">GENERATED BY EMBY PULSE</div>
+                    <div class="p-footer" id="p-footer" style="color: rgba(255,255,255,0.4);">GENERATED BY EMBY PULSE</div>
                 </div>
             </div>
         </div>
@@ -441,15 +427,18 @@
         document.getElementById('poster-bg-img').style.opacity = '0';
         
         if(text === '#333') {
-            document.documentElement.style.setProperty('--theme-pill-bg', '#333');
-            document.documentElement.style.setProperty('--theme-pill-text', 'white');
-            document.documentElement.style.setProperty('--theme-card', 'rgba(0,0,0,0.05)');
+            document.documentElement.style.setProperty('--theme-pill-bg', '#e5e7eb'); // 浅灰更配纯白
+            document.documentElement.style.setProperty('--theme-pill-text', '#1f2937'); // 深灰字
+            document.documentElement.style.setProperty('--theme-card', 'rgba(0,0,0,0.03)');
             document.getElementById('poster-bg-gradient').style.background = 'transparent';
+            // 🔥 暴力修改页脚颜色
+            document.getElementById('p-footer').style.color = 'rgba(0,0,0,0.3)';
         } else {
             document.documentElement.style.setProperty('--theme-pill-bg', 'rgba(255,255,255,0.15)');
             document.documentElement.style.setProperty('--theme-pill-text', 'white');
             document.documentElement.style.setProperty('--theme-card', 'rgba(255,255,255,0.08)');
             document.getElementById('poster-bg-gradient').style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.5))';
+            document.getElementById('p-footer').style.color = 'rgba(255,255,255,0.4)';
         }
     }
 
@@ -473,6 +462,7 @@
             document.documentElement.style.setProperty('--theme-text', 'white'); 
             document.querySelector('.poster-canvas').style.color = 'white';
             document.getElementById('poster-bg-gradient').style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.8) 100%)';
+            document.getElementById('p-footer').style.color = 'rgba(255,255,255,0.5)'; // 背景图上统一白字
             if(top1PhysicalBlurredBase64) {
                 document.getElementById('poster-bg-img').style.backgroundImage = `url('${top1PhysicalBlurredBase64}')`;
             }
@@ -554,17 +544,28 @@
         loadData();
     }
 
+    // 🔥 彻底重构的情绪模块渲染器：放弃内联图文，全转为硬核 flex 大盒子数据看板
     function renderMoods(moodData) {
         const area = document.getElementById('mood-area');
         area.innerHTML = '';
         let html = '';
         
         if(moodData.genres && moodData.genres.length > 0) {
+            const iconMap = {'剧情': '🎬', '喜剧': '😂', '动作': '⚔️', '科幻': '🛸', '悬疑': '🕵️‍♂️', '爱情': '❤️', '动画': '🦄', '恐怖': '👻', '纪录': '🌍'};
+            let tagsHtml = '';
+            moodData.genres.forEach(g => {
+                let icon = iconMap[g] || '🏷️';
+                tagsHtml += `<div class="mood-tag-pill"><span>${icon}</span> <span>${g}</span></div>`;
+            });
+            
             html += `
             <div class="mood-card">
                 <i class="fa-solid fa-dna mood-icon"></i>
-                <div class="mood-title"><i class="fa-solid fa-flask"></i> 观影基因</div>
-                <div class="mood-text">你的灵魂由 <span class="mood-highlight">${moodData.genres.join(' / ')}</span> 构成。这是一个独一无二的宇宙。</div>
+                <div class="mood-title"><i class="fa-solid fa-flask"></i> 观影基因重组</div>
+                <div class="mood-tags-container">
+                    ${tagsHtml}
+                </div>
+                <div class="mood-desc">这是一个独一无二的影视灵魂宇宙。</div>
             </div>`;
         }
         
@@ -572,8 +573,18 @@
             html += `
             <div class="mood-card">
                 <i class="fa-solid fa-couch mood-icon"></i>
-                <div class="mood-title"><i class="fa-solid fa-fire"></i> 沉迷时刻</div>
-                <div class="mood-text"><span class="mood-highlight">${moodData.binge_day.date}</span> 是你最疯狂的一天，一口气观看了 <span class="mood-highlight">${moodData.binge_day.hours}</span> 小时。</div>
+                <div class="mood-title"><i class="fa-solid fa-fire"></i> 极度沉迷时刻</div>
+                <div class="mood-data-container">
+                    <div class="mood-data-box">
+                        <div class="mood-data-val">${moodData.binge_day.date}</div>
+                        <div class="mood-data-sub">这一天最疯狂</div>
+                    </div>
+                    <div class="mood-data-box">
+                        <div class="mood-data-val">${moodData.binge_day.hours} H</div>
+                        <div class="mood-data-sub">一口气看了</div>
+                    </div>
+                </div>
+                <div class="mood-desc">是谁陪你一起度过了这漫长的时光？</div>
             </div>`;
         }
         
@@ -581,8 +592,14 @@
             html += `
             <div class="mood-card">
                 <i class="fa-solid fa-moon mood-icon"></i>
-                <div class="mood-title"><i class="fa-solid fa-owl"></i> 深夜刺客</div>
-                <div class="mood-text"><span class="mood-highlight">${moodData.late_night.date} 凌晨 ${moodData.late_night.time}</span>，整座城市都沉睡了，你还在独自沉浸在《${moodData.late_night.name}》里。夜深了，注意保护眼睛。</div>
+                <div class="mood-title"><i class="fa-solid fa-owl"></i> 深夜刺客出没</div>
+                <div class="mood-data-container">
+                    <div class="mood-data-box" style="flex:1;">
+                        <div class="mood-data-val">凌晨 ${moodData.late_night.time}</div>
+                        <div class="mood-data-sub">在看: ${moodData.late_night.name}</div>
+                    </div>
+                </div>
+                <div class="mood-desc">整座城市都在沉睡，你却独自在此修仙。注意保护眼睛。</div>
             </div>`;
         }
         
@@ -637,7 +654,7 @@
                                 if(isCoverBgEnabled) document.getElementById('poster-bg-img').style.backgroundImage = `url('${top1PhysicalBlurredBase64}')`;
                             }
                         } else {
-                            fallbackReportPoster(realImg, list[idx].ItemName, rank === 1);
+                            window.fallbackReportPoster(realImg, list[idx].ItemName, rank === 1);
                         }
                     }
                 };
@@ -672,7 +689,7 @@
                         imgEl.src = b64;
                         imgEl.style.objectFit = "cover";
                     } else {
-                        fallbackReportPoster(imgEl, list[i].ItemName);
+                        window.fallbackReportPoster(imgEl, list[i].ItemName);
                     }
                 })());
             }
