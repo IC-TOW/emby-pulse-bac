@@ -15,6 +15,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
     
     <script>
         tailwind.config = {
@@ -57,6 +58,65 @@
         .dark .poster-card:hover { box-shadow: 0 20px 25px -5px rgba(0,0,0,0.8); }
         .bg-gradient-radial { background: radial-gradient(circle at center, var(--tw-gradient-stops)); }
         [x-cloak] { display: none !important; }
+
+        /* 🔥 海报工作室的内置组件样式 (脱离全局污染) */
+        .my-poster-canvas { 
+            width: 400px; height: fit-content; min-height: auto; padding-bottom: 20px; 
+            background: var(--p-theme-bg, #1a1a1a); color: var(--p-theme-text, white); 
+            position: relative; overflow: hidden; display: flex; flex-direction: column; 
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5); line-height: 1.6; 
+            font-family: "Microsoft YaHei", "Noto Sans SC", sans-serif !important; 
+            transition: background 0.3s; transform-origin: top center; 
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .my-poster-bg-img { position: absolute; inset: 0; z-index: 0; background-size: cover; background-position: center; transform: scale(1.2); opacity: 0; transition: opacity 0.5s; height: 100%; }
+        .my-poster-gradient { position: absolute; inset: 0; z-index: 1; background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.5) 100%); height: 100%; transition: background 0.3s; }
+        
+        .my-p-content { position: relative; z-index: 10; padding: 40px 30px; display: block; }
+        .my-p-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .my-avatar { width: 54px; height: 54px; border-radius: 50%; background-color: #e5e7eb; display: flex; align-items: center; justify-content: center; font-size: 26px; color: white; border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 4px 10px rgba(0,0,0,0.2); background-size: cover !important; background-position: center !important; z-index: 20; position: relative; }
+        .my-user-info h1 { font-size: 24px; font-weight: 900; margin: 0; padding: 4px 0; color: var(--p-theme-text, white); }
+        .my-user-info p { font-size: 11px; opacity: 0.7; letter-spacing: 1px; margin: 0; padding-bottom: 2px; color: var(--p-theme-text, white); }
+        
+        .my-server-pill { background: var(--p-theme-card, rgba(255,255,255,0.08)); padding: 5px 12px; border-radius: 20px; font-size: 10px; border: 1px solid rgba(255,255,255,0.1); text-align: center; color: var(--p-theme-text, white); display: block; line-height: 1.2; }
+        .my-server-pill span { display: block; font-weight: 900; font-size: 13px; color: #4ade80; margin-bottom: 2px; }
+        
+        .my-stats-row { display: flex; gap: 10px; margin-bottom: 25px; }
+        .my-stat-card { flex: 1; background: var(--p-theme-card, rgba(255,255,255,0.08)); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center; }
+        .my-stat-val { font-size: 28px; font-weight: 900; line-height: 1; margin-bottom: 4px; padding-bottom: 4px; color: var(--p-theme-text, white); }
+        .my-stat-label { font-size: 9px; opacity: 0.6; font-weight: bold; color: var(--p-theme-text, white); }
+        
+        .my-podium-container { display: flex; justify-content: center; align-items: flex-end; gap: 10px; margin-bottom: 30px; margin-top: 10px; }
+        .my-podium-item { position: relative; display: flex; flex-direction: column; align-items: center; }
+        .my-podium-item.rank-2, .my-podium-item.rank-3 { width: 95px; }
+        .my-podium-item.rank-1 { width: 115px; z-index: 10; }
+        
+        .my-podium-cover { width: 100%; aspect-ratio: 2/3; border-radius: 8px; background-color: #333; box-shadow: 0 10px 20px rgba(0,0,0,0.3); border: 2px solid transparent; object-fit: cover; display: block; }
+        .my-podium-item.rank-1 .my-podium-cover { border-color: #eab308; box-shadow: 0 0 20px rgba(234, 179, 8, 0.4); }
+        .my-podium-item.rank-2 .my-podium-cover { border-color: #94a3b8; }
+        .my-podium-item.rank-3 .my-podium-cover { border-color: #b45309; }
+        
+        .my-medal { position: absolute; top: -10px; left: calc(50% - 12px); width: 24px; height: 24px; border-radius: 50%; text-align: center; font-size: 12px; font-weight: bold; color: white; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.3); line-height: 24px; box-sizing: border-box; }
+        .my-medal.rank-1 { background: linear-gradient(135deg, #fcd34d, #b45309); width: 32px; height: 32px; top: -16px; left: calc(50% - 16px); font-size: 14px; line-height: 32px; }
+        .my-medal i { display: block; margin-top: 1px; }
+        .my-medal.rank-2 { background: linear-gradient(135deg, #e2e8f0, #64748b); }
+        .my-medal.rank-3 { background: linear-gradient(135deg, #fdba74, #9a3412); }
+        
+        .my-podium-title { font-size: 11px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; padding-bottom: 4px; color: var(--p-theme-text, white); width: 100%; text-align: center; margin-top:8px;}
+        .my-podium-meta { font-size: 9px; opacity: 0.7; color: var(--p-theme-text, white); width: 100%; text-align: center;}
+        
+        .my-rank-row { display: flex; align-items: center; padding: 10px 10px; background: var(--p-theme-card, rgba(255,255,255,0.08)); border-radius: 10px; min-height: 50px; color: var(--p-theme-text, white); margin-bottom: 8px;}
+        .my-rank-poster-sm { width: 32px; height: 48px; border-radius: 4px; background-color: #333; margin-right: 12px; flex-shrink: 0; object-fit: cover; display: block; border: none; }
+        
+        .my-mood-card { background: linear-gradient(135deg, var(--p-theme-card, rgba(255,255,255,0.08)), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 15px; position: relative; overflow: hidden; color: var(--p-theme-text, white); margin-bottom: 15px;}
+        .my-mood-highlight { display: inline-block; font-weight: bold; color: var(--p-theme-pill-text, white); background: var(--p-theme-pill-bg, rgba(255,255,255,0.15)); padding: 2px 6px; border-radius: 4px; line-height: 1.2; margin: 0 2px; }
+        
+        /* 炫酷流光按钮 */
+        .btn-glow { position: relative; overflow: hidden; }
+        .btn-glow::after { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(to right, transparent, rgba(255,255,255,0.3), transparent); transform: rotate(30deg); animation: glow-sweep 3s infinite linear; }
+        @keyframes glow-sweep { 0% { transform: translateX(-100%) rotate(30deg); } 100% { transform: translateX(100%) rotate(30deg); } }
     </style>
 </head>
 
@@ -65,6 +125,7 @@
       @scroll.window="handleScroll()">
     
     <script>
+        window.tmdbCache = {};
         window.fallbackPoster = async function(img, title) {
             if (img.getAttribute('data-fallback-done')) return;
             img.setAttribute('data-fallback-done', 'true');
@@ -83,6 +144,62 @@
                 }
             } catch(e) {}
         };
+        
+        // 专供海报生成器的强制 Base64 TMDB 兜底
+        window.fallbackReportPoster = async function(imgEl, title) {
+            if(imgEl.getAttribute('data-fallback-done')) return;
+            imgEl.setAttribute('data-fallback-done', 'true');
+            imgEl.src = '/static/img/logo-app-2.png';
+            imgEl.style.objectFit = "contain"; imgEl.style.padding = "20px";
+            if(window.tmdbCache[title]) { imgEl.src = window.tmdbCache[title]; imgEl.style.objectFit = "cover"; imgEl.style.padding = "0"; return; }
+            try {
+                const res = await fetch(`/api/requests/search?query=${encodeURIComponent(title)}`);
+                const data = await res.json();
+                if (data.status === 'success' && data.data.length > 0) {
+                    const match = data.data.find(d => d.poster_path) || data.data[0];
+                    if (match.poster_path) {
+                        const b64 = await toBase64(match.poster_path);
+                        if(b64) {
+                            window.tmdbCache[title] = b64;
+                            imgEl.src = b64; imgEl.style.objectFit = "cover"; imgEl.style.padding = "0";
+                        }
+                    }
+                }
+            } catch(e) {}
+        };
+
+        // Canvas 物理模糊
+        async function toBase64(url) {
+            try {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`); 
+                const blob = await res.blob();
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            } catch(e) { return null; }
+        }
+
+        async function applyPhysicalBlur(base64Url) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = 400; canvas.height = 800; 
+                    ctx.filter = 'blur(40px) brightness(0.4)';
+                    const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
+                    const x = (canvas.width / 2) - (img.width / 2) * scale;
+                    const y = (canvas.height / 2) - (img.height / 2) * scale;
+                    ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                };
+                img.onerror = () => resolve(base64Url);
+                img.src = base64Url;
+            });
+        }
     </script>
     
     <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
@@ -337,7 +454,12 @@
                                 </div>
                             </div>
                             
-                            <div class="w-full mt-2 z-10 bg-slate-50 dark:bg-[#111] p-3 rounded-xl border border-slate-200 dark:border-white/5 text-left relative group">
+                            <button @click="openMyPosterStudio()" class="w-full mt-3 py-3 rounded-2xl font-black text-white bg-slate-900 dark:bg-brand-600 shadow-xl transition-transform active:scale-95 z-10 flex items-center justify-center gap-2 btn-glow">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                生成专属观影海报
+                            </button>
+                            
+                            <div class="w-full mt-3 z-10 bg-slate-50 dark:bg-[#111] p-3 rounded-xl border border-slate-200 dark:border-white/5 text-left relative group">
                                 <div class="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-1">🔗 服务器直连地址</div>
                                 <div class="text-xs font-mono font-bold text-slate-800 dark:text-zinc-300 truncate pr-16 flex items-center gap-2">
                                     <span x-show="showServerUrl" x-text="serverUrl"></span>
@@ -512,51 +634,120 @@
 
     </div>
 
-    <div x-show="showcaseModal.open" class="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4" x-cloak>
-        <div x-show="showcaseModal.open" x-transition.opacity @click="closeShowcaseModal()" class="absolute inset-0 bg-slate-900/60 dark:bg-black/90 backdrop-blur-sm"></div>
-        <div x-show="showcaseModal.open" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-full md:translate-y-10 scale-95" x-transition:enter-end="opacity-100 translate-y-0 scale-100" class="relative w-full md:w-[500px] max-h-[85vh] bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/5 rounded-t-3xl md:rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+    <div x-show="posterStudio.open" class="fixed inset-0 z-[200] flex flex-col bg-slate-900 dark:bg-black" x-cloak>
+        <div class="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0 bg-black/50 backdrop-blur-md">
+            <h3 class="text-white font-bold"><i class="fa-solid fa-wand-magic-sparkles text-brand-500 mr-2"></i>生成我的观影海报</h3>
+            <button @click="closeMyPosterStudio()" class="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-rose-500 transition"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto bg-slate-800 dark:bg-[#0a0a0a] flex justify-center items-start pt-6 pb-20 relative" id="my-poster-preview-area">
+            <div x-show="posterStudio.isLoading" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-slate-900/80 backdrop-blur-sm">
+                <i class="fa-solid fa-circle-notch fa-spin text-4xl text-brand-500 mb-4"></i>
+                <div class="text-white font-bold tracking-widest text-sm">正在提炼观影灵魂...</div>
+            </div>
             
-            <div class="relative h-48 md:h-56 shrink-0 bg-slate-200 dark:bg-[#111]">
-                <img :src="`/api/proxy/smart_image?item_id=${showcaseModal.data?.Id || showcaseModal.data?.ItemId}&type=Backdrop`" class="w-full h-full object-cover opacity-60 dark:opacity-30" onerror="this.style.display='none'">
-                <div class="absolute inset-0 bg-gradient-to-t from-white via-white/40 dark:from-[#0a0a0a] dark:via-[#0a0a0a]/40 to-transparent"></div>
-                <button @click="closeShowcaseModal()" class="absolute top-4 right-4 bg-black/30 hover:bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center backdrop-blur-md transition shadow-md">
-                    <i class="fa-solid fa-xmark"></i>
+            <div id="my-scale-wrapper" class="transition-transform duration-300 origin-top">
+                <div id="my-capture-target" class="my-poster-canvas shadow-2xl">
+                    <div class="my-poster-bg-img" id="my-poster-bg-img"></div>
+                    <div class="my-poster-gradient" id="my-poster-bg-gradient"></div>
+                    <div class="my-p-content">
+                        <div class="my-p-header">
+                            <div class="user-box">
+                                <div class="my-avatar" id="my-p-avatar"></div>
+                                <div class="my-user-info">
+                                    <h1 x-text="userName">User</h1>
+                                    <p x-text="posterStudio.periodLabel">全量观影报告</p>
+                                </div>
+                            </div>
+                            <div class="my-server-pill"><span>专属</span>玩家足迹</div>
+                        </div>
+                        <div class="my-stats-row">
+                            <div class="my-stat-card">
+                                <div class="my-stat-val" x-text="posterStudio.data?.hours || 0">0</div>
+                                <div class="my-stat-label">专注时长 (H)</div>
+                            </div>
+                            <div class="my-stat-card">
+                                <div class="my-stat-val" x-text="posterStudio.data?.plays || 0">0</div>
+                                <div class="my-stat-label">播放次数</div>
+                            </div>
+                        </div>
+                        
+                        <div x-show="posterStudio.data?.plays > 0">
+                            <div class="my-podium-container" x-show="posterStudio.data?.top_list?.length > 0">
+                                <div class="my-podium-item rank-2" :style="posterStudio.data?.top_list?.length > 1 ? '' : 'visibility:hidden'">
+                                    <div class="my-medal rank-2">2</div>
+                                    <img class="my-podium-cover" id="my-rank2-img">
+                                    <div class="my-podium-title" x-text="posterStudio.data?.top_list?.[1]?.ItemName || '-'"></div>
+                                    <div class="my-podium-meta" x-text="(posterStudio.data?.top_list?.[1]?.Count || 0) + '次'"></div>
+                                </div>
+                                <div class="my-podium-item rank-1" :style="posterStudio.data?.top_list?.length > 0 ? '' : 'visibility:hidden'">
+                                    <div class="my-medal rank-1"><i class="fa-solid fa-crown"></i></div>
+                                    <img class="my-podium-cover" id="my-rank1-img">
+                                    <div class="my-podium-title" x-text="posterStudio.data?.top_list?.[0]?.ItemName || '-'"></div>
+                                    <div class="my-podium-meta" x-text="(posterStudio.data?.top_list?.[0]?.Count || 0) + '次'"></div>
+                                </div>
+                                <div class="my-podium-item rank-3" :style="posterStudio.data?.top_list?.length > 2 ? '' : 'visibility:hidden'">
+                                    <div class="my-medal rank-3">3</div>
+                                    <img class="my-podium-cover" id="my-rank3-img">
+                                    <div class="my-podium-title" x-text="posterStudio.data?.top_list?.[2]?.ItemName || '-'"></div>
+                                    <div class="my-podium-meta" x-text="(posterStudio.data?.top_list?.[2]?.Count || 0) + '次'"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex flex-col gap-2">
+                                <template x-for="(item, i) in (posterStudio.data?.top_list || []).slice(3, 10)" :key="item.ItemId">
+                                    <div class="my-rank-row">
+                                        <div class="w-6 text-center font-black text-xs opacity-40" x-text="i + 4"></div>
+                                        <img class="my-rank-poster-sm" :id="'my-sm-img-'+i">
+                                        <div class="flex-1 min-w-0 ml-1">
+                                            <div class="font-bold text-xs truncate pb-1" x-text="item.ItemName"></div>
+                                            <div class="text-[9px] opacity-70" x-text="item.Count + '次'"></div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                            
+                            <div class="flex flex-col gap-4 mt-6" id="my-mood-area"></div>
+                        </div>
+                        
+                        <div x-show="posterStudio.data?.plays === 0" class="py-20 text-center opacity-40 text-white flex flex-col items-center">
+                            <i class="fa-solid fa-ghost text-4xl mb-3"></i>
+                            <div class="font-bold text-sm">该时段暂无记录</div>
+                        </div>
+                        
+                        <div class="mt-8 text-center opacity-40 font-bold text-[9px] tracking-[2px] text-white">GENERATED BY EMBY PULSE</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-slate-900 border-t border-white/10 shrink-0 px-4 py-4 pb-[env(safe-area-inset-bottom)] z-10">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex bg-slate-800 p-1 rounded-xl">
+                    <button @click="setMyPosterPeriod('all')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors" :class="posterStudio.period === 'all' ? 'bg-white text-black' : 'text-slate-400'">全量</button>
+                    <button @click="setMyPosterPeriod('year')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors" :class="posterStudio.period === 'year' ? 'bg-white text-black' : 'text-slate-400'">年度</button>
+                    <button @click="setMyPosterPeriod('month')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors" :class="posterStudio.period === 'month' ? 'bg-white text-black' : 'text-slate-400'">本月</button>
+                    <button @click="setMyPosterPeriod('week')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors" :class="posterStudio.period === 'week' ? 'bg-white text-black' : 'text-slate-400'">本周</button>
+                </div>
+                <button @click="toggleMyCoverBg()" class="px-3 py-1.5 rounded-xl border transition-colors text-xs font-bold flex items-center gap-1.5" :class="posterStudio.useCoverBg ? 'bg-brand-500 text-white border-brand-400' : 'border-slate-600 text-slate-300'">
+                    <i class="fa-solid fa-image"></i> 模糊背景
                 </button>
             </div>
             
-            <div class="relative px-6 pb-6 pt-0 flex-1 overflow-y-auto hide-scrollbar -mt-16">
-                <div class="flex gap-4 items-end mb-5">
-                    <img :src="`/api/proxy/smart_image?item_id=${showcaseModal.data?.Id || showcaseModal.data?.ItemId}&type=Primary`" class="w-24 md:w-28 rounded-xl shadow-xl ring-4 ring-white dark:ring-[#0a0a0a] relative z-10 aspect-[2/3] object-cover bg-slate-200 dark:bg-[#111]">
-                    <div class="pb-1 w-full min-w-0">
-                        <h2 class="text-xl md:text-2xl font-extrabold leading-tight text-slate-900 dark:text-white truncate" x-text="showcaseModal.data?.Name || showcaseModal.data?.ItemName"></h2>
-                        <div class="flex flex-wrap items-center gap-2 mt-2 text-[10px] sm:text-xs font-bold text-slate-600 dark:text-zinc-300">
-                            <span class="px-2 py-0.5 bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 rounded" x-show="showcaseModal.data?.Type" x-text="showcaseModal.data?.Type === 'Movie' ? '电影' : '剧集'"></span>
-                            <span class="px-2 py-0.5 bg-slate-100 dark:bg-white/10 rounded" x-show="showcaseModal.data?.ProductionYear" x-text="showcaseModal.data?.ProductionYear"></span>
-                            <span class="flex items-center gap-1 text-yellow-500 bg-yellow-50 dark:bg-yellow-500/10 px-2 py-0.5 rounded" x-show="showcaseModal.data?.CommunityRating"><i class="fa-solid fa-star"></i> <span x-text="showcaseModal.data?.CommunityRating"></span></span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div x-show="showcaseModal.isLoading" class="space-y-2 mb-6">
-                    <div class="h-4 bg-slate-200 dark:bg-white/5 rounded animate-pulse w-full"></div>
-                    <div class="h-4 bg-slate-200 dark:bg-white/5 rounded animate-pulse w-5/6"></div>
-                    <div class="h-4 bg-slate-200 dark:bg-white/5 rounded animate-pulse w-4/6"></div>
-                </div>
-                
-                <div x-show="!showcaseModal.isLoading">
-                    <div class="flex flex-wrap gap-1.5 mb-3" x-show="showcaseModal.data?.Genres && showcaseModal.data?.Genres.length > 0">
-                        <template x-for="g in showcaseModal.data?.Genres" :key="g">
-                            <span class="px-2 py-0.5 border border-slate-200 dark:border-white/10 rounded-full text-[10px] font-medium text-slate-500 dark:text-zinc-400" x-text="g"></span>
-                        </template>
-                    </div>
-                    <p class="text-slate-600 dark:text-zinc-400 text-sm leading-relaxed mb-6" x-text="showcaseModal.data?.Overview || '暂无剧情简介...'"></p>
-                </div>
-                
-                <div class="bg-gradient-to-r from-brand-500/10 to-blue-500/10 border border-brand-500/20 rounded-2xl p-4 flex items-center justify-center gap-2 mt-2">
-                    <i class="fa-solid fa-popcorn text-brand-500 text-lg"></i>
-                    <span class="text-sm font-bold text-brand-700 dark:text-brand-400">本片已收录，快去媒体库中寻找它吧！</span>
-                </div>
+            <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-4 pb-1">
+                <div @click="setMyPosterTheme('#1a1a1a', 'white', '#eab308')" class="shrink-0 w-12 h-8 rounded-lg cursor-pointer border-2 border-transparent focus:border-white shadow-sm" style="background: #1a1a1a;"></div>
+                <div @click="setMyPosterTheme('#2e1065', 'white', '#c084fc')" class="shrink-0 w-12 h-8 rounded-lg cursor-pointer border-2 border-transparent focus:border-white shadow-sm" style="background: #2e1065;"></div>
+                <div @click="setMyPosterTheme('#0f172a', 'white', '#38bdf8')" class="shrink-0 w-12 h-8 rounded-lg cursor-pointer border-2 border-transparent focus:border-white shadow-sm" style="background: #0f172a;"></div>
+                <div @click="setMyPosterTheme('#064e3b', 'white', '#34d399')" class="shrink-0 w-12 h-8 rounded-lg cursor-pointer border-2 border-transparent focus:border-white shadow-sm" style="background: #064e3b;"></div>
+                <div @click="setMyPosterTheme('#7f1d1d', 'white', '#f87171')" class="shrink-0 w-12 h-8 rounded-lg cursor-pointer border-2 border-transparent focus:border-white shadow-sm" style="background: #7f1d1d;"></div>
+                <div @click="setMyPosterTheme('linear-gradient(135deg, #c2410c, #7c2d12)', 'white', '#fdba74')" class="shrink-0 w-12 h-8 rounded-lg cursor-pointer border-2 border-transparent focus:border-white shadow-sm" style="background: linear-gradient(135deg, #c2410c, #7c2d12);"></div>
+                <div @click="setMyPosterTheme('#ffffff', '#333', '#3b82f6')" class="shrink-0 w-12 h-8 rounded-lg cursor-pointer border-2 border-slate-300 shadow-sm flex items-center justify-center text-[10px] font-bold text-slate-400" style="background: #ffffff;">纯白</div>
             </div>
+            
+            <button @click="saveMyPoster()" :disabled="posterStudio.isSaving || posterStudio.isLoading" class="w-full py-4 rounded-xl font-black text-white bg-brand-600 hover:bg-brand-500 shadow-lg shadow-brand-500/20 transition flex items-center justify-center gap-2">
+                <span x-show="posterStudio.isSaving" class="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full"></span>
+                <span x-show="!posterStudio.isSaving"><i class="fa-solid fa-download"></i> 生成并保存相册</span>
+            </button>
         </div>
     </div>
 
@@ -661,72 +852,49 @@
         </div>
     </div>
 
-    <div x-show="queueModal.open" class="fixed inset-0 z-[90] flex items-end md:items-center justify-center p-0 md:p-4" x-cloak>
-        <div x-show="queueModal.open" x-transition.opacity @click="closeQueueModal()" class="absolute inset-0 bg-slate-900/60 dark:bg-black/90 backdrop-blur-sm"></div>
-        <div x-show="queueModal.open" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-full md:translate-y-10 scale-95" x-transition:enter-end="opacity-100 translate-y-0 scale-100" class="relative w-full md:w-[700px] h-[85vh] md:h-[800px] bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/5 rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col">
+    <div x-show="showcaseModal.open" class="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4" x-cloak>
+        <div x-show="showcaseModal.open" x-transition.opacity @click="closeShowcaseModal()" class="absolute inset-0 bg-slate-900/60 dark:bg-black/90 backdrop-blur-sm"></div>
+        <div x-show="showcaseModal.open" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-full md:translate-y-10 scale-95" x-transition:enter-end="opacity-100 translate-y-0 scale-100" class="relative w-full md:w-[500px] max-h-[85vh] bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/5 rounded-t-3xl md:rounded-3xl overflow-hidden shadow-2xl flex flex-col">
             
-            <div class="p-4 sm:p-6 border-b border-slate-200 dark:border-white/5 flex justify-between items-center glass-header z-10 shrink-0">
-                <div class="flex bg-slate-100 dark:bg-white/5 p-1 rounded-xl">
-                    <button @click="queueModal.activeTab = 'request'; loadQueue()" class="px-4 py-1.5 rounded-lg text-sm font-bold transition-all" :class="queueModal.activeTab === 'request' ? 'bg-white dark:bg-[#1a1a1a] text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400'">我的求片</button>
-                    <button @click="queueModal.activeTab = 'feedback'; loadMyFeedback()" class="px-4 py-1.5 rounded-lg text-sm font-bold transition-all" :class="queueModal.activeTab === 'feedback' ? 'bg-white dark:bg-[#1a1a1a] text-rose-600 dark:text-rose-400 shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400'">我的报错</button>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button @click="queueModal.activeTab === 'request' ? loadQueue() : loadMyFeedback(); isSpinning = true; setTimeout(() => isSpinning = false, 800); showToast('已刷新')" x-data="{ isSpinning: false }" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 text-slate-500 hover:text-brand-500 flex items-center justify-center transition">
-                        <svg :class="{'animate-spin': isSpinning}" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                    </button>
-                    <button @click="closeQueueModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 text-slate-500 hover:text-rose-500 flex items-center justify-center transition"><i class="fa-solid fa-xmark"></i></button>
-                </div>
+            <div class="relative h-48 md:h-56 shrink-0 bg-slate-200 dark:bg-[#111]">
+                <img :src="`/api/proxy/smart_image?item_id=${showcaseModal.data?.Id || showcaseModal.data?.ItemId}&type=Backdrop`" class="w-full h-full object-cover opacity-60 dark:opacity-30" onerror="this.style.display='none'">
+                <div class="absolute inset-0 bg-gradient-to-t from-white via-white/40 dark:from-[#0a0a0a] dark:via-[#0a0a0a]/40 to-transparent"></div>
+                <button @click="closeShowcaseModal()" class="absolute top-4 right-4 bg-black/30 hover:bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center backdrop-blur-md transition shadow-md">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
-
-            <div class="flex-1 overflow-y-auto p-4 sm:p-6 hide-scrollbar bg-slate-50/50 dark:bg-transparent">
-                <div x-show="queueModal.activeTab === 'request'">
-                    <div x-show="myQueue.length === 0" class="text-center py-20 text-slate-400 dark:text-zinc-600">
-                        <i class="fa-solid fa-box-open text-5xl mb-4 opacity-30"></i>
-                        <p class="font-bold text-sm">暂无求片记录</p>
-                    </div>
-                    <div class="flex flex-col gap-3">
-                        <template x-for="item in myQueue" :key="item.tmdb_id + '_' + item.season">
-                            <div class="bg-white dark:bg-[#111] p-3 rounded-2xl flex gap-4 items-center relative border border-slate-200 dark:border-white/5 shadow-sm hover:shadow-md transition">
-                                <img :src="item.poster_path" class="w-16 sm:w-20 rounded-xl shadow-sm aspect-[2/3] object-cover bg-slate-200 dark:bg-[#1a1a1a]">
-                                <div class="flex-1 min-w-0">
-                                    <h4 class="font-bold text-base sm:text-lg truncate text-slate-900 dark:text-white" x-text="item.title"></h4>
-                                    <div class="text-xs font-medium text-slate-500 dark:text-zinc-400 mt-1 mb-2.5" x-text="item.media_type === 'tv' ? `${item.year} · 第 ${item.season} 季` : item.year"></div>
-                                    
-                                    <span x-show="item.status === 0" class="px-2 py-1 bg-slate-100 dark:bg-[#1a1a1a] text-slate-600 dark:text-zinc-300 rounded border border-slate-200 dark:border-white/10 text-[10px] font-bold">审核中</span>
-                                    <span x-show="item.status === 1 || item.status === 4" class="px-2 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-500/20 text-[10px] font-bold inline-flex items-center gap-1.5"><span class="animate-pulse w-1.5 h-1.5 bg-blue-500 rounded-full"></span> 处理中</span>
-                                    <span x-show="item.status === 2" class="px-2 py-1 bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 rounded border border-green-200 dark:border-green-500/20 text-[10px] font-bold">✅ 已入库</span>
-                                    
-                                    <div x-show="item.status === 3" class="mt-1">
-                                        <span class="px-2 py-1 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded border border-red-200 dark:border-red-500/20 text-[10px] font-bold">❌ 被拒绝</span>
-                                        <div class="text-[10px] text-red-500/80 mt-1 pl-1" x-show="item.reject_reason">原因: <span x-text="item.reject_reason"></span></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
+            
+            <div class="relative px-6 pb-6 pt-0 flex-1 overflow-y-auto hide-scrollbar -mt-16">
+                <div class="flex gap-4 items-end mb-5">
+                    <img :src="`/api/proxy/smart_image?item_id=${showcaseModal.data?.Id || showcaseModal.data?.ItemId}&type=Primary`" class="w-24 md:w-28 rounded-xl shadow-xl ring-4 ring-white dark:ring-[#0a0a0a] relative z-10 aspect-[2/3] object-cover bg-slate-200 dark:bg-[#111]">
+                    <div class="pb-1 w-full min-w-0">
+                        <h2 class="text-xl md:text-2xl font-extrabold leading-tight text-slate-900 dark:text-white truncate" x-text="showcaseModal.data?.Name || showcaseModal.data?.ItemName"></h2>
+                        <div class="flex flex-wrap items-center gap-2 mt-2 text-[10px] sm:text-xs font-bold text-slate-600 dark:text-zinc-300">
+                            <span class="px-2 py-0.5 bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 rounded" x-show="showcaseModal.data?.Type" x-text="showcaseModal.data?.Type === 'Movie' ? '电影' : '剧集'"></span>
+                            <span class="px-2 py-0.5 bg-slate-100 dark:bg-white/10 rounded" x-show="showcaseModal.data?.ProductionYear" x-text="showcaseModal.data?.ProductionYear"></span>
+                            <span class="flex items-center gap-1 text-yellow-500 bg-yellow-50 dark:bg-yellow-500/10 px-2 py-0.5 rounded" x-show="showcaseModal.data?.CommunityRating"><i class="fa-solid fa-star"></i> <span x-text="showcaseModal.data?.CommunityRating"></span></span>
+                        </div>
                     </div>
                 </div>
-
-                <div x-show="queueModal.activeTab === 'feedback'" x-cloak>
-                    <div x-show="myFeedbacks.length === 0" class="text-center py-20 text-slate-400 dark:text-zinc-600">
-                        <i class="fa-solid fa-check-double text-5xl mb-4 opacity-30"></i>
-                        <p class="font-bold text-sm">没有任何报错记录</p>
-                    </div>
-                    <div class="flex flex-col gap-3">
-                        <template x-for="feed in myFeedbacks" :key="feed.id">
-                            <div class="bg-white dark:bg-[#111] p-4 rounded-2xl flex flex-col gap-2 border-l-4 shadow-sm border border-slate-200 dark:border-white/5" :class="feed.status === 0 ? 'border-l-red-400' : (feed.status === 1 ? 'border-l-blue-400' : (feed.status === 2 ? 'border-l-green-400' : 'border-l-gray-500'))">
-                                <div class="flex justify-between items-start">
-                                    <h4 class="font-bold text-sm sm:text-base text-slate-900 dark:text-white line-clamp-1 pr-2" x-text="feed.item_name"></h4>
-                                    <span x-show="feed.status === 0" class="text-[10px] bg-slate-100 dark:bg-[#1a1a1a] text-slate-600 dark:text-zinc-300 px-2 py-1 rounded font-bold shrink-0">待核实</span>
-                                    <span x-show="feed.status === 1" class="text-[10px] bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-1 rounded font-bold shrink-0">🛠️ 修复中</span>
-                                    <span x-show="feed.status === 2" class="text-[10px] bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 px-2 py-1 rounded font-bold shrink-0">✅ 已解决</span>
-                                    <span x-show="feed.status === 3" class="text-[10px] bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 px-2 py-1 rounded font-bold shrink-0">❌ 忽略</span>
-                                </div>
-                                <div class="text-[11px] text-rose-500 font-bold bg-rose-50 dark:bg-rose-500/10 self-start px-1.5 py-0.5 rounded border border-rose-100 dark:border-rose-500/20" x-text="'标签：' + feed.issue_type"></div>
-                                <p class="text-xs text-slate-500 dark:text-zinc-400 bg-slate-50 dark:bg-white/5 p-2 rounded-lg mt-1" x-show="feed.description" x-text="feed.description"></p>
-                                <p class="text-[9px] text-slate-400 font-mono mt-1" x-text="feed.created_at"></p>
-                            </div>
+                
+                <div x-show="showcaseModal.isLoading" class="space-y-2 mb-6">
+                    <div class="h-4 bg-slate-200 dark:bg-white/5 rounded animate-pulse w-full"></div>
+                    <div class="h-4 bg-slate-200 dark:bg-white/5 rounded animate-pulse w-5/6"></div>
+                    <div class="h-4 bg-slate-200 dark:bg-white/5 rounded animate-pulse w-4/6"></div>
+                </div>
+                
+                <div x-show="!showcaseModal.isLoading">
+                    <div class="flex flex-wrap gap-1.5 mb-3" x-show="showcaseModal.data?.Genres && showcaseModal.data?.Genres.length > 0">
+                        <template x-for="g in showcaseModal.data?.Genres" :key="g">
+                            <span class="px-2 py-0.5 border border-slate-200 dark:border-white/10 rounded-full text-[10px] font-medium text-slate-500 dark:text-zinc-400" x-text="g"></span>
                         </template>
                     </div>
+                    <p class="text-slate-600 dark:text-zinc-400 text-sm leading-relaxed mb-6" x-text="showcaseModal.data?.Overview || '暂无剧情简介...'"></p>
+                </div>
+                
+                <div class="bg-gradient-to-r from-brand-500/10 to-blue-500/10 border border-brand-500/20 rounded-2xl p-4 flex items-center justify-center gap-2 mt-2">
+                    <i class="fa-solid fa-popcorn text-brand-500 text-lg"></i>
+                    <span class="text-sm font-bold text-brand-700 dark:text-brand-400">本片已收录，快去媒体库中寻找它吧！</span>
                 </div>
             </div>
         </div>
@@ -770,15 +938,15 @@
                 searchQuery: '', isSearching: false, currentTab: 'explore', 
                 searchResults: [], 
                 
-                // 大盘相关数据
+                // 大盘数据
                 serverDashboard: null,
                 serverLatest: [],
-                serverTopRated: [], // 高分神作
-                serverGenres: [],   // 流派占比
+                serverTopRated: [], 
+                serverGenres: [],   
                 serverTopMovies: [],
                 serverTopSeries: [],
                 
-                // 种草弹窗 (展示 Emby 已有资源详情)
+                // 种草弹窗 
                 showcaseModal: { open: false, isLoading: false, data: null },
                 
                 // 工单浮窗
@@ -788,7 +956,6 @@
                 userStats: null, userBadges: [], userTrend: null, isStatsLoading: false, statsLoaded: false,
                 charts: { hour: null, device: null, client: null, trend: null },
 
-                // TMDB 求片弹窗
                 isModalOpen: false, activeItem: null, tvSeasons: [],
                 isLoadingSeasons: false, isCheckingLocal: false, selectedSeasons: [], isSubmitting: false,
                 toast: { show: false, message: '', type: 'success' },
@@ -796,6 +963,13 @@
                 feedbackModal: { open: false, itemName: '', posterPath: '', issueType: '缺少字幕', desc: '' },
                 feedbackIssues: ['缺少字幕', '字幕错位', '视频卡顿/花屏', '清晰度太低', '音轨无声/音画不同步', '其他问题'],
                 isFeedbackSubmitting: false,
+
+                // 🔥 新增：专属海报工作室状态
+                posterStudio: {
+                    open: false, isLoading: false, isSaving: false,
+                    period: 'month', periodLabel: '本月 观影报告',
+                    data: null, useCoverBg: false, top1BgBase64: null
+                },
 
                 handleScroll() {
                     const st = window.pageYOffset || document.documentElement.scrollTop;
@@ -824,11 +998,8 @@
                 toggleTheme() {
                     this.isDarkMode = !this.isDarkMode;
                     localStorage.setItem('ep_theme', this.isDarkMode ? 'dark' : 'light');
-                    if (this.isDarkMode) {
-                        document.documentElement.classList.add('dark');
-                    } else {
-                        document.documentElement.classList.remove('dark');
-                    }
+                    if (this.isDarkMode) { document.documentElement.classList.add('dark'); } 
+                    else { document.documentElement.classList.remove('dark'); }
                     if (this.currentTab === 'profile' && this.statsLoaded) { setTimeout(() => this.renderCharts(), 150); }
                 },
 
@@ -838,15 +1009,11 @@
                 },
                 
                 async copyToClipboard(text) {
-                    try {
-                        await navigator.clipboard.writeText(text);
-                    } catch(e) {
+                    try { await navigator.clipboard.writeText(text); } 
+                    catch(e) {
                         const input = document.createElement('input');
-                        input.value = text;
-                        document.body.appendChild(input);
-                        input.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(input);
+                        input.value = text; document.body.appendChild(input);
+                        input.select(); document.execCommand('copy'); document.body.removeChild(input);
                     }
                 },
 
@@ -886,7 +1053,6 @@
                     }
                 },
 
-                // 加载首页服务器大盘数据
                 async loadServerData() {
                     try {
                         const resDash = await fetch('/api/stats/dashboard?user_id=all');
@@ -914,7 +1080,6 @@
                     } catch(e) {}
                 },
 
-                // 种草弹窗逻辑
                 async openShowcaseModal(itemId, fallbackItem = null) {
                     this.showcaseModal.data = fallbackItem;
                     this.showcaseModal.open = true;
@@ -1118,6 +1283,214 @@
                         } else { this.showToast(data.message, 'error'); }
                     } catch(e) { this.showToast('报错失败，请重试', 'error'); }
                     finally { this.isFeedbackSubmitting = false; }
+                },
+
+                // ==========================
+                // 🔥 新增：专属海报工作室引擎
+                // ==========================
+                async openMyPosterStudio() {
+                    this.posterStudio.open = true;
+                    document.body.style.overflow = 'hidden';
+                    this.setMyPosterTheme('#1a1a1a', 'white', '#eab308'); // 默认黑金
+                    this.setMyPosterPeriod('month'); // 默认本月
+                },
+                
+                closeMyPosterStudio() {
+                    this.posterStudio.open = false;
+                    document.body.style.overflow = '';
+                },
+
+                setMyPosterTheme(bg, text, hl) {
+                    const canvas = document.getElementById('my-capture-target');
+                    canvas.style.setProperty('--p-theme-bg', bg);
+                    canvas.style.setProperty('--p-theme-text', text);
+                    canvas.style.setProperty('--p-theme-highlight', hl);
+                    
+                    this.posterStudio.useCoverBg = false;
+                    document.getElementById('my-poster-bg-img').style.opacity = '0';
+                    
+                    if(text === '#333') {
+                        canvas.style.setProperty('--p-theme-pill-bg', '#333');
+                        canvas.style.setProperty('--p-theme-pill-text', 'white');
+                        canvas.style.setProperty('--p-theme-card', 'rgba(0,0,0,0.05)');
+                        document.getElementById('my-poster-bg-gradient').style.background = 'transparent';
+                    } else {
+                        canvas.style.setProperty('--p-theme-pill-bg', 'rgba(255,255,255,0.15)');
+                        canvas.style.setProperty('--p-theme-pill-text', 'white');
+                        canvas.style.setProperty('--p-theme-card', 'rgba(255,255,255,0.08)');
+                        document.getElementById('my-poster-bg-gradient').style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.5))';
+                    }
+                },
+
+                toggleMyCoverBg() {
+                    this.posterStudio.useCoverBg = !this.posterStudio.useCoverBg;
+                    const bgImg = document.getElementById('my-poster-bg-img');
+                    const canvas = document.getElementById('my-capture-target');
+                    
+                    if(!this.posterStudio.useCoverBg) {
+                        bgImg.style.opacity = '0';
+                        const currentColor = canvas.style.getPropertyValue('--p-theme-text');
+                        if(currentColor === '#333') {
+                            document.getElementById('my-poster-bg-gradient').style.background = 'transparent';
+                        } else {
+                            document.getElementById('my-poster-bg-gradient').style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.5))';
+                        }
+                    } else {
+                        bgImg.style.opacity = '1';
+                        canvas.style.setProperty('--p-theme-card', 'rgba(255,255,255,0.08)');
+                        canvas.style.setProperty('--p-theme-pill-bg', 'rgba(255,255,255,0.15)');
+                        canvas.style.setProperty('--p-theme-pill-text', 'white');
+                        canvas.style.setProperty('--p-theme-text', 'white'); 
+                        document.getElementById('my-poster-bg-gradient').style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.8) 100%)';
+                        if(this.posterStudio.top1BgBase64) {
+                            bgImg.style.backgroundImage = `url('${this.posterStudio.top1BgBase64}')`;
+                        }
+                    }
+                },
+
+                async setMyPosterPeriod(period) {
+                    this.posterStudio.period = period;
+                    
+                    const now = new Date(); const y = now.getFullYear(); const m = now.getMonth() + 1;
+                    if (period === 'year') this.posterStudio.periodLabel = `${y} 年度观影报告`;
+                    else if (period === 'month') this.posterStudio.periodLabel = `${y}年${m}月 观影报告`;
+                    else if (period === 'week') {
+                        const day = now.getDay() || 7; 
+                        const start = new Date(now); start.setDate(now.getDate() - day + 1);
+                        const end = new Date(now); end.setDate(now.getDate() - day + 7);
+                        this.posterStudio.periodLabel = `${start.getMonth()+1}月${start.getDate()}日 - ${end.getMonth()+1}月${end.getDate()}日 周报`;
+                    }
+                    else this.posterStudio.periodLabel = '历史全量 观影报告';
+                    
+                    await this.loadMyPosterData();
+                },
+
+                async loadMyPosterData() {
+                    this.posterStudio.isLoading = true;
+                    try {
+                        // 渲染头像
+                        const avatarEl = document.getElementById('my-p-avatar');
+                        const realUrl = `/api/proxy/user_image/${this.userId}`;
+                        const b64Avatar = await toBase64(realUrl);
+                        if (b64Avatar) { avatarEl.style.backgroundImage = `url('${b64Avatar}')`; avatarEl.innerHTML = ''; } 
+                        else {
+                            const hash = this.userName.charCodeAt(0) % 10;
+                            const colors = ['#FFC0CB', '#FFB6C1', '#FF69B4', '#E6E6FA', '#D8BFD8', '#B0C4DE', '#ADD8E6', '#87CEFA', '#98FB98', '#90EE90'];
+                            avatarEl.style.backgroundColor = colors[hash];
+                            avatarEl.innerHTML = `<i class="fa-solid fa-user-astronaut"></i>`;
+                        }
+
+                        // 请求数据
+                        const res = await fetch(`/api/stats/poster_data?user_id=${this.userId}&period=${this.posterStudio.period}`);
+                        const json = await res.json();
+                        const data = json.data;
+                        this.posterStudio.data = data;
+                        this.posterStudio.top1BgBase64 = null;
+
+                        if (data.plays > 0) {
+                            const list = data.top_list;
+                            
+                            // 渲染前三名
+                            const renderRank = async (rank, idx) => {
+                                if(list[idx]) {
+                                    const imgUrl = `/api/proxy/smart_image?item_id=${list[idx].ItemId}&type=Primary`;
+                                    const realImg = document.getElementById(`my-rank${rank}-img`);
+                                    realImg.removeAttribute('data-fallback-done');
+                                    
+                                    const b64 = await toBase64(imgUrl);
+                                    if(b64) {
+                                        realImg.src = b64;
+                                        realImg.style.objectFit = "cover";
+                                        realImg.style.padding = "0";
+                                        if(rank === 1) {
+                                            this.posterStudio.top1BgBase64 = await applyPhysicalBlur(b64);
+                                            if(this.posterStudio.useCoverBg) document.getElementById('my-poster-bg-img').style.backgroundImage = `url('${this.posterStudio.top1BgBase64}')`;
+                                        }
+                                    } else {
+                                        window.fallbackReportPoster(realImg, list[idx].ItemName);
+                                    }
+                                }
+                            };
+                            await Promise.all([renderRank(1, 0), renderRank(2, 1), renderRank(3, 2)]);
+
+                            // 渲染列表小图
+                            const smPromises = [];
+                            const max = Math.min(list.length, 10);
+                            for(let i=3; i<max; i++) {
+                                smPromises.push((async () => {
+                                    const imgUrl = `/api/proxy/smart_image?item_id=${list[i].ItemId}&type=Primary`;
+                                    const b64 = await toBase64(imgUrl);
+                                    const imgEl = document.getElementById(`my-sm-img-${i-3}`);
+                                    if(imgEl) {
+                                        if(b64) { imgEl.src = b64; imgEl.style.objectFit = "cover"; } 
+                                        else { window.fallbackReportPoster(imgEl, list[i].ItemName); }
+                                    }
+                                })());
+                            }
+                            await Promise.all(smPromises);
+
+                            // 渲染情绪文案
+                            const area = document.getElementById('my-mood-area');
+                            area.innerHTML = '';
+                            let html = '';
+                            const mood = data.mood_data;
+                            if(mood) {
+                                if(mood.genres && mood.genres.length > 0) {
+                                    html += `<div class="my-mood-card"><i class="fa-solid fa-dna mood-icon"></i><div class="mood-title"><i class="fa-solid fa-flask"></i> 观影基因</div><div class="mood-text">你的灵魂由 <span class="my-mood-highlight">${mood.genres.join(' / ')}</span> 构成。这是一个独一无二的宇宙。</div></div>`;
+                                }
+                                if(mood.binge_day) {
+                                    html += `<div class="my-mood-card"><i class="fa-solid fa-couch mood-icon"></i><div class="mood-title"><i class="fa-solid fa-fire"></i> 沉迷时刻</div><div class="mood-text"><span class="my-mood-highlight">${mood.binge_day.date}</span> 是你最疯狂的一天，一口气观看了 <span class="my-mood-highlight">${mood.binge_day.hours}</span> 小时。</div></div>`;
+                                }
+                                if(mood.late_night) {
+                                    html += `<div class="my-mood-card"><i class="fa-solid fa-moon mood-icon"></i><div class="mood-title"><i class="fa-solid fa-owl"></i> 深夜刺客</div><div class="mood-text"><span class="my-mood-highlight">${mood.late_night.date} 凌晨 ${mood.late_night.time}</span>，整座城市都沉睡了，你还在独自沉浸在《${mood.late_night.name}》里。夜深了，注意保护眼睛。</div></div>`;
+                                }
+                            }
+                            area.innerHTML = html;
+                        }
+                        
+                        // 动态缩放适配屏幕
+                        this.$nextTick(() => {
+                            const wrapper = document.getElementById('my-poster-preview-area');
+                            const scaleWrapper = document.getElementById('my-scale-wrapper');
+                            const w = wrapper.clientWidth;
+                            const scale = Math.min((w - 40) / 400, 1);
+                            scaleWrapper.style.transform = `scale(${scale})`;
+                        });
+                        
+                    } catch(e) {}
+                    this.posterStudio.isLoading = false;
+                },
+
+                async saveMyPoster() {
+                    this.posterStudio.isSaving = true;
+                    
+                    const scaleWrapper = document.getElementById('my-scale-wrapper');
+                    const oldT = scaleWrapper.style.transform;
+                    
+                    // 强行把滚动条拉回顶部并取消缩放，杜绝偏移
+                    document.getElementById('my-poster-preview-area').scrollTo(0, 0);
+                    scaleWrapper.style.transform = 'none';
+                    await new Promise(r => setTimeout(r, 400)); 
+                    
+                    try {
+                        const canvas = await html2canvas(document.getElementById('my-capture-target'), { 
+                            scale: 2, 
+                            useCORS: true, 
+                            backgroundColor: null,
+                            scrollY: 0,
+                            scrollX: 0
+                        });
+                        const link = document.createElement('a');
+                        link.download = `EmbyPulse_${this.userName}_${this.posterStudio.period}.png`;
+                        link.href = canvas.toDataURL();
+                        link.click();
+                        this.showToast('海报已保存到相册！');
+                    } catch(e) { 
+                        this.showToast('生成截图失败，请重试', 'error'); 
+                    } finally { 
+                        scaleWrapper.style.transform = oldT; 
+                        this.posterStudio.isSaving = false;
+                    }
                 }
             }));
         });

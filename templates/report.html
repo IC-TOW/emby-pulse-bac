@@ -61,7 +61,6 @@
         --theme-pill-text: white; 
     }
     
-    /* 强制抗锯齿，提升截图文字锐度 */
     .poster-canvas { 
         width: 400px; height: fit-content; min-height: auto; padding-bottom: 20px; 
         background: var(--theme-bg); color: var(--theme-text); position: relative; 
@@ -92,8 +91,14 @@
     .user-info h1 { font-size: 24px; font-weight: 900; margin: 0; padding: 4px 0; color: var(--theme-text); transition: color 0.3s;}
     .user-info p { font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; margin: 0; padding-bottom: 2px; color: var(--theme-text); transition: color 0.3s;}
     
-    .server-pill { background: var(--theme-card); padding: 4px 10px; border-radius: 20px; font-size: 10px; border: 1px solid rgba(255,255,255,0.1); text-align: center; color: var(--theme-text); transition: color 0.3s, background 0.3s;}
-    .server-pill span { display: block; font-weight: 900; font-size: 12px; color: #4ade80; padding-bottom: 2px; }
+    /* 🔥 修复全服总播下掉：放弃 flex 居中，直接用 block 和显式的 padding 控制 */
+    .server-pill { 
+        background: var(--theme-card); padding: 5px 12px; border-radius: 20px; 
+        font-size: 10px; border: 1px solid rgba(255,255,255,0.1); 
+        text-align: center; color: var(--theme-text); transition: color 0.3s, background 0.3s;
+        display: block; line-height: 1.2;
+    }
+    .server-pill span { display: block; font-weight: 900; font-size: 13px; color: #4ade80; margin-bottom: 2px; }
     
     .stats-row { display: flex; gap: 10px; margin-bottom: 25px; }
     .stat-card { flex: 1; background: var(--theme-card); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center; backdrop-filter: blur(10px); transition: background 0.3s;}
@@ -105,7 +110,6 @@
     .podium-item.rank-2, .podium-item.rank-3 { width: 95px; }
     .podium-item.rank-1 { width: 115px; z-index: 10; }
     
-    /* 🔥 核心修复：完全废弃背景图，改用 <img> 实体渲染，画质瞬间起飞 */
     .podium-cover { 
         width: 100%; aspect-ratio: 2/3; border-radius: 8px; 
         background-color: #333; box-shadow: 0 10px 20px rgba(0,0,0,0.3); 
@@ -116,9 +120,18 @@
     .podium-item.rank-2 .podium-cover { border-color: #94a3b8; }
     .podium-item.rank-3 .podium-cover { border-color: #b45309; }
     
-    .medal { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: white; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.3); line-height: 1; }
-    .medal.rank-1 { background: linear-gradient(135deg, #fcd34d, #b45309); width: 32px; height: 32px; top: -16px; font-size: 14px; }
-    .medal i { display: block; margin-top: 1px; }
+    /* 🔥 修复皇冠下掉：使用绝对物理定位取代 transform 负值，增加 padding */
+    .medal { 
+        position: absolute; top: -10px; left: calc(50% - 12px); width: 24px; height: 24px; 
+        border-radius: 50%; text-align: center; font-size: 12px; font-weight: bold; 
+        color: white; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+        line-height: 24px; box-sizing: border-box;
+    }
+    .medal.rank-1 { 
+        background: linear-gradient(135deg, #fcd34d, #b45309); 
+        width: 32px; height: 32px; top: -16px; left: calc(50% - 16px); 
+        font-size: 14px; line-height: 32px;
+    }
     .medal.rank-2 { background: linear-gradient(135deg, #e2e8f0, #64748b); }
     .medal.rank-3 { background: linear-gradient(135deg, #fdba74, #9a3412); }
     
@@ -129,14 +142,7 @@
     .rank-list { display: flex; flex-direction: column; gap: 8px; }
     .rank-row { display: flex; align-items: center; padding: 10px 10px; background: var(--theme-card); border-radius: 10px; backdrop-filter: blur(5px); min-height: 50px; color: var(--theme-text); transition: background 0.3s, color 0.3s;}
     .rank-idx { font-size: 12px; font-weight: 900; opacity: 0.4; width: 25px; text-align: center; }
-    
-    /* 🔥 核心修复：列表图也改为实体 <img> */
-    .rank-poster-sm { 
-        width: 32px; height: 48px; border-radius: 4px; 
-        background-color: #333; margin-right: 12px; flex-shrink: 0; 
-        object-fit: cover; display: block; border: none;
-    }
-    
+    .rank-poster-sm { width: 32px; height: 48px; border-radius: 4px; background-color: #333; margin-right: 12px; flex-shrink: 0; object-fit: cover; display: block; border: none; }
     .rank-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
     .rank-name { font-size: 12px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-bottom: 4px; margin-bottom: -2px; }
     .rank-meta-row { font-size: 9px; opacity: 0.7; display: flex; gap: 8px; }
@@ -146,7 +152,13 @@
     .mood-icon { position: absolute; right: -10px; bottom: -15px; font-size: 60px; opacity: 0.08; transform: rotate(-15deg); }
     .mood-title { font-size: 10px; font-weight: 900; letter-spacing: 1px; color: var(--theme-highlight); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; transition: color 0.3s;}
     .mood-text { font-size: 12px; line-height: 1.6; opacity: 0.9; }
-    .mood-highlight { font-weight: bold; color: var(--theme-pill-text); background: var(--theme-pill-bg); padding: 0 4px; border-radius: 4px; transition: color 0.3s, background 0.3s;}
+    
+    /* 🔥 修复字块背景被狗啃：强制设置为 inline-block 并在内部精细控制 padding */
+    .mood-highlight { 
+        display: inline-block; font-weight: bold; color: var(--theme-pill-text); 
+        background: var(--theme-pill-bg); padding: 2px 6px; border-radius: 4px; 
+        transition: color 0.3s, background 0.3s; line-height: 1.2; margin: 0 2px;
+    }
     
     .p-footer { margin-top: 30px; text-align: center; opacity: 0.4; font-size: 10px; letter-spacing: 2px; color: var(--theme-text); transition: color 0.3s;}
     .empty-box { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.4; min-height: 200px; text-align: center; color: var(--theme-text); transition: color 0.3s;}
@@ -179,7 +191,6 @@
 <script>
     window.tmdbCache = {};
     
-    // 🔥 前置资源加载引擎：所有海报直接请求 Base64 实体
     window.fallbackReportPoster = async function(imgEl, title, isTop1 = false) {
         if(imgEl.getAttribute('data-fallback-done')) return;
         imgEl.setAttribute('data-fallback-done', 'true');
@@ -651,7 +662,6 @@
             }
             listEl.innerHTML = html;
             
-            // 异步并发加载小图 Base64 或触发 fallback
             const smPromises = [];
             for(let i=3; i<max; i++) {
                 smPromises.push((async () => {
@@ -680,13 +690,11 @@
         const wrapper = document.getElementById('scale-wrapper');
         const oldT = wrapper.style.transform;
         
-        // 强行把页面滚动到最顶端，并且移除缩放，保证 html2canvas 计算坐标绝对精准，拒绝偏移！
         window.scrollTo(0, 0);
         wrapper.style.transform = 'none';
         await new Promise(r => setTimeout(r, 400)); 
         
         try {
-            // 此时页面上所有的 img src 都已经是准备好的 Base64 实体图，直接无脑截图即可
             const canvas = await html2canvas(document.getElementById('capture-target'), { 
                 scale: 2, 
                 useCORS: true, 
