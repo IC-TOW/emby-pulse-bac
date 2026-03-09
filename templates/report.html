@@ -4,12 +4,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <script src="https://cdn.bootcdn.net/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <style>
-    /* 基础布局 - 🔥 修复：移除了强制的 font-family，现在它会跟随全局主题 */
     html, body { height: 100%; margin: 0; background: #f3f4f6; overflow: hidden; }
-    
     .app-container { display: flex; height: 100%; }
     
-    /* 预览区 */
     .preview-area { 
         flex: 1; overflow-y: auto; display: flex; justify-content: center; align-items: flex-start; 
         padding: 40px 20px; padding-top: 30px; padding-bottom: 140px;
@@ -17,14 +14,12 @@
         transition: background-color 0.3s;
     }
     
-    /* 控制面板 (PC) */
     .control-panel { 
         width: 360px; background: white; padding: 20px; border-left: 1px solid #ddd; 
         z-index: 50; display: block; box-shadow: -5px 0 15px rgba(0,0,0,0.05); overflow-y: auto; 
         transition: all 0.3s;
     }
     
-    /* 移动端底部栏 */
     .mobile-toolbar { 
         display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: 70px; 
         background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); 
@@ -36,7 +31,6 @@
     .btn-config { background: #f3f4f6; color: #333; margin-right: 10px; border: 1px solid #ddd; }
     .btn-save { background: #16a34a; color: white; flex: 1.5; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3); }
     
-    /* 底部弹窗 (Mobile) */
     .bottom-sheet { 
         display: block; visibility: hidden; position: fixed; bottom: 0; left: 0; width: 100%; 
         background: white; border-radius: 20px 20px 0 0; padding: 25px; padding-bottom: 40px; 
@@ -51,7 +45,6 @@
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 550; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
     .overlay.active { opacity: 1; pointer-events: auto; }
     
-    /* 响应式 */
     @media (max-width: 768px) { 
         .app-container { flex-direction: column; } 
         .control-panel { display: none !important; } 
@@ -59,8 +52,7 @@
         .preview-area { align-items: flex-start; } 
     }
     
-    /* 海报样式 (独立主题，不随界面暗色模式改变) */
-    /* 🔥 注意：这里保留 font-family，因为生成图片需要确定的字体，但它只影响海报内部 */
+    /* 海报内部样式 */
     :root { --theme-bg: #1a1a1a; --theme-card: rgba(255,255,255,0.08); --theme-text: white; --theme-highlight: #eab308; }
     .poster-canvas { 
         width: 400px; height: fit-content; min-height: auto; padding-bottom: 20px; 
@@ -94,10 +86,20 @@
     .stat-card { flex: 1; background: var(--theme-card); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center; backdrop-filter: blur(10px); }
     .stat-val { font-size: 28px; font-weight: 900; line-height: 1; margin-bottom: 4px; padding-bottom: 4px; }
     .stat-label { font-size: 9px; opacity: 0.6; text-transform: uppercase; font-weight: bold; }
-    .podium-container { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 10px; align-items: end; margin-bottom: 30px; margin-top: 10px; }
+    
+    /* 🔥 修复 Bug 核心：领奖台排版锁死 */
+    .podium-container { 
+        display: flex; /* 改用 Flex，强制控制尺寸和对齐 */
+        justify-content: center; align-items: flex-end; 
+        gap: 10px; margin-bottom: 30px; margin-top: 10px; 
+    }
     .podium-item { position: relative; display: flex; flex-direction: column; align-items: center; }
+    /* 锁死宽高，绝不允许拉伸 */
+    .podium-item.rank-2, .podium-item.rank-3 { width: 95px; }
+    .podium-item.rank-1 { width: 115px; z-index: 10; }
+    
     .podium-cover { width: 100%; aspect-ratio: 2/3; border-radius: 8px; background-color: #333; background-size: cover; background-position: center; box-shadow: 0 10px 20px rgba(0,0,0,0.3); position: relative; border: 2px solid transparent; }
-    .podium-item.rank-1 .podium-cover { border-color: #eab308; transform: scale(1.05); z-index: 5; box-shadow: 0 0 20px rgba(234, 179, 8, 0.4); }
+    .podium-item.rank-1 .podium-cover { border-color: #eab308; box-shadow: 0 0 20px rgba(234, 179, 8, 0.4); }
     .podium-item.rank-2 .podium-cover { border-color: #94a3b8; }
     .podium-item.rank-3 .podium-cover { border-color: #b45309; }
     .medal { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: white; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
@@ -107,17 +109,26 @@
     .podium-info { text-align: center; margin-top: 8px; width: 100%; }
     .podium-title { font-size: 11px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; padding-bottom: 4px; }
     .podium-meta { font-size: 9px; opacity: 0.7; }
+    
     .rank-list { display: flex; flex-direction: column; gap: 8px; }
     .rank-row { display: flex; align-items: center; padding: 10px 10px; background: var(--theme-card); border-radius: 10px; backdrop-filter: blur(5px); min-height: 50px; }
     .rank-idx { font-size: 12px; font-weight: 900; opacity: 0.4; width: 25px; text-align: center; }
-    .rank-poster-sm { width: 32px; height: 48px; border-radius: 4px; background-color: #333; background-size: cover; background-position: center; margin-right: 12px; flex-shrink: 0; }
+    .rank-poster-sm { width: 32px; height: 48px; border-radius: 4px; background-color: #333; background-size: cover; background-position: center; margin-right: 12px; flex-shrink: 0; position: relative; overflow: hidden; }
     .rank-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
     .rank-name { font-size: 12px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-bottom: 4px; margin-bottom: -2px; }
     .rank-meta-row { font-size: 9px; opacity: 0.7; display: flex; gap: 8px; }
-    .p-footer { margin-top: 15px; text-align: center; opacity: 0.4; font-size: 10px; letter-spacing: 2px; }
+    
+    /* 🔥 新增：情绪模块样式 */
+    .mood-area { margin-top: 25px; display: flex; flex-direction: column; gap: 15px; }
+    .mood-card { background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 15px; position: relative; overflow: hidden; }
+    .mood-icon { position: absolute; right: -10px; bottom: -15px; font-size: 60px; opacity: 0.08; transform: rotate(-15deg); }
+    .mood-title { font-size: 10px; font-weight: 900; letter-spacing: 1px; color: var(--theme-highlight); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+    .mood-text { font-size: 12px; line-height: 1.6; opacity: 0.9; }
+    .mood-highlight { font-weight: bold; color: white; background: rgba(255,255,255,0.15); padding: 0 4px; border-radius: 4px; }
+    
+    .p-footer { margin-top: 30px; text-align: center; opacity: 0.4; font-size: 10px; letter-spacing: 2px; }
     .empty-box { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.4; min-height: 200px; text-align: center; }
     
-    /* 控件样式 */
     .ctrl-label { font-size: 12px; font-weight: bold; color: #666; margin-bottom: 8px; display: block; }
     .btn-group { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
     .btn { flex: 1; padding: 10px; border: 1px solid #ddd; background: #fff; font-weight: bold; border-radius: 8px; font-size: 12px; cursor: pointer; min-width: 60px; white-space: nowrap; color: #374151; transition: all 0.2s; }
@@ -125,29 +136,58 @@
     .theme-dots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
     .dot { height: 40px; border-radius: 8px; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; font-weight: bold; text-shadow: 0 1px 2px black; }
 
-    /* 🔥 暗色模式适配 override 🔥 */
     html.dark body { background: #111827 !important; }
     html.dark .preview-area { background-color: #0f172a; } 
     html.dark .control-panel { background: #1f2937; border-left-color: #374151; }
     html.dark .mobile-toolbar { background: rgba(31, 41, 55, 0.95); border-top-color: #374151; }
     html.dark .toolbar-btn.btn-config { background: #374151; color: white; border-color: #4b5563; }
-    
     html.dark .bottom-sheet { background: #1f2937; color: #e5e7eb; }
     html.dark .sheet-title { color: white; }
     html.dark .sheet-close { background: #374151; color: white; }
-    
     html.dark .ctrl-label { color: #d1d5db; }
     html.dark .btn { background: #374151; border-color: #4b5563; color: #e5e7eb; }
     html.dark .btn.active { background: #f3f4f6; color: #111827; border-color: #fff; }
     html.dark .btn:hover:not(.active) { background: #4b5563; }
-    
-    /* 下拉框适配 */
     .ctrl-select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 15px; background: #f9fafb; color: #333; outline: none; }
     html.dark .ctrl-select { background-color: #374151; border-color: #4b5563; color: white; }
 </style>
 {% endblock %}
 
 {% block content %}
+<script>
+    window.tmdbCache = {};
+    window.fallbackReportPoster = async function(el, title) {
+        if(el.getAttribute('data-fallback-done')) return;
+        el.setAttribute('data-fallback-done', 'true');
+        
+        el.style.backgroundImage = "url('/static/img/logo-app-2.png')";
+        el.style.backgroundSize = "contain";
+        el.style.backgroundRepeat = "no-repeat";
+        
+        if(window.tmdbCache[title]) {
+            el.style.backgroundImage = `url('${window.tmdbCache[title]}')`;
+            el.style.backgroundSize = "cover";
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/requests/search?query=${encodeURIComponent(title)}`);
+            const data = await res.json();
+            if (data.status === 'success' && data.data.length > 0) {
+                const match = data.data.find(d => d.poster_path) || data.data[0];
+                if (match.poster_path) {
+                    window.tmdbCache[title] = match.poster_path;
+                    const b64 = await toBase64(match.poster_path);
+                    if(b64) {
+                        el.style.backgroundImage = `url('${b64}')`;
+                        el.style.backgroundSize = "cover";
+                    }
+                }
+            }
+        } catch(e) {}
+    };
+</script>
+
 <div class="app-container">
     <div class="preview-area">
         <div id="scale-wrapper">
@@ -175,26 +215,35 @@
                             <div class="stat-label">播放次数</div>
                         </div>
                     </div>
+                    
                     <div id="content-area">
                         <div id="podium-area" class="podium-container" style="display:none;">
                             <div class="podium-item rank-2" id="rank2-box" style="visibility: hidden;">
                                 <div class="medal rank-2">2</div>
-                                <div class="podium-cover" id="rank2-img" data-src=""></div>
+                                <img class="podium-cover" id="rank2-img" style="opacity:0; position:absolute; z-index:-1;" onerror="fallbackReportPoster(document.getElementById('rank2-bg'), this.dataset.title)">
+                                <div class="podium-cover" id="rank2-bg" data-src=""></div>
                                 <div class="podium-info"><div class="podium-title" id="rank2-title">-</div><div class="podium-meta" id="rank2-meta">0次</div></div>
                             </div>
-                            <div class="podium-item rank-1" id="rank1-box">
+                            <div class="podium-item rank-1" id="rank1-box" style="visibility: hidden;">
                                 <div class="medal rank-1"><i class="fa-solid fa-crown"></i></div>
-                                <div class="podium-cover" id="rank1-img" data-src=""></div>
+                                <img class="podium-cover" id="rank1-img" style="opacity:0; position:absolute; z-index:-1;" onerror="fallbackReportPoster(document.getElementById('rank1-bg'), this.dataset.title)">
+                                <div class="podium-cover" id="rank1-bg" data-src=""></div>
                                 <div class="podium-info"><div class="podium-title" id="rank1-title">-</div><div class="podium-meta" id="rank1-meta">0次</div></div>
                             </div>
                             <div class="podium-item rank-3" id="rank3-box" style="visibility: hidden;">
                                 <div class="medal rank-3">3</div>
-                                <div class="podium-cover" id="rank3-img" data-src=""></div>
+                                <img class="podium-cover" id="rank3-img" style="opacity:0; position:absolute; z-index:-1;" onerror="fallbackReportPoster(document.getElementById('rank3-bg'), this.dataset.title)">
+                                <div class="podium-cover" id="rank3-bg" data-src=""></div>
                                 <div class="podium-info"><div class="podium-title" id="rank3-title">-</div><div class="podium-meta" id="rank3-meta">0次</div></div>
                             </div>
                         </div>
+                        
                         <div class="rank-list" id="rank-list"></div>
+                        
+                        <div class="mood-area" id="mood-area">
+                            </div>
                     </div>
+                    
                     <div id="empty-area" class="empty-box" style="display:none;"><i class="fa-solid fa-ghost" style="font-size: 40px; margin-bottom: 10px;"></i><p>该时段暂无记录</p></div>
                     <div class="p-footer">GENERATED BY EMBY PULSE</div>
                 </div>
@@ -238,14 +287,14 @@
 
             <label class="ctrl-label">海报主题</label>
             <div class="theme-dots">
-                <div class="dot" style="background: #1a1a1a;" onclick="setTheme('#1a1a1a', 'white')">黑金</div>
-                <div class="dot" style="background: #2e1065;" onclick="setTheme('#2e1065', 'white')">赛博</div>
-                <div class="dot" style="background: #0f172a;" onclick="setTheme('#0f172a', 'white')">深海</div>
-                <div class="dot" style="background: #064e3b;" onclick="setTheme('#064e3b', 'white')">极光</div>
-                <div class="dot" style="background: #7f1d1d;" onclick="setTheme('#7f1d1d', 'white')">熔岩</div>
-                <div class="dot" style="background: linear-gradient(135deg, #c2410c, #7c2d12);" onclick="setTheme('linear-gradient(135deg, #c2410c, #7c2d12)', 'white')">落日</div>
-                <div class="dot" style="background: #525252;" onclick="setTheme('#525252', 'white')">水泥</div>
-                <div class="dot" style="background: #ffffff; color:#333; text-shadow:none; border:1px solid #ccc;" onclick="setTheme('#ffffff', '#333')">纯白</div>
+                <div class="dot" style="background: #1a1a1a;" onclick="setTheme('#1a1a1a', 'white', '#eab308')">黑金</div>
+                <div class="dot" style="background: #2e1065;" onclick="setTheme('#2e1065', 'white', '#c084fc')">赛博</div>
+                <div class="dot" style="background: #0f172a;" onclick="setTheme('#0f172a', 'white', '#38bdf8')">深海</div>
+                <div class="dot" style="background: #064e3b;" onclick="setTheme('#064e3b', 'white', '#34d399')">极光</div>
+                <div class="dot" style="background: #7f1d1d;" onclick="setTheme('#7f1d1d', 'white', '#f87171')">熔岩</div>
+                <div class="dot" style="background: linear-gradient(135deg, #c2410c, #7c2d12);" onclick="setTheme('linear-gradient(135deg, #c2410c, #7c2d12)', 'white', '#fdba74')">落日</div>
+                <div class="dot" style="background: #525252;" onclick="setTheme('#525252', 'white', '#e5e7eb')">水泥</div>
+                <div class="dot" style="background: #ffffff; color:#333; text-shadow:none; border:1px solid #ccc;" onclick="setTheme('#ffffff', '#333', '#3b82f6')">纯白</div>
             </div>
             
             <button onclick="toggleCoverBg()" class="btn" style="width: 100%; margin-bottom: 15px; border: 1px dashed #999;">🖼️ 使用 Top1 封面背景</button>
@@ -255,9 +304,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-    window.onerror = function(msg) { alert("发生错误: " + msg); return false; };
-</script>
 <script>
     let currentUserId = '';
     let currentUserName = 'User';
@@ -278,10 +324,7 @@
     function toggleSheet(forceState) {
         const sheet = document.getElementById('mobile-sheet');
         const overlay = document.getElementById('mobile-overlay');
-        let shouldShow = false;
-        if (typeof forceState === 'boolean') { shouldShow = forceState; } 
-        else { shouldShow = !sheet.classList.contains('active'); }
-
+        let shouldShow = typeof forceState === 'boolean' ? forceState : !sheet.classList.contains('active');
         if(shouldShow) { sheet.classList.add('active'); overlay.classList.add('active'); } 
         else { sheet.classList.remove('active'); overlay.classList.remove('active'); }
     }
@@ -323,10 +366,11 @@
         return '历史全量 观影报告';
     }
 
-    function setTheme(bg, text) {
+    function setTheme(bg, text, hl) {
         const canvas = document.querySelector('.poster-canvas');
         canvas.style.background = bg;
         canvas.style.color = text;
+        document.documentElement.style.setProperty('--theme-highlight', hl);
         document.getElementById('poster-bg-img').style.opacity = '0';
         if(text === '#333') {
             document.documentElement.style.setProperty('--theme-card', 'rgba(0,0,0,0.05)');
@@ -350,15 +394,11 @@
     }
 
     function getIconAvatar(name) {
-        const icons = ['fa-robot', 'fa-cat', 'fa-ghost', 'fa-dragon', 'fa-user-astronaut', 'fa-snowman', 'fa-frog', 'fa-hippo', 'fa-dog', 'fa-otter', 'fa-kiwi-bird', 'fa-crow', 'fa-fish', 'fa-spider', 'fa-dove', 'fa-paw'];
-        const colors = ['#FFC0CB', '#FFB6C1', '#FF69B4', '#E6E6FA', '#D8BFD8', '#B0C4DE', '#ADD8E6', '#87CEFA', '#98FB98', '#90EE90', '#F0E68C', '#FFD700', '#FFA07a', '#FF7F50', '#00CED1', '#20B2AA'];
-        
+        const icons = ['fa-robot', 'fa-cat', 'fa-ghost', 'fa-dragon', 'fa-user-astronaut', 'fa-snowman', 'fa-frog', 'fa-hippo', 'fa-dog', 'fa-otter'];
+        const colors = ['#FFC0CB', '#FFB6C1', '#FF69B4', '#E6E6FA', '#D8BFD8', '#B0C4DE', '#ADD8E6', '#87CEFA', '#98FB98', '#90EE90'];
         let hash = 0;
         for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-        
-        const icon = icons[Math.abs(hash % icons.length)];
-        const color = colors[Math.abs(hash % colors.length)];
-        return { icon, color };
+        return { icon: icons[Math.abs(hash % icons.length)], color: colors[Math.abs(hash % colors.length)] };
     }
 
     async function loadAvatar() {
@@ -379,14 +419,11 @@
         if (b64) {
             avatarEl.style.backgroundImage = `url('${b64}')`;
             avatarEl.innerHTML = ''; 
-            avatarEl.dataset.src = realUrl;
         } else {
             const style = getIconAvatar(currentUserName);
             avatarEl.style.backgroundColor = style.color;
-            avatarEl.style.backgroundImage = 'none';
             avatarEl.innerHTML = `<i class="fa-solid ${style.icon}"></i>`;
             avatarEl.style.color = 'white'; 
-            avatarEl.style.textShadow = '0 1px 3px rgba(0,0,0,0.2)'; 
         }
     }
 
@@ -396,12 +433,9 @@
         const selects = document.querySelectorAll('#user-select');
         selects.forEach(sel => {
             sel.innerHTML = '';
-            
             const optAll = document.createElement('option');
-            optAll.value = 'all';
-            optAll.innerText = '全服概览 (All Users)';
+            optAll.value = 'all'; optAll.innerText = '全服概览 (All Users)';
             sel.appendChild(optAll);
-
             if(json.data) {
                 json.data.forEach(u => {
                     const opt = document.createElement('option');
@@ -410,21 +444,14 @@
                 });
             }
         });
-        
         changeUser('all');
     }
 
     function changeUser(uid) {
         currentUserId = uid;
         document.querySelectorAll('#user-select').forEach(s => s.value = uid);
-        
         const sel = document.querySelector('#user-select');
-        for(let opt of sel.options) {
-            if(opt.value === uid) {
-                currentUserName = opt.text;
-                break;
-            }
-        }
+        for(let opt of sel.options) { if(opt.value === uid) { currentUserName = opt.text; break; } }
         if(uid === 'all') currentUserName = 'Emby Server';
 
         document.getElementById('p-user').innerText = currentUserName;
@@ -439,6 +466,45 @@
             else b.classList.remove('active');
         });
         loadData();
+    }
+
+    // 🔥 渲染情绪卡片
+    function renderMoods(moodData) {
+        const area = document.getElementById('mood-area');
+        area.innerHTML = '';
+        let html = '';
+        
+        // 基因 DNA
+        if(moodData.genres && moodData.genres.length > 0) {
+            html += `
+            <div class="mood-card">
+                <i class="fa-solid fa-dna mood-icon"></i>
+                <div class="mood-title"><i class="fa-solid fa-flask"></i> 观影基因</div>
+                <div class="mood-text">你的灵魂由 <span class="mood-highlight">${moodData.genres.join(' / ')}</span> 构成。这是一个独一无二的宇宙。</div>
+            </div>`;
+        }
+        
+        // 沉迷时刻
+        if(moodData.binge_day && currentUserId !== 'all') {
+            html += `
+            <div class="mood-card">
+                <i class="fa-solid fa-couch mood-icon"></i>
+                <div class="mood-title"><i class="fa-solid fa-fire"></i> 沉迷时刻</div>
+                <div class="mood-text"><span class="mood-highlight">${moodData.binge_day.date}</span> 是你最疯狂的一天，一口气观看了 <span class="mood-highlight">${moodData.binge_day.hours}</span> 小时。那一天，是谁陪你一起度过的？</div>
+            </div>`;
+        }
+        
+        // 深夜刺客
+        if(moodData.late_night && currentUserId !== 'all') {
+            html += `
+            <div class="mood-card">
+                <i class="fa-solid fa-moon mood-icon"></i>
+                <div class="mood-title"><i class="fa-solid fa-owl"></i> 深夜刺客</div>
+                <div class="mood-text"><span class="mood-highlight">${moodData.late_night.date} 凌晨 ${moodData.late_night.time}</span>，整座城市都沉睡了，你还在独自沉浸在《${moodData.late_night.name}》里。注意保护眼睛。</div>
+            </div>`;
+        }
+        
+        area.innerHTML = html;
     }
 
     async function loadData() {
@@ -460,31 +526,41 @@
             const list = data.top_list;
             const podiumArea = document.getElementById('podium-area');
             
+            ['rank1-box', 'rank2-box', 'rank3-box'].forEach(id => document.getElementById(id).style.visibility = 'hidden');
+            
             if(list.length > 0) {
-                podiumArea.style.display = 'grid';
+                podiumArea.style.display = 'flex';
+                
                 const renderRank = async (rank, idx) => {
                     const el = document.getElementById(`rank${rank}-box`);
                     if(list[idx]) {
                         el.style.visibility = 'visible';
                         document.getElementById(`rank${rank}-title`).innerText = list[idx].ItemName;
                         const h = Math.round(list[idx].Duration/3600);
-                        const t = h > 0 ? ` · ${h}小时` : '';
-                        document.getElementById(`rank${rank}-meta`).innerText = `${list[idx].Count}次${t}`;
+                        document.getElementById(`rank${rank}-meta`).innerText = `${list[idx].Count}次${h > 0 ? ` · ${h}h` : ''}`;
                         
                         const imgUrl = `/api/proxy/image/${list[idx].ItemId}/primary`;
+                        // 给真实 img 标签赋值触发 onerror 兜底机制
+                        const realImg = document.getElementById(`rank${rank}-img`);
+                        realImg.dataset.title = list[idx].ItemName;
+                        realImg.removeAttribute('data-fallback-done');
+                        realImg.src = imgUrl; 
+                        
                         const b64 = await toBase64(imgUrl);
-                        const coverEl = document.getElementById(`rank${rank}-img`);
+                        const coverBg = document.getElementById(`rank${rank}-bg`);
                         if(b64) {
-                            coverEl.style.backgroundImage = `url('${b64}')`;
-                            coverEl.dataset.src = imgUrl;
+                            coverBg.style.backgroundImage = `url('${b64}')`;
                             if(rank === 1) {
                                 document.getElementById('poster-bg-img').style.backgroundImage = `url('${b64}')`;
-                                document.getElementById('poster-bg-img').dataset.src = imgUrl;
                             }
-                        } else { coverEl.style.backgroundColor = '#333'; }
-                    } else { el.style.visibility = 'hidden'; }
+                        } else { 
+                            // fallback 会由 onerror 接管处理
+                        }
+                    }
                 };
-                await renderRank(1, 0); await renderRank(2, 1); await renderRank(3, 2); 
+                
+                // 并发加载前三名，保持渲染速度
+                await Promise.all([renderRank(1, 0), renderRank(2, 1), renderRank(3, 2)]);
             } else { podiumArea.style.display = 'none'; }
 
             const listEl = document.getElementById('rank-list');
@@ -492,32 +568,37 @@
             const max = Math.min(list.length, 10);
             for(let i=3; i<max; i++) {
                 const hours = Math.round(list[i].Duration/3600);
-                const timeText = hours > 0 ? `${hours}h` : '<1h';
                 const imgUrl = `/api/proxy/image/${list[i].ItemId}/primary`;
                 html += `
                 <div class="rank-row">
                     <div class="rank-idx">${i+1}</div>
-                    <div class="rank-poster-sm" style="background-image: url('${imgUrl}')" data-src="${imgUrl}"></div>
+                    <div class="rank-poster-sm" id="sm-bg-${i}">
+                        <img src="${imgUrl}" data-title="${list[i].ItemName}" style="opacity:0; position:absolute; z-index:-1;" onerror="fallbackReportPoster(document.getElementById('sm-bg-${i}'), this.dataset.title)">
+                    </div>
                     <div class="rank-info">
                         <div class="rank-name">${list[i].ItemName}</div>
-                        <div class="rank-meta-row"><span>${list[i].Count}次</span><span>${timeText}</span></div>
+                        <div class="rank-meta-row"><span>${list[i].Count}次</span><span>${hours > 0 ? hours+'h' : '<1h'}</span></div>
                     </div>
                 </div>`;
             }
             listEl.innerHTML = html;
+            
+            // 异步加载小图的 base64 (为了 html2canvas 截图)
             setTimeout(async () => {
-                const smPosters = listEl.querySelectorAll('.rank-poster-sm');
-                for(let el of smPosters) {
-                    const url = el.dataset.src;
-                    const b64 = await toBase64(url);
-                    if(b64) el.style.backgroundImage = `url('${b64}')`;
+                for(let i=3; i<max; i++) {
+                    const imgUrl = `/api/proxy/image/${list[i].ItemId}/primary`;
+                    const b64 = await toBase64(imgUrl);
+                    if(b64) document.getElementById(`sm-bg-${i}`).style.backgroundImage = `url('${b64}')`;
                 }
             }, 100);
+            
+            // 渲染情绪模块
+            if(data.mood_data) renderMoods(data.mood_data);
         }
     }
 
     async function savePoster() {
-        const btns = document.querySelectorAll('#save-btn');
+        const btns = document.querySelectorAll('#save-btn, #mobile-save-btn, #pc-save-btn');
         btns.forEach(b => b.innerText = '生成中...');
         toggleSheet(false); 
 
@@ -527,23 +608,15 @@
         await new Promise(r => setTimeout(r, 200)); 
         
         try {
-            const allImages = document.getElementById('capture-target').querySelectorAll('[data-src]');
-            const promises = Array.from(allImages).map(async (el) => {
-                if(el.dataset.src && !el.style.backgroundImage.includes('base64')) {
-                    const b64 = await toBase64(el.dataset.src);
-                    if(b64) el.style.backgroundImage = `url('${b64}')`;
-                }
-            });
-            await Promise.all(promises);
-
+            // 保证 TMDB 兜底的图片也能被截图
             const canvas = await html2canvas(document.getElementById('capture-target'), { 
                 scale: 2, useCORS: true, backgroundColor: null 
             });
             const link = document.createElement('a');
-            link.download = `EmbyReport_${currentUserId}.png`;
+            link.download = `EmbyPulse_${currentUserName}_${currentPeriod}.png`;
             link.href = canvas.toDataURL();
             link.click();
-        } catch(e) { alert('Err: ' + e); } 
+        } catch(e) { alert('生成截图失败，请确保图片已加载完毕。'); } 
         finally { 
             wrapper.style.transform = oldT; 
             btns.forEach(b => b.innerHTML = '<i class="fa-solid fa-download"></i> 保存海报');
@@ -553,4 +626,3 @@
     init();
 </script>
 {% endblock %}
-}

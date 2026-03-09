@@ -5,10 +5,11 @@ from app.core.database import query_db, get_base_filter
 import requests
 import re
 import datetime
+from collections import defaultdict
 
 router = APIRouter()
 
-# --- 🧹 智能清洗引擎：强制统一成 "第 X 季"，绝对不分集 ---
+# --- 🧹 智能清洗引擎 ---
 def get_clean_name(item_name, item_type):
     if not item_name: return "未知内容"
     item_name = str(item_name)
@@ -215,7 +216,6 @@ def api_user_details(user_id: Optional[str] = None):
                 if dc:
                     m = re.search(r'(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})', str(dc))
                     if m:
-                        # 🔪 剔除了多余的 +8 小时，回归数据库纯粹的原始时间
                         dt = datetime.datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4)), int(m.group(5)), int(m.group(6)))
                         h_data[str(dt.hour).zfill(2)] += 1
             
@@ -323,6 +323,7 @@ def api_chart_stats(user_id: Optional[str] = None, dimension: str = 'day'):
         return {"status": "success", "data": data}
     except: return {"status": "error", "data": {}}
 
+# 🔥 核心升级：报表数据源增强，加入情绪引擎所需数据
 @router.get("/api/stats/poster_data")
 def api_poster_data(user_id: Optional[str] = None, period: str = 'all'):
     try:
@@ -334,21 +335,87 @@ def api_poster_data(user_id: Optional[str] = None, period: str = 'all'):
         server_res = query_db(f"SELECT COUNT(*) as Plays FROM PlaybackActivity {get_base_filter('all')[0]} {date_filter}", get_base_filter('all')[1])
         server_plays = server_res[0]['Plays'] if server_res else 0
 
-        raw_sql = f"SELECT ItemName, ItemId, ItemType, PlayDuration FROM PlaybackActivity {where_base + date_filter}"
+        raw_sql = f"SELECT DateCreated, ItemName, ItemId, ItemType, PlayDuration FROM PlaybackActivity {where_base + date_filter}"
         rows = query_db(raw_sql, params)
-        total_plays = 0; total_duration = 0; aggregated = {} 
+        
+        total_plays = 0; total_duration = 0; aggregated = {}
+        daily_duration = defaultdict(int)
+        late_night_record = None
+        late_night_hour = -1
+
         if rows:
             for row in rows:
                 row_dict = dict(row)
                 total_plays += 1; dur = row_dict['PlayDuration'] or 0; total_duration += dur
+                
+                # 统计每日时长
+                dc = row_dict.get('DateCreated', '')
+                if dc:
+                    day_str = dc[:10]
+                    daily_duration[day_str] += dur
+                    
+                    # 抓取深夜刺客 (01:00 - 05:00)
+                    m = re.search(r'T(\d{2}):(\d{2}):(\d{2})', dc)
+                    if m:
+                        hour = int(m.group(1))
+                        if 1 <= hour <= 5:
+                            # 找最晚的那条 (最接近5点)
+                            if hour > late_night_hour:
+                                late_night_hour = hour
+                                late_night_record = {
+                                    "time": f"{hour:02d}:{m.group(2)}",
+                                    "date": day_str[5:].replace('-', '月') + '日',
+                                    "name": get_clean_name(row_dict.get('ItemName'), row_dict.get('ItemType', ''))
+                                }
+
                 clean = get_clean_name(row_dict.get('ItemName'), row_dict.get('ItemType', ''))
                 if clean not in aggregated: aggregated[clean] = {'ItemName': clean, 'ItemId': row_dict['ItemId'], 'Count': 0, 'Duration': 0}
                 aggregated[clean]['Count'] += 1; aggregated[clean]['Duration'] += dur
                 
+        # 计算沉迷时刻
+        binge_day = None
+        if daily_duration:
+            max_day = max(daily_duration, key=daily_duration.get)
+            max_dur = daily_duration[max_day]
+            if max_dur > 3600: # 至少得看一小时才叫沉迷
+                binge_day = {
+                    "date": max_day[5:].replace('-', '月') + '日',
+                    "hours": round(max_dur / 3600, 1)
+                }
+                
+        # 拉取流派 DNA
+        genres = []
+        try:
+            key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
+            if host and key and user_id and user_id != 'all':
+                g_url = f"{host}/emby/Users/{user_id}/Items?IncludeItemTypes=Movie,Series&Recursive=true&SortBy=DateCreated&SortOrder=Descending&Limit=100&Fields=Genres&api_key={key}"
+                g_res = requests.get(g_url, timeout=3).json()
+                genre_counts = defaultdict(int)
+                for i in g_res.get("Items", []):
+                    for g in i.get("Genres", []): genre_counts[g] += 1
+                if genre_counts:
+                    sorted_genres = sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)[:3]
+                    genres = [k for k, v in sorted_genres]
+        except: pass
+
         top_list = list(aggregated.values()); top_list.sort(key=lambda x: x['Count'], reverse=True)
         top_10 = top_list[:10]
         resolve_poster_ids(top_10)
-        return {"status": "success", "data": {"plays": total_plays, "hours": round(total_duration / 3600), "server_plays": server_plays, "top_list": top_10, "tags": ["观影达人"]}}
+        
+        return {
+            "status": "success", 
+            "data": {
+                "plays": total_plays, 
+                "hours": round(total_duration / 3600), 
+                "server_plays": server_plays, 
+                "top_list": top_10,
+                "mood_data": {
+                    "late_night": late_night_record,
+                    "binge_day": binge_day,
+                    "genres": genres
+                }
+            }
+        }
     except: return {"status": "error", "data": {"plays": 0, "hours": 0}}
 
 @router.get("/api/stats/top_users_list")
@@ -411,7 +478,6 @@ def api_badges(user_id: Optional[str] = None):
             if dc:
                 m = re.search(r'(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})', str(dc))
                 if m:
-                    # 🔪 剔除多余的 +8 小时，让成就时段完全匹配你真实的观影时间
                     dt = datetime.datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4)), int(m.group(5)), int(m.group(6)))
                         
                     hour = dt.hour
@@ -443,8 +509,6 @@ def api_badges(user_id: Optional[str] = None):
             
         return {"status": "success", "data": badges}
     except Exception as e: 
-        import logging
-        logging.getLogger("uvicorn").error(f"Badges Error: {e}")
         return {"status": "success", "data": []}
 
 @router.get("/api/stats/monthly_stats")
