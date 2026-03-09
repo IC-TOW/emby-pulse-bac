@@ -1,0 +1,172 @@
+/* ============================================================
+   EmbyPulse 玩家社区 - 全局核心样式表
+   包含：玻璃态特效、海报排版、移动端适配、截图偏移修正
+   ============================================================ */
+
+/* 1. 基础重置与响应式变量 */
+html.dark { background-color: #000000; }
+html, body {
+    overscroll-behavior-y: none; 
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+}
+input, textarea { -webkit-user-select: auto; user-select: auto; }
+
+/* 2. 极致亚克力玻璃态面板 */
+.glass-panel { 
+    background: rgba(255, 255, 255, 0.75); 
+    backdrop-filter: blur(24px); 
+    -webkit-backdrop-filter: blur(24px); 
+    border: 1px solid rgba(255, 255, 255, 0.6); 
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+}
+.dark .glass-panel { 
+    background: rgba(15, 15, 15, 0.75); 
+    border: 1px solid rgba(255, 255, 255, 0.05); 
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); 
+}
+
+/* 3. 滚动条美化（隐藏） */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* 4. 影视海报卡片交互 */
+.poster-card { 
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s; 
+}
+.poster-card:hover { 
+    transform: scale(1.05); 
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); 
+    z-index: 10; 
+}
+.dark .poster-card:hover { 
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.8); 
+}
+
+/* 5. 专属海报工作室 - 物理渲染引擎 (关键：杜绝 html2canvas 截图偏移) */
+.my-poster-canvas { 
+    width: 400px; 
+    height: fit-content; 
+    min-height: auto; 
+    padding-bottom: 20px; 
+    background: var(--p-theme-bg, #1a1a1a); 
+    color: var(--p-theme-text, white); 
+    position: relative; 
+    overflow: hidden; 
+    display: flex; 
+    flex-direction: column; 
+    box-shadow: 0 30px 60px rgba(0,0,0,0.5); 
+    line-height: 1.6; 
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* 背景与渐变层 */
+.my-poster-bg-img { 
+    position: absolute; 
+    inset: 0; 
+    z-index: 0; 
+    background-size: cover; 
+    background-position: center; 
+    transform: scale(1.2); 
+    opacity: 0; 
+    transition: opacity 0.5s; 
+    height: 100%; 
+}
+.my-poster-gradient { 
+    position: absolute; 
+    inset: 0; 
+    z-index: 1; 
+    background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.5) 100%); 
+    height: 100%; 
+    transition: background 0.3s; 
+}
+
+/* 皇冠与奖牌定位修正 */
+.my-medal { 
+    position: absolute; 
+    top: -10px; 
+    left: calc(50% - 12px); 
+    width: 24px; 
+    height: 24px; 
+    border-radius: 50%; 
+    text-align: center; 
+    font-size: 12px; 
+    font-weight: bold; 
+    color: white; 
+    z-index: 10; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+    line-height: 24px; 
+    box-sizing: border-box;
+}
+.my-medal.rank-1 { 
+    background: linear-gradient(135deg, #fcd34d, #b45309); 
+    width: 32px; 
+    height: 32px; 
+    top: -16px; 
+    left: calc(50% - 16px); 
+    font-size: 14px; 
+    line-height: 32px;
+}
+.my-medal i { display: block; margin-top: 1px; }
+
+/* 结构化看板色块 (杜绝内联偏移) */
+.my-mood-card { 
+    background: linear-gradient(135deg, var(--p-theme-card, rgba(255,255,255,0.08)), rgba(255,255,255,0.02)); 
+    border: 1px solid rgba(255,255,255,0.1); 
+    border-radius: 12px; 
+    padding: 16px; 
+    position: relative; 
+    overflow: hidden; 
+    color: var(--p-theme-text, white); 
+    margin-bottom: 15px; 
+    transition: color 0.3s, background 0.3s;
+}
+.my-mood-data-box { 
+    background: var(--p-theme-pill-bg, rgba(255,255,255,0.15)); 
+    border-radius: 8px; 
+    padding: 10px 12px; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; 
+    border: 1px solid rgba(255,255,255,0.05); 
+    min-width: 80px; 
+    transition: background 0.3s; 
+}
+.my-mood-tag-pill { 
+    background: var(--p-theme-pill-bg, rgba(255,255,255,0.15)); 
+    color: var(--p-theme-pill-text, white); 
+    font-size: 12px; 
+    font-weight: bold; 
+    padding: 6px 12px; 
+    border-radius: 20px; 
+    border: 1px solid rgba(255,255,255,0.05); 
+    display: flex; 
+    align-items: center; 
+    gap: 6px; 
+    transition: background 0.3s, color 0.3s; 
+}
+
+/* 6. 特效类 */
+.bg-gradient-radial { background: radial-gradient(circle at center, var(--tw-gradient-stops)); }
+
+.btn-glow { position: relative; overflow: hidden; }
+.btn-glow::after { 
+    content: ''; 
+    position: absolute; 
+    top: -50%; 
+    left: -50%; 
+    width: 200%; 
+    height: 200%; 
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.3), transparent); 
+    transform: rotate(30deg); 
+    animation: glow-sweep 3s infinite linear; 
+}
+@keyframes glow-sweep { 
+    0% { transform: translateX(-100%) rotate(30deg); } 
+    100% { transform: translateX(100%) rotate(30deg); } 
+}
