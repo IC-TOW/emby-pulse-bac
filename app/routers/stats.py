@@ -206,9 +206,8 @@ def api_user_details(user_id: Optional[str] = None):
     try:
         where, params = get_base_filter(user_id)
         
-        # 🔥 去除了毒瘤 localtime，直接使用数据库原生的当地时间
-        time_expr = "substr(replace(DateCreated, 'T', ' '), 1, 19)"
-        h_res = query_db(f"SELECT strftime('%H', {time_expr}) as Hour, COUNT(*) as Plays FROM PlaybackActivity {where} GROUP BY Hour", params)
+        # 🔥 物理切割装甲：不调函数，直接物理抠出时间字符串第12-13位的“小时”，彻底屏蔽毫秒引发的 SQLite 崩溃！
+        h_res = query_db(f"SELECT substr(replace(DateCreated, 'T', ' '), 12, 2) as Hour, COUNT(*) as Plays FROM PlaybackActivity {where} GROUP BY Hour", params)
         h_data = {str(i).zfill(2): 0 for i in range(24)}
         if h_res:
             for r in h_res: 
@@ -244,27 +243,38 @@ def api_user_details(user_id: Optional[str] = None):
             overview['total_duration'] = ov_res[0]['Dur'] or 0
             overview['avg_duration'] = round(overview['total_duration'] / overview['total_plays'])
             
-        # 🚀 终极首次登录溯源引擎 (优先读自有系统库，兜底读第一条播放记录)
-        first_date_str = None
-        if user_id and user_id != 'all':
-            try:
-                meta = query_db("SELECT created_at FROM users_meta WHERE user_id = ?", (user_id,))
-                if meta and meta[0]['created_at']: first_date_str = meta[0]['created_at']
-            except: pass
-            
-        if not first_date_str:
-            try:
-                first_play = query_db(f"SELECT MIN(DateCreated) as FirstDate FROM PlaybackActivity {where}", params)
-                if first_play and first_play[0]['FirstDate']: first_date_str = first_play[0]['FirstDate']
-            except: pass
-
-        if first_date_str:
-            try:
-                m = re.search(r'(\d{4})-(\d{2})-(\d{2})', str(first_date_str))
-                if m:
-                    fd = datetime.datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
-                    overview['account_age_days'] = max(1, (datetime.datetime.now() - fd).days)
-            except: pass
+        # 🚀 斩断一切兜底，只认 Emby 官方用户注册时间！
+        try:
+            host = cfg.get("emby_host")
+            key = cfg.get("emby_api_key")
+            if host and key:
+                u_res = requests.get(f"{host}/emby/Users?api_key={key}", timeout=5)
+                if u_res.status_code == 200:
+                    users_data = u_res.json()
+                    target_dates = []
+                    
+                    if user_id and user_id != 'all':
+                        for u in users_data:
+                            if u.get("Id") == user_id and u.get("DateCreated"):
+                                target_dates.append(u.get("DateCreated"))
+                    else:
+                        for u in users_data:
+                            if u.get("DateCreated"):
+                                target_dates.append(u.get("DateCreated"))
+                    
+                    if target_dates:
+                        earliest_dt = None
+                        for dc in target_dates:
+                            # 暴力提取 YYYY-MM-DD
+                            m = re.search(r'(\d{4})-(\d{2})-(\d{2})', str(dc))
+                            if m:
+                                dt = datetime.datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+                                if not earliest_dt or dt < earliest_dt:
+                                    earliest_dt = dt
+                        if earliest_dt:
+                            overview['account_age_days'] = max(1, (datetime.datetime.now() - earliest_dt).days)
+        except Exception as e: 
+            pass
 
         try:
             m_res = query_db(f"SELECT ItemType, COUNT(*) as c FROM PlaybackActivity {where} GROUP BY ItemType", params)
@@ -298,10 +308,14 @@ def api_user_details(user_id: Optional[str] = None):
 def api_chart_stats(user_id: Optional[str] = None, dimension: str = 'day'):
     try:
         where, params = get_base_filter(user_id)
-        time_expr = "substr(replace(DateCreated, 'T', ' '), 1, 19)"
-        if dimension == 'week': sql = f"SELECT strftime('%Y-%W', {time_expr}) as Label, SUM(PlayDuration) as Duration FROM PlaybackActivity {where} AND DateCreated > date('now', '-120 days') GROUP BY Label ORDER BY Label"
-        elif dimension == 'month': sql = f"SELECT strftime('%Y-%m', {time_expr}) as Label, SUM(PlayDuration) as Duration FROM PlaybackActivity {where} AND DateCreated > date('now', '-365 days') GROUP BY Label ORDER BY Label"
-        else: sql = f"SELECT date({time_expr}) as Label, SUM(PlayDuration) as Duration FROM PlaybackActivity {where} AND DateCreated > date('now', '-30 days') GROUP BY Label ORDER BY Label"
+        # 🔥 彻底抛弃 strftime 复杂的日期解析，直接用 substr 切割出最纯粹的 YYYY-MM-DD
+        if dimension == 'week': 
+            sql = f"SELECT strftime('%Y-%W', substr(replace(DateCreated, 'T', ' '), 1, 19)) as Label, SUM(PlayDuration) as Duration FROM PlaybackActivity {where} AND DateCreated > date('now', '-120 days') GROUP BY Label ORDER BY Label"
+        elif dimension == 'month': 
+            sql = f"SELECT substr(replace(DateCreated, 'T', ' '), 1, 7) as Label, SUM(PlayDuration) as Duration FROM PlaybackActivity {where} AND DateCreated > date('now', '-365 days') GROUP BY Label ORDER BY Label"
+        else: 
+            sql = f"SELECT substr(replace(DateCreated, 'T', ' '), 1, 10) as Label, SUM(PlayDuration) as Duration FROM PlaybackActivity {where} AND DateCreated > date('now', '-30 days') GROUP BY Label ORDER BY Label"
+            
         results = query_db(sql, params)
         data = {}
         if results:
@@ -366,23 +380,22 @@ def api_badges(user_id: Optional[str] = None):
         where, params = get_base_filter(user_id)
         badges = []
         
-        # 🔥 去除了引发血案的 localtime，还原最干净的时间提取
-        time_expr = "substr(replace(DateCreated, 'T', ' '), 1, 19)"
+        # 🔥 物理切割装甲：再也不用 strftime 去猜时区了，直接切！
+        # 提取小时数 (12-13位) 和 星期几 (用完整19位扔给strftime)
         
-        # 🔥 全面下调门槛，让更多普通用户也能感受到成就解锁的快乐
-        night_res = query_db(f"SELECT COUNT(*) as c FROM PlaybackActivity {where} AND strftime('%H', {time_expr}) BETWEEN '02' AND '05'", params)
+        night_res = query_db(f"SELECT COUNT(*) as c FROM PlaybackActivity {where} AND substr(replace(DateCreated, 'T', ' '), 12, 2) BETWEEN '02' AND '05'", params)
         if night_res and night_res[0]['c'] >= 2: badges.append({"id": "night", "name": "深夜修仙", "icon": "fa-moon", "color": "text-indigo-500", "bg": "bg-indigo-100", "desc": "深夜是灵魂最自由的时刻"})
         
-        weekend_res = query_db(f"SELECT COUNT(*) as c FROM PlaybackActivity {where} AND strftime('%w', {time_expr}) IN ('0', '6')", params)
+        weekend_res = query_db(f"SELECT COUNT(*) as c FROM PlaybackActivity {where} AND strftime('%w', substr(replace(DateCreated, 'T', ' '), 1, 19)) IN ('0', '6')", params)
         if weekend_res and weekend_res[0]['c'] >= 5: badges.append({"id": "weekend", "name": "周末狂欢", "icon": "fa-champagne-glasses", "color": "text-pink-500", "bg": "bg-pink-100", "desc": "工作日唯唯诺诺，周末重拳出击"})
         
         dur_res = query_db(f"SELECT SUM(PlayDuration) as d FROM PlaybackActivity {where}", params)
         if dur_res and dur_res[0]['d'] and dur_res[0]['d'] > 180000: badges.append({"id": "liver", "name": "Emby肝帝", "icon": "fa-fire", "color": "text-red-500", "bg": "bg-red-100", "desc": "阅片无数，肝度爆表"})
         
-        fish_res = query_db(f"SELECT COUNT(*) as c FROM PlaybackActivity {where} AND strftime('%w', {time_expr}) BETWEEN '1' AND '5' AND strftime('%H', {time_expr}) BETWEEN '09' AND '17'", params)
+        fish_res = query_db(f"SELECT COUNT(*) as c FROM PlaybackActivity {where} AND strftime('%w', substr(replace(DateCreated, 'T', ' '), 1, 19)) BETWEEN '1' AND '5' AND substr(replace(DateCreated, 'T', ' '), 12, 2) BETWEEN '09' AND '17'", params)
         if fish_res and fish_res[0]['c'] >= 5: badges.append({"id": "fish", "name": "带薪观影", "icon": "fa-fish", "color": "text-cyan-500", "bg": "bg-cyan-100", "desc": "工作是老板的，快乐是自己的"})
         
-        morning_res = query_db(f"SELECT COUNT(*) as c FROM PlaybackActivity {where} AND strftime('%H', {time_expr}) BETWEEN '05' AND '08'", params)
+        morning_res = query_db(f"SELECT COUNT(*) as c FROM PlaybackActivity {where} AND substr(replace(DateCreated, 'T', ' '), 12, 2) BETWEEN '05' AND '08'", params)
         if morning_res and morning_res[0]['c'] >= 2: badges.append({"id": "morning", "name": "晨练追剧", "icon": "fa-sun", "color": "text-amber-500", "bg": "bg-amber-100", "desc": "比你优秀的人，连看片都比你早"})
         
         device_res = query_db(f"SELECT COUNT(DISTINCT COALESCE(DeviceName, ClientName)) as c FROM PlaybackActivity {where}", params)
@@ -416,8 +429,7 @@ def api_monthly_stats(user_id: Optional[str] = None):
     try:
         where_base, params = get_base_filter(user_id)
         where = where_base + " AND DateCreated > date('now', '-12 months')"
-        time_expr = "substr(replace(DateCreated, 'T', ' '), 1, 19)"
-        sql = f"SELECT strftime('%Y-%m', {time_expr}) as Month, SUM(PlayDuration) as Duration FROM PlaybackActivity {where} GROUP BY Month ORDER BY Month"
+        sql = f"SELECT substr(replace(DateCreated, 'T', ' '), 1, 7) as Month, SUM(PlayDuration) as Duration FROM PlaybackActivity {where} GROUP BY Month ORDER BY Month"
         results = query_db(sql, params); data = {}
         if results: 
             for r in results: data[r['Month']] = int(r['Duration'] or 0)
