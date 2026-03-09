@@ -4,7 +4,7 @@ import requests
 import datetime
 from app.core.config import cfg, FONT_PATH, FONT_URL, THEMES
 from app.core.database import query_db, get_base_filter
-from app.core.database import DB_PATH # check existence
+from app.core.database import DB_PATH 
 
 try:
     from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -14,7 +14,6 @@ except ImportError:
     print("⚠️ Pillow not found. Report generation disabled.")
 
 def get_user_map_internal():
-    # 简单的内部获取，避免循环引用
     user_map = {}
     key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
     if key and host:
@@ -50,7 +49,6 @@ class ReportGenerator:
         date_filter = ""
         title_period = "全量"
         
-        # 🔥 修改点：增加 yesterday 逻辑
         if period == 'week': 
             date_filter = " AND DateCreated > date('now', '-7 days')"
             title_period = "本周观影周报"
@@ -64,9 +62,7 @@ class ReportGenerator:
             date_filter = " AND DateCreated > date('now', 'start of day')"
             title_period = "今日日报"
         elif period == 'yesterday':
-            # 昨天全天：大于等于昨天0点，且小于今天0点
             date_filter = " AND DateCreated >= date('now', '-1 day', 'start of day') AND DateCreated < date('now', 'start of day')"
-            # 获取昨天的日期字符串
             yesterday_str = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%m-%d")
             title_period = f"昨日日报 ({yesterday_str})"
         else: 
@@ -113,7 +109,10 @@ class ReportGenerator:
         if top_list:
             for i, item in enumerate(top_list):
                 self.draw_rounded_rect(draw, (40, item_y, 760, item_y+60), theme['card'], radius=10)
-                name = item['ItemName'][:20]
+                # 🔥 核心防御：如果 ItemName 为空，给它一个默认名字，防止强行截取字符串导致崩溃
+                raw_name = item.get('ItemName') or '未知内容'
+                name = str(raw_name)[:20]
+                
                 draw.text((60, item_y+15), str(i+1), font=font_sm, fill=theme['highlight'])
                 draw.text((120, item_y+15), name, font=font_sm, fill=theme['text'])
                 item_y += 70
