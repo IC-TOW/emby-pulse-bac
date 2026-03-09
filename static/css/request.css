@@ -170,3 +170,53 @@ input, textarea { -webkit-user-select: auto; user-select: auto; }
     0% { transform: translateX(-100%) rotate(30deg); } 
     100% { transform: translateX(100%) rotate(30deg); } 
 }
+
+/* ============================================================
+   海报工作室 - 内部精密排版引擎 (修复版)
+   ============================================================ */
+
+/* 1. 顶部用户信息区 */
+.my-p-header { display: flex; justify-content: space-between; align-items: center; padding: 25px 25px 20px; position: relative; z-index: 5; }
+.my-avatar { width: 42px; height: 42px; border-radius: 50%; background-size: cover; border: 2px solid rgba(255,255,255,0.8); flex-shrink: 0; display: flex; items-center; justify-content: center; font-size: 20px; }
+.my-user-info h1 { font-size: 18px; font-weight: 900; margin: 0; line-height: 1.2; letter-spacing: -0.5px; }
+.my-server-pill { background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 900; border: 1px solid rgba(255,255,255,0.1); }
+
+/* 2. 核心指标数字区 */
+.my-stats-row { display: flex; gap: 15px; padding: 0 25px 25px; position: relative; z-index: 5; }
+.my-stat-card { flex: 1; background: var(--p-theme-card, rgba(255,255,255,0.08)); border-radius: 12px; padding: 12px; border: 1px solid rgba(255,255,255,0.05); }
+.my-stat-val { font-size: 24px; font-weight: 900; font-family: 'Monaco', monospace; line-height: 1; margin-bottom: 4px; }
+.my-stat-label { font-size: 9px; font-weight: bold; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
+
+/* 3. 领奖台排版 (重点修复：高度与对齐) */
+.my-podium-container { 
+    display: flex; justify-content: center; align-items: flex-end; 
+    gap: 8px; padding: 30px 20px 40px; position: relative; z-index: 5; height: 240px; 
+}
+.my-podium-item { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
+.my-podium-cover { 
+    width: 100%; border-radius: 10px; aspect-ratio: 2/3; object-cover: cover; 
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.1); 
+    background: rgba(255,255,255,0.05);
+}
+.rank-1 .my-podium-cover { transform: scale(1.15); z-index: 2; border-color: rgba(252, 211, 77, 0.5); }
+.my-podium-title { font-size: 10px; font-weight: 900; margin-top: 12px; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.9; }
+.rank-1 .my-podium-title { font-size: 12px; margin-top: 18px; }
+.my-podium-meta { font-size: 9px; font-weight: bold; opacity: 0.5; margin-top: 2px; }
+
+/* 4. Top 4-10 列表行排版 */
+.my-rank-row { 
+    display: flex; items-center; gap: 12px; padding: 8px 25px; 
+    position: relative; z-index: 5; transition: background 0.3s;
+}
+.my-rank-poster-sm { width: 34px; height: 50px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: rgba(255,255,255,0.05); }
+
+/* 5. 情绪看板区域控制 */
+#my-mood-area { padding: 0 25px; position: relative; z-index: 5; }
+.my-mood-tags-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.my-mood-data-container { display: flex; gap: 10px; margin-top: 10px; }
+.my-mood-data-sub { font-size: 9px; font-weight: bold; opacity: 0.5; margin-top: 4px; }
+.my-mood-desc { font-size: 10px; font-weight: bold; opacity: 0.4; margin-top: 12px; font-style: italic; }
+.my-mood-title { font-size: 11px; font-weight: 900; color: var(--p-theme-highlight); letter-spacing: 1px; text-transform: uppercase; }
+
+/* 6. 内容层容器 */
+.my-p-content { position: relative; z-index: 10; display: flex; flex-direction: column; width: 100%; height: 100%; }
