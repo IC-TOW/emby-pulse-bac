@@ -258,27 +258,69 @@ def search_tmdb(query: str, request: Request):
                 results.append({"tmdb_id": i['id'], "media_type": i['media_type'], "title": i.get('title') or i.get('name'), "year": (i.get('release_date') or i.get('first_air_date') or "")[:4], "poster_path": f"https://image.tmdb.org/t/p/w500{i['poster_path']}" if i.get('poster_path') else "", "overview": i.get('overview', ''), "vote_average": round(i.get('vote_average', 0), 1), "local_status": -1})
         return {"status": "success", "data": results}
     except Exception as e: return {"status": "error", "message": str(e)}
-
+# 🔥 新增：Apple TV+ 风格动态海报墙的专属数据源
+@router.get("/api/requests/trending")
+def get_tmdb_trending(request: Request):
+    if not request.session.get("req_user"): return {"status": "error", "message": "未登录"}
+    tmdb_key = cfg.get("tmdb_api_key")
+    proxy = cfg.get("proxy_url"); proxies = {"https": proxy} if proxy else None
+    try:
+        results = []
+        # 连抓 2 页，拿到 40 部最新热门大片铺满屏幕
+        for page in [1, 2]:
+            res = requests.get(f"https://api.themoviedb.org/3/trending/all/week?api_key={tmdb_key}&language=zh-CN&page={page}", proxies=proxies, timeout=10).json()
+            for i in res.get("results", []):
+                # 只保留有海报的电影和剧集
+                if i.get("media_type") in ["movie", "tv"] and i.get("poster_path"):
+                    results.append({
+                        "tmdb_id": i['id'], 
+                        "media_type": i['media_type'], 
+                        "title": i.get('title') or i.get('name'), 
+                        "year": (i.get('release_date') or i.get('first_air_date') or "")[:4], 
+                        "poster_path": f"https://image.tmdb.org/t/p/w500{i['poster_path']}", 
+                        "overview": i.get('overview', ''), 
+                        "vote_average": round(i.get('vote_average', 0), 1), 
+                        "local_status": -1
+                    })
+        return {"status": "success", "data": results}
+    except Exception as e: 
+        return {"status": "error", "message": str(e)}
 @router.get("/api/requests/tv/{tmdb_id}")
 def get_tv_details(tmdb_id: int):
-    tmdb_key = cfg.get("tmdb_api_key"); proxy = cfg.get("proxy_url"); proxies = {"https": proxy} if proxy else None
+    tmdb_key = cfg.get("tmdb_api_key")
+    proxy = cfg.get("proxy_url"); proxies = {"https": proxy} if proxy else None
     try:
         emby_host = cfg.get("emby_host"); emby_key = cfg.get("emby_api_key")
-        local_seasons = []
+        local_seasons_map = {} # 新增：用于存放 "第几季: 已下载几集" 的映射
+        
         admin_id = get_emby_admin(emby_host, emby_key)
         if admin_id:
-            s_res = requests.get(f"{emby_host}/emby/Users/{admin_id}/Items?AnyProviderIdEquals=tmdb.{tmdb_id}&Recursive=true&api_key={emby_key}", timeout=5).json()
+            # 1. 查剧集是否存在
+            s_res = requests.get(f"{emby_host}/emby/Users/{admin_id}/Items?AnyProviderIdEquals=tmdb.{tmdb_id}&IncludeItemTypes=Series&Recursive=true&api_key={emby_key}", timeout=5).json()
             if s_res.get("Items"):
                 sid = s_res["Items"][0]["Id"]
-                season_res = requests.get(f"{emby_host}/emby/Shows/{sid}/Seasons?UserId={admin_id}&api_key={emby_key}", timeout=5).json()
-                local_seasons = [s.get("IndexNumber") for s in season_res.get("Items", [])]
+                # 2. 🔥 深度穿透：获取该剧集下所有的单集，并统计每季的数量
+                ep_res = requests.get(f"{emby_host}/emby/Users/{admin_id}/Items?ParentId={sid}&IncludeItemTypes=Episode&Recursive=true&Fields=ParentIndexNumber&api_key={emby_key}", timeout=5).json()
+                for ep in ep_res.get("Items", []):
+                    sn = ep.get("ParentIndexNumber") # ParentIndexNumber 就是季数
+                    if sn is not None:
+                        local_seasons_map[sn] = local_seasons_map.get(sn, 0) + 1
+
         tmdb_res = requests.get(f"https://api.themoviedb.org/3/tv/{tmdb_id}?api_key={tmdb_key}&language=zh-CN", proxies=proxies, timeout=10).json()
         seasons = []
         for s in tmdb_res.get("seasons", []):
-            if s["season_number"] > 0: seasons.append({"season_number": s["season_number"], "name": s["name"], "episode_count": s["episode_count"], "exists_locally": s["season_number"] in local_seasons})
+            if s["season_number"] > 0: 
+                sn = s["season_number"]
+                seasons.append({
+                    "season_number": sn, 
+                    "name": s["name"], 
+                    "episode_count": s["episode_count"], # TMDB 上总共多少集
+                    "exists_locally": sn in local_seasons_map, # 只要下载了至少 1 集，就算入库
+                    "local_ep_count": local_seasons_map.get(sn, 0) # 🔥 告诉前端实际下载了多少集
+                })
         return {"status": "success", "seasons": seasons}
-    except Exception as e: return {"status": "error", "message": str(e)}
-
+    except Exception as e: 
+        return {"status": "error", "message": str(e)}
 @router.get("/api/requests/check/{media_type}/{tmdb_id}")
 def check_local_status(media_type: str, tmdb_id: int):
     exists = check_emby_exists(tmdb_id, media_type)

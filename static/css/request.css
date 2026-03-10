@@ -190,9 +190,10 @@ input, textarea { -webkit-user-select: auto; user-select: auto; }
 /* 3. 领奖台排版 (重点修复：高度与对齐) */
 .my-podium-container { 
     display: flex; justify-content: center; align-items: flex-end; 
-    gap: 8px; padding: 30px 20px 40px; position: relative; z-index: 5; height: 240px; 
-}
-.my-podium-item { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
+    gap: 8px; padding: 30px 20px 40px; position: relative; z-index: 5; 
+    height: 260px; /* 原来是 240px，拉高一点腾出空间 */
+    margin-top: 25px; /* 增加顶部间距，强行往下推，远离上方卡片 */
+}.my-podium-item { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
 .my-podium-cover { 
     width: 100%; border-radius: 10px; aspect-ratio: 2/3; object-cover: cover; 
     box-shadow: 0 10px 20px rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.1); 
@@ -220,3 +221,67 @@ input, textarea { -webkit-user-select: auto; user-select: auto; }
 
 /* 6. 内容层容器 */
 .my-p-content { position: relative; z-index: 10; display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+/* ============================================================
+   Apple TV+ 风格动态跑马灯海报墙
+   ============================================================ */
+.marquee-wrapper {
+    position: relative;
+    width: 100vw;
+    left: 50%;
+    transform: translateX(-50%);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 10px 0;
+    /* 边缘渐变消隐遮罩，大厂高级感的来源 */
+    mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+}
+
+.marquee-track {
+    display: flex;
+    gap: 16px;
+    width: max-content; /* 让轨道被海报自然撑开 */
+}
+
+/* 无限滚动动画 */
+.marquee-track.scroll-left { animation: marquee-left 70s linear infinite; }
+.marquee-track.scroll-right { animation: marquee-right 70s linear infinite; }
+
+/* 鼠标悬浮时暂停滚动，方便用户点击 */
+.marquee-track:hover { animation-play-state: paused; }
+
+@keyframes marquee-left {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); } /* 位移刚好一半，实现无缝衔接 */
+}
+
+@keyframes marquee-right {
+    0% { transform: translateX(-50%); }
+    100% { transform: translateX(0); }
+}
+
+.marquee-poster {
+    width: 110px;
+    border-radius: 12px;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+    box-shadow: 0 10px 20px -5px rgba(0,0,0,0.3);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.marquee-poster:hover {
+    transform: scale(1.1);
+    box-shadow: 0 20px 30px -10px rgba(0,0,0,0.6);
+    z-index: 10;
+}
+
+@media (min-width: 768px) {
+    .marquee-poster { width: 150px; border-radius: 16px; }
+    .marquee-wrapper { gap: 24px; }
+    .marquee-track { gap: 24px; }
+}
