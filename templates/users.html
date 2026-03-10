@@ -1,69 +1,105 @@
 {% extends "layout.html" %}
+{% block title %}用户管理 - EmbyPulse{% endblock %}
+{% block head %}
+<style>
+    /* === 🔥 Apple 级极简卡片质感 === */
+    .apple-card { 
+        background-color: rgba(255, 255, 255, 0.95); 
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 24px; 
+        padding: 24px; 
+        box-shadow: 0 4px 24px -8px rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.02);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    html.dark .apple-card {
+        background-color: rgba(28, 28, 30, 0.85); 
+        box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255,255,255,0.04);
+    }
+
+    @media (min-width: 768px) {
+        .apple-card:hover { transform: translateY(-2px); box-shadow: 0 12px 32px -8px rgba(0,0,0,0.08); }
+        html.dark .apple-card:hover { box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.6); }
+    }
+
+    input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active{ -webkit-box-shadow: 0 0 0 30px white inset !important; }
+    .dark input:-webkit-autofill, .dark input:-webkit-autofill:hover, .dark input:-webkit-autofill:focus, .dark input:-webkit-autofill:active{ -webkit-box-shadow: 0 0 0 30px #1f2937 inset !important; -webkit-text-fill-color: white !important; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-6 pb-32">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
-            <i class="fa-solid fa-users text-indigo-500"></i>
-            用户管理
-        </h1>
-        <div class="flex gap-2 flex-wrap">
-            <button onclick="openInviteManageModal()" class="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition shadow-sm font-medium">
+<div class="w-full max-w-[1600px] mx-auto py-4 pb-32 px-4 sm:px-6 md:px-8 space-y-6 md:space-y-8">
+    
+    <div class="apple-card flex flex-col md:flex-row md:items-center justify-between gap-6 w-full mb-2">
+        <div class="flex items-center gap-4 pl-1">
+            <div class="w-12 h-12 rounded-[14px] bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-xl shadow-lg shadow-indigo-500/30 shrink-0">
+                <i class="fa-solid fa-users"></i>
+            </div>
+            <div>
+                <h2 class="text-xl md:text-[22px] font-bold tracking-tight text-gray-900 dark:text-white">用户管理</h2>
+                <div class="text-[12px] text-gray-500 mt-1 font-medium flex items-center gap-1.5">
+                    <i class="fa-solid fa-sliders opacity-70"></i> <span>统筹全站账号与权限生命周期</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex gap-2.5 flex-wrap md:flex-nowrap">
+            <button onclick="openInviteManageModal()" class="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-gray-700 dark:text-gray-200 px-4 py-2.5 rounded-xl transition-colors shadow-sm font-semibold text-[13px]">
                 <i class="fa-solid fa-list-check"></i>
-                <span class="hidden md:inline">邀请管理</span>
-                <span class="md:hidden">管理</span>
+                <span>邀请管理</span>
             </button>
-            <button onclick="openInviteModal()" class="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition shadow-sm font-medium">
+            <button onclick="openInviteModal()" class="flex-1 md:flex-none flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-4 py-2.5 rounded-xl transition-colors shadow-sm font-semibold text-[13px] border border-emerald-200/50 dark:border-emerald-500/20">
                 <i class="fa-solid fa-link"></i>
-                <span class="hidden md:inline">生成邀请</span>
-                <span class="md:hidden">生成</span>
+                <span>生成邀请</span>
             </button>
-            <button onclick="openNewUserModal()" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition shadow-sm font-medium">
+            <button onclick="openNewUserModal()" class="w-full md:w-auto flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-xl transition-colors shadow-md shadow-brand-500/20 font-bold text-[13px] active:scale-95">
                 <i class="fa-solid fa-user-plus"></i>
-                <span class="hidden md:inline">创建用户</span>
-                <span class="md:hidden">新建</span>
+                <span>创建用户</span>
             </button>
         </div>
     </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div onclick="setFilter('all')" class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-md transition-all">
-            <div class="text-gray-500 dark:text-gray-400 text-xs font-bold mb-1"><i class="fa-solid fa-users mr-1"></i>总用户数</div>
-            <div class="text-2xl font-black text-gray-900 dark:text-white" id="stat-total">0</div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div onclick="setFilter('all')" class="apple-card p-5 !rounded-2xl cursor-pointer hover:border-gray-300 dark:hover:border-gray-500 group">
+            <div class="text-gray-500 dark:text-gray-400 text-[11px] font-bold mb-1.5 uppercase tracking-widest"><i class="fa-solid fa-users mr-1"></i>总用户数</div>
+            <div class="text-2xl md:text-3xl font-black text-gray-900 dark:text-white font-mono" id="stat-total">0</div>
         </div>
-        <div onclick="setFilter('active')" class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-green-100 dark:border-green-900/50 shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-md hover:border-green-300 transition-all">
-            <div class="text-green-500 text-xs font-bold mb-1"><i class="fa-solid fa-circle-check mr-1"></i>活跃正常</div>
-            <div class="text-2xl font-black text-green-600 dark:text-green-400" id="stat-active">0</div>
+        <div onclick="setFilter('active')" class="apple-card p-5 !rounded-2xl cursor-pointer hover:border-green-300 dark:hover:border-green-500 group">
+            <div class="text-green-500 text-[11px] font-bold mb-1.5 uppercase tracking-widest"><i class="fa-solid fa-circle-check mr-1"></i>活跃正常</div>
+            <div class="text-2xl md:text-3xl font-black text-green-600 dark:text-green-400 font-mono" id="stat-active">0</div>
         </div>
-        <div onclick="setFilter('expiring')" class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-amber-100 dark:border-amber-900/50 shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-md hover:border-amber-300 transition-all">
-            <div class="text-amber-500 text-xs font-bold mb-1"><i class="fa-solid fa-clock mr-1"></i>7天内到期</div>
-            <div class="text-2xl font-black text-amber-600 dark:text-amber-400" id="stat-expiring">0</div>
+        <div onclick="setFilter('expiring')" class="apple-card p-5 !rounded-2xl cursor-pointer hover:border-amber-300 dark:hover:border-amber-500 group">
+            <div class="text-amber-500 text-[11px] font-bold mb-1.5 uppercase tracking-widest"><i class="fa-solid fa-clock mr-1"></i>7天内到期</div>
+            <div class="text-2xl md:text-3xl font-black text-amber-600 dark:text-amber-400 font-mono" id="stat-expiring">0</div>
         </div>
-        <div onclick="setFilter('error')" class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-red-100 dark:border-red-900/50 shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-md hover:border-red-300 transition-all">
-            <div class="text-red-500 text-xs font-bold mb-1"><i class="fa-solid fa-ban mr-1"></i>已封禁 / 过期</div>
-            <div class="text-2xl font-black text-red-600 dark:text-red-400" id="stat-error">0</div>
+        <div onclick="setFilter('error')" class="apple-card p-5 !rounded-2xl cursor-pointer hover:border-red-300 dark:hover:border-red-500 group">
+            <div class="text-red-500 text-[11px] font-bold mb-1.5 uppercase tracking-widest"><i class="fa-solid fa-ban mr-1"></i>已封禁/过期</div>
+            <div class="text-2xl md:text-3xl font-black text-red-600 dark:text-red-400 font-mono" id="stat-error">0</div>
         </div>
     </div>
 
-    <div class="flex flex-col md:flex-row gap-3 mb-4">
+    <div class="flex flex-col md:flex-row gap-3 mt-2">
         <div class="relative flex-1">
-            <i class="fa-solid fa-search absolute left-3 top-3 text-gray-400"></i>
-            <input type="text" id="search-input" name="search_prevent_autofill" autocomplete="off" oninput="renderUsers()" placeholder="搜索用户名..." class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-10 pr-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none text-sm dark:text-white transition-all">
+            <i class="fa-solid fa-search absolute left-4 top-3.5 text-gray-400"></i>
+            <input type="text" id="search-input" name="search_prevent_autofill" autocomplete="off" oninput="renderUsers()" placeholder="搜索用户名..." class="w-full bg-white dark:bg-[#1C1C1E] border border-gray-200/80 dark:border-white/10 rounded-xl pl-11 pr-4 py-3 focus:ring-2 focus:ring-brand-500 outline-none text-[13px] font-medium dark:text-white transition-all shadow-sm">
         </div>
-        <select id="sort-select" onchange="renderUsers()" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer">
+        <select id="sort-select" onchange="renderUsers()" class="bg-white dark:bg-[#1C1C1E] border border-gray-200/80 dark:border-white/10 rounded-xl px-4 py-3 text-[13px] font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-brand-500 outline-none cursor-pointer shadow-sm">
             <option value="name">排序: 按名称 A-Z</option>
             <option value="login">排序: 最近登录时间</option>
             <option value="expire_asc">排序: 到期时间 (先到期优先)</option>
         </select>
     </div>
 
-    <div class="hidden md:block bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-                <thead class="bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 font-bold border-b border-gray-100 dark:border-gray-700">
+    <div class="hidden md:block apple-card p-0 overflow-hidden mt-4">
+        <div class="overflow-x-auto mac-scrollbar">
+            <table class="w-full text-left text-[13px] text-gray-600 dark:text-gray-300">
+                <thead class="bg-gray-50/50 dark:bg-black/10 text-gray-500 dark:text-gray-400 font-bold border-b border-gray-100 dark:border-white/5 uppercase tracking-wider text-[11px]">
                     <tr>
-                        <th class="px-4 py-4 w-12 text-center">
-                            <input type="checkbox" id="selectAll-desktop" onchange="toggleSelectAll(this)" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                        <th class="px-5 py-4 w-12 text-center">
+                            <input type="checkbox" id="selectAll-desktop" onchange="toggleSelectAll(this)" class="w-4 h-4 rounded text-brand-500 focus:ring-brand-500 cursor-pointer">
                         </th>
                         <th class="px-2 py-4">用户信息</th>
                         <th class="px-6 py-4">账号状态</th>
@@ -72,218 +108,256 @@
                         <th class="px-6 py-4 text-right">操作管理</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-700" id="user-list-body-desktop">
+                <tbody class="divide-y divide-gray-50 dark:divide-white/5" id="user-list-body-desktop">
                 </tbody>
             </table>
         </div>
     </div>
 
-    <div class="md:hidden flex items-center gap-2 mb-3 px-1">
-        <input type="checkbox" id="selectAll-mobile" onchange="toggleSelectAll(this)" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
-        <span class="text-sm font-bold text-gray-700 dark:text-gray-300">全选当前列表</span>
+    <div class="md:hidden flex items-center gap-2 mt-4 mb-2 px-2">
+        <input type="checkbox" id="selectAll-mobile" onchange="toggleSelectAll(this)" class="w-4 h-4 rounded text-brand-500 focus:ring-brand-500 cursor-pointer">
+        <span class="text-[13px] font-bold text-gray-700 dark:text-gray-300">全选当前列表</span>
     </div>
-    <div class="grid grid-cols-1 gap-4 md:hidden" id="user-list-body-mobile">
+    <div class="grid grid-cols-1 gap-3 md:hidden" id="user-list-body-mobile">
     </div>
 </div>
 
-<div id="batch-action-bar" class="fixed bottom-4 left-4 right-4 md:bottom-8 md:left-1/2 md:right-auto md:-translate-x-1/2 z-40 bg-white/90 dark:bg-gray-800/95 backdrop-blur-xl text-gray-800 dark:text-white border border-gray-200/60 dark:border-gray-700/60 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.5)] rounded-2xl px-3 py-3 md:px-5 flex items-center justify-between md:justify-start gap-2 md:gap-5 transform translate-y-24 opacity-0 transition-all duration-300 overflow-x-auto no-scrollbar">
+<div id="batch-action-bar" class="fixed bottom-4 left-4 right-4 md:bottom-8 md:left-1/2 md:right-auto md:-translate-x-1/2 z-40 bg-white/90 dark:bg-[#2C2C2E]/90 backdrop-blur-2xl text-gray-800 dark:text-white border border-gray-200/60 dark:border-white/10 shadow-[0_16px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.6)] rounded-2xl px-3 py-3 md:px-5 flex items-center justify-between md:justify-start gap-2 md:gap-5 transform translate-y-24 opacity-0 transition-all duration-400 ease-out overflow-x-auto mac-scrollbar">
     <div class="flex items-center shrink-0 pl-1">
         <div id="batch-count" class="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-black h-7 md:h-8 min-w-[1.75rem] md:min-w-[2rem] px-2 rounded-lg flex items-center justify-center text-sm shadow-inner">0</div>
         <span class="text-sm font-bold text-gray-600 dark:text-gray-300 ml-2 hidden sm:inline whitespace-nowrap">项已选</span>
     </div>
     <div class="w-px h-5 bg-gray-200 dark:bg-gray-700 hidden md:block shrink-0"></div>
     <div class="flex items-center gap-1.5 md:gap-2 shrink-0">
-        <button onclick="openBatchRenewModal()" class="flex items-center gap-1.5 px-3 md:px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs md:text-sm font-bold transition shadow-md active:scale-95 whitespace-nowrap">
-            <i class="fa-solid fa-calendar-plus"></i>
-            <span class="hidden sm:inline">批量续期</span>
-            <span class="sm:hidden">续期</span>
-        <button onclick="openBatchTemplateModal()" class="flex items-center gap-1.5 px-3 md:px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs md:text-sm font-bold transition shadow-md active:scale-95 whitespace-nowrap">
-            <i class="fa-solid fa-wand-magic-sparkles"></i>
-            <span class="hidden sm:inline">批量套用</span>
-            <span class="sm:hidden">套用</span>
+        <button onclick="openBatchRenewModal()" class="flex items-center gap-1.5 px-3 md:px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs md:text-[13px] font-bold transition shadow-md active:scale-95 whitespace-nowrap">
+            <i class="fa-solid fa-calendar-plus"></i><span class="hidden sm:inline">批量续期</span><span class="sm:hidden">续期</span>
         </button>
+        <button onclick="openBatchTemplateModal()" class="flex items-center gap-1.5 px-3 md:px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs md:text-[13px] font-bold transition shadow-md active:scale-95 whitespace-nowrap">
+            <i class="fa-solid fa-wand-magic-sparkles"></i><span class="hidden sm:inline">批量套用</span><span class="sm:hidden">套用</span>
         </button>
-        <button onclick="batchAction('enable')" class="flex items-center gap-1.5 px-2.5 md:px-3 py-2 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/40 text-green-600 dark:text-green-400 rounded-xl text-xs md:text-sm font-bold transition whitespace-nowrap border border-transparent hover:border-green-200 dark:hover:border-green-800/50 active:scale-95">
+        <button onclick="batchAction('enable')" class="flex items-center gap-1.5 px-2.5 md:px-3 py-2 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/40 text-green-600 dark:text-green-400 rounded-xl text-xs md:text-[13px] font-bold transition whitespace-nowrap border border-transparent hover:border-green-200 dark:hover:border-green-800/50 active:scale-95">
             <i class="fa-solid fa-play"></i><span>启用</span>
         </button>
-        <button onclick="batchAction('disable')" class="flex items-center gap-1.5 px-2.5 md:px-3 py-2 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-600 dark:text-amber-400 rounded-xl text-xs md:text-sm font-bold transition whitespace-nowrap border border-transparent hover:border-amber-200 dark:hover:border-amber-800/50 active:scale-95">
+        <button onclick="batchAction('disable')" class="flex items-center gap-1.5 px-2.5 md:px-3 py-2 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-600 dark:text-amber-400 rounded-xl text-xs md:text-[13px] font-bold transition whitespace-nowrap border border-transparent hover:border-amber-200 dark:hover:border-amber-800/50 active:scale-95">
             <i class="fa-solid fa-pause"></i><span>禁用</span>
         </button>
         <button onclick="batchAction('delete')" class="flex items-center justify-center w-8 h-8 md:w-9 md:h-9 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-500 rounded-xl transition ml-0.5 shrink-0 active:scale-95 border border-transparent hover:border-red-200 dark:hover:border-red-800/50" title="批量删除">
-            <i class="fa-solid fa-trash text-xs md:text-sm"></i>
+            <i class="fa-solid fa-trash text-xs md:text-[13px]"></i>
         </button>
     </div>
 </div>
 
-<div id="invite-manage-modal" class="fixed inset-0 z-[60] hidden items-center justify-center h-screen w-screen bg-black/50 backdrop-blur-sm px-4">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh]">
-        <div class="p-6 pb-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center shrink-0">
+<div id="invite-manage-modal" class="fixed inset-0 z-[100] hidden items-center justify-center h-screen w-screen bg-black/50 backdrop-blur-sm px-4 py-6">
+    <div class="bg-white dark:bg-[#1C1C1E] rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden border border-gray-100 dark:border-white/5">
+        <div class="p-6 pb-4 border-b border-gray-100 dark:border-white/5 flex justify-between items-center shrink-0">
             <h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <i class="fa-solid fa-link text-indigo-500"></i> 
-                系统邀请码管理
+                <i class="fa-solid fa-link text-brand-500"></i> 系统邀请码管理
             </h3>
             <button onclick="closeInviteManageModal()" class="text-gray-400 hover:text-red-500 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
         </div>
         
-        <div class="p-0 overflow-y-auto custom-scrollbar flex-1 relative">
-            <table class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-                <thead class="bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 font-bold sticky top-0 shadow-sm z-10">
+        <div class="p-0 overflow-y-auto overflow-x-auto mac-scrollbar flex-1 relative bg-gray-50/30 dark:bg-black/10">
+            <table class="w-full text-left text-[13px] text-gray-600 dark:text-gray-300 min-w-[600px]">
+                <thead class="bg-gray-50 dark:bg-black/20 text-gray-500 dark:text-gray-400 font-bold sticky top-0 shadow-sm z-10 text-[11px] uppercase tracking-wider">
                     <tr>
-                        <th class="px-4 py-3 w-12 text-center">
-                            <input type="checkbox" onchange="toggleSelectAllInvites(this)" class="w-4 h-4 rounded text-indigo-600 cursor-pointer">
+                        <th class="px-5 py-3 w-12 text-center whitespace-nowrap">
+                            <input type="checkbox" onchange="toggleSelectAllInvites(this)" class="w-4 h-4 rounded text-brand-500 cursor-pointer">
                         </th>
-                        <th class="px-4 py-3">邀请码链接</th>
-                        <th class="px-4 py-3">初始分配时长</th>
-                        <th class="px-4 py-3">使用状态</th>
-                        <th class="px-4 py-3">生成时间</th>
+                        <th class="px-4 py-3 whitespace-nowrap">邀请码链接</th>
+                        <th class="px-4 py-3 whitespace-nowrap">初始时长</th>
+                        <th class="px-4 py-3 whitespace-nowrap">使用状态</th>
+                        <th class="px-4 py-3 whitespace-nowrap">生成时间</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-700" id="invite-list-tbody">
+                <tbody class="divide-y divide-gray-50 dark:divide-white/5" id="invite-list-tbody">
                 </tbody>
             </table>
         </div>
         
-        <div class="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 shrink-0 flex justify-between items-center rounded-b-xl">
-            <button onclick="batchDeleteInvites()" id="btn-batch-del-invite" disabled class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-bold shadow-sm transition opacity-50 cursor-not-allowed">
+        <div class="p-4 border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/20 shrink-0 flex justify-between items-center rounded-b-2xl">
+            <button onclick="batchDeleteInvites()" id="btn-batch-del-invite" disabled class="px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-[13px] font-bold shadow-sm transition opacity-50 cursor-not-allowed">
                 <i class="fa-solid fa-trash mr-1"></i>批量删除
             </button>
-            <button onclick="closeInviteManageModal()" class="px-5 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg text-sm font-bold transition">返回关闭</button>
+            <button onclick="closeInviteManageModal()" class="px-5 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-xl text-[13px] font-bold transition">返回关闭</button>
         </div>
     </div>
 </div>
 
-<div id="batch-renew-modal" class="fixed inset-0 z-50 hidden items-center justify-center h-screen w-screen bg-black/50 backdrop-blur-sm px-4">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-sm p-6">
-        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4"><i class="fa-solid fa-calendar-plus text-indigo-500 mr-2"></i>批量续期</h3>
-        <p class="text-xs text-gray-500 mb-4">将为选中的 <span id="renew-count-text" class="font-bold text-indigo-500"></span> 个用户修改到期时间。</p>
+<div id="batch-renew-modal" class="fixed inset-0 z-[100] hidden items-center justify-center h-screen w-screen bg-black/50 backdrop-blur-sm px-4">
+    <div class="bg-white dark:bg-[#1C1C1E] rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-gray-100 dark:border-white/5">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4"><i class="fa-solid fa-calendar-plus text-brand-500 mr-2"></i>批量续期</h3>
+        <p class="text-[13px] text-gray-500 mb-4">将为选中的 <span id="renew-count-text" class="font-bold text-brand-500"></span> 个用户修改到期时间。</p>
         <div class="grid grid-cols-3 gap-2 mb-4">
-            <button onclick="submitBatchRenew('+30')" class="py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-sm font-bold hover:bg-indigo-100 transition border border-transparent hover:border-indigo-200 dark:hover:border-indigo-800">+ 30 天</button>
-            <button onclick="submitBatchRenew('+90')" class="py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-sm font-bold hover:bg-indigo-100 transition border border-transparent hover:border-indigo-200 dark:hover:border-indigo-800">+ 90 天</button>
-            <button onclick="submitBatchRenew('+365')" class="py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-sm font-bold hover:bg-indigo-100 transition border border-transparent hover:border-indigo-200 dark:hover:border-indigo-800">+ 1 年</button>
+            <button onclick="submitBatchRenew('+30')" class="py-2.5 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-xl text-[13px] font-bold hover:bg-brand-100 transition border border-transparent hover:border-brand-200 dark:hover:border-brand-500/30">+ 30 天</button>
+            <button onclick="submitBatchRenew('+90')" class="py-2.5 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-xl text-[13px] font-bold hover:bg-brand-100 transition border border-transparent hover:border-brand-200 dark:hover:border-brand-500/30">+ 90 天</button>
+            <button onclick="submitBatchRenew('+365')" class="py-2.5 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-xl text-[13px] font-bold hover:bg-brand-100 transition border border-transparent hover:border-brand-200 dark:hover:border-brand-500/30">+ 1 年</button>
         </div>
         <div class="relative flex py-2 items-center"><div class="flex-grow border-t border-gray-200 dark:border-gray-700"></div><span class="flex-shrink-0 mx-4 text-gray-400 text-xs">或指定绝对日期</span><div class="flex-grow border-t border-gray-200 dark:border-gray-700"></div></div>
-        <input type="date" id="batch-date-picker" class="w-full px-4 py-2 mt-2 mb-6 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+        <input type="date" id="batch-date-picker" class="w-full px-4 py-3 mt-2 mb-6 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50 dark:bg-black/20 focus:ring-2 focus:ring-brand-500 outline-none text-[13px]">
         <div class="flex justify-end gap-3">
-            <button onclick="closeBatchRenewModal()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm transition">取消</button>
-            <button onclick="submitBatchRenew('date')" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-md transition">确认指定</button>
+            <button onclick="closeBatchRenewModal()" class="px-5 py-2.5 bg-gray-100 dark:bg-[#2C2C2E] text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#3A3A3C] rounded-xl text-[13px] font-bold transition">取消</button>
+            <button onclick="submitBatchRenew('date')" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-[13px] font-bold shadow-md transition">确认指定</button>
         </div>
     </div>
 </div>
 
-<div id="new-user-modal" class="fixed inset-0 z-50 hidden items-center justify-center h-screen w-screen bg-black/50 backdrop-blur-sm px-4">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all">
-        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-user-plus text-indigo-500"></i> 创建新 Emby 账号</h3>
+<div id="new-user-modal" class="fixed inset-0 z-[100] hidden items-center justify-center h-screen w-screen bg-black/50 backdrop-blur-sm px-4 py-6">
+    <div class="bg-white dark:bg-[#1C1C1E] rounded-2xl shadow-2xl w-full max-w-md p-6 transform transition-all border border-gray-100 dark:border-white/5 max-h-[90vh] overflow-y-auto mac-scrollbar">
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2"><i class="fa-solid fa-user-plus text-brand-500"></i> 创建新账号</h3>
         <div class="space-y-4">
-            <div><label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">用户名</label><input type="text" id="new-username" autocomplete="off" class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"></div>
-            <div><label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">初始密码 (可选)</label><input type="password" id="new-password" autocomplete="new-password" class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="留空则不设置密码"></div>
-            <div><label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">账号到期时间</label><input type="date" id="new-expire" class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"></div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase">用户名</label>
+                <input type="text" id="new-username" autocomplete="off" class="w-full px-4 py-3 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50 dark:bg-black/20 focus:ring-2 focus:ring-brand-500 outline-none transition-all text-[13px]">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase">初始密码 (可选)</label>
+                <input type="password" id="new-password" autocomplete="new-password" class="w-full px-4 py-3 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50 dark:bg-black/20 focus:ring-2 focus:ring-brand-500 outline-none transition-all text-[13px]" placeholder="留空则不设置密码">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase">账号到期时间</label>
+                <input type="date" id="new-expire" class="w-full px-4 py-3 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50 dark:bg-black/20 focus:ring-2 focus:ring-brand-500 outline-none transition-all text-[13px]">
+            </div>
             
-            <div class="p-3 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-xl border border-indigo-100 dark:border-indigo-800/30">
-                <label class="block text-xs font-bold text-indigo-800 dark:text-indigo-300 mb-1.5 uppercase tracking-wide">权限同步模板 (可选)</label>
-                <select id="new-template" onchange="toggleNewTemplateOpts()" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none cursor-pointer text-sm mb-2"></select>
-                <div id="new-template-opts" class="flex flex-wrap gap-x-4 gap-y-2 px-1 hidden">
-                    <label class="flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-400 cursor-pointer">
-                        <input type="checkbox" id="new-opt-lib" checked class="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500"> 媒体库权限
+            <div class="p-4 bg-brand-50/50 dark:bg-brand-500/5 rounded-xl border border-brand-100 dark:border-brand-500/10">
+                <label class="block text-xs font-bold text-brand-600 dark:text-brand-400 mb-2 uppercase tracking-wide">权限同步模板 (可选)</label>
+                <select id="new-template" onchange="toggleNewTemplateOpts()" class="w-full px-3 py-2.5 rounded-xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#2C2C2E] focus:ring-2 focus:ring-brand-500 outline-none appearance-none cursor-pointer text-[13px] mb-3 shadow-sm"></select>
+                <div id="new-template-opts" class="flex flex-wrap gap-x-4 gap-y-3 px-1 hidden">
+                    <label class="flex items-center gap-1.5 text-[11px] font-bold text-brand-600 dark:text-brand-400 cursor-pointer">
+                        <input type="checkbox" id="new-opt-lib" checked class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500"> 媒体库权限
                     </label>
-                    <label class="flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-400 cursor-pointer">
-                        <input type="checkbox" id="new-opt-pol" checked class="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500"> 下载/转码策略
+                    <label class="flex items-center gap-1.5 text-[11px] font-bold text-brand-600 dark:text-brand-400 cursor-pointer">
+                        <input type="checkbox" id="new-opt-pol" checked class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500"> 下载/转码策略
                     </label>
-                    <label class="flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-400 cursor-pointer">
-                        <input type="checkbox" id="new-opt-par" checked class="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500"> 年龄分级控制
+                    <label class="flex items-center gap-1.5 text-[11px] font-bold text-brand-600 dark:text-brand-400 cursor-pointer">
+                        <input type="checkbox" id="new-opt-par" checked class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500"> 年龄分级
                     </label>
                 </div>
             </div>
 
             <div class="flex justify-end gap-3 mt-8">
-                <button onclick="closeNewUserModal()" class="px-5 py-2 text-gray-500 hover:bg-gray-100 rounded-lg font-medium transition-colors">取消</button>
-                <button onclick="submitNewUser()" id="new-user-btn" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-md active:scale-95 transition-all">立即创建</button>
+                <button onclick="closeNewUserModal()" class="px-5 py-2.5 bg-gray-100 dark:bg-[#2C2C2E] text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#3A3A3C] rounded-xl font-bold text-[13px] transition-colors">取消</button>
+                <button onclick="submitNewUser()" id="new-user-btn" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-bold text-[13px] shadow-md active:scale-95 transition-all">立即创建</button>
             </div>
         </div>
     </div>
 </div>
 
-<div id="edit-user-modal" class="fixed inset-0 z-50 hidden items-center justify-center h-screen w-screen bg-black/50 backdrop-blur-sm px-4 py-6">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md flex flex-col max-h-[95vh] transform transition-all">
-        <div class="p-6 pb-4 shrink-0 border-b border-gray-100 dark:border-gray-700">
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-user-gear text-indigo-500"></i>编辑用户配置</h3>
-            <div class="flex border-b border-gray-100 dark:border-gray-700 gap-6">
-                <button onclick="switchEditTab('basic')" id="tab-btn-basic" class="pb-2 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition-all">基础资料</button>
-                <button onclick="switchEditTab('library')" id="tab-btn-library" class="pb-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 dark:text-gray-400 transition-all">库权限</button>
-                <button onclick="switchEditTab('policy')" id="tab-btn-policy" class="pb-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 dark:text-gray-400 transition-all">高级策略</button>
+<div id="edit-user-modal" class="fixed inset-0 z-[100] hidden items-center justify-center h-screen w-screen bg-black/50 backdrop-blur-sm px-4 py-6">
+    <div class="bg-white dark:bg-[#1C1C1E] rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh] transform transition-all border border-gray-100 dark:border-white/5">
+        <div class="p-6 pb-0 shrink-0 border-b border-gray-100 dark:border-white/5">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2"><i class="fa-solid fa-user-gear text-brand-500"></i> 编辑用户配置</h3>
+            <div class="flex gap-6">
+                <button onclick="switchEditTab('basic')" id="tab-btn-basic" class="pb-3 text-[13px] font-bold text-brand-500 border-b-2 border-brand-500 transition-all">基础资料</button>
+                <button onclick="switchEditTab('library')" id="tab-btn-library" class="pb-3 text-[13px] font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 dark:text-gray-300 transition-all">库权限</button>
+                <button onclick="switchEditTab('policy')" id="tab-btn-policy" class="pb-3 text-[13px] font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 dark:text-gray-300 transition-all">高级策略</button>
             </div>
         </div>
         <input type="hidden" id="edit-userid">
-        <div class="p-6 pt-5 overflow-y-auto custom-scrollbar flex-1">
+        <div class="p-6 overflow-y-auto mac-scrollbar flex-1 bg-gray-50/30 dark:bg-black/10">
             
             <div id="edit-tab-basic" class="block space-y-6">
-                <div class="flex flex-col items-center pb-6 border-b border-gray-50 dark:border-gray-700">
-                    <div class="relative group mb-4"><img id="edit-avatar-preview" src="" class="w-24 h-24 rounded-full border-4 border-white dark:border-gray-700 shadow-xl object-cover bg-indigo-50"><input type="file" id="edit-avatar-file" accept="image/*" class="hidden" onchange="previewFileAvatar()"></div>
-                    <div class="flex gap-2 mb-4">
-                        <button onclick="generateRandomAvatar()" class="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs rounded-lg hover:bg-indigo-100 transition shadow-sm"><i class="fa-solid fa-dice mr-1"></i> 随机生成</button>
-                        <button onclick="document.getElementById('edit-avatar-file').click()" class="px-3 py-1.5 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs rounded-lg hover:bg-gray-100 transition shadow-sm"><i class="fa-solid fa-upload mr-1"></i> 上传图片</button>
+                <div class="flex flex-col items-center pb-6 border-b border-gray-100 dark:border-white/5">
+                    <div class="relative group mb-4">
+                        <img id="edit-avatar-preview" src="" class="w-24 h-24 rounded-full border-4 border-white dark:border-[#2C2C2E] shadow-xl object-cover bg-gray-100 dark:bg-gray-800">
+                        <input type="file" id="edit-avatar-file" accept="image/*" class="hidden" onchange="previewFileAvatar()">
                     </div>
-                    <div class="grid grid-cols-4 gap-3">
-                        <img onclick="setAvatarPreset('micah')" src="https://api.dicebear.com/9.x/micah/png?seed=Felix" class="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition border border-gray-200 dark:border-gray-600"><img onclick="setAvatarPreset('bottts')" src="https://api.dicebear.com/9.x/bottts/png?seed=Zoe" class="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition border border-gray-200 dark:border-gray-600"><img onclick="setAvatarPreset('avataaars')" src="https://api.dicebear.com/9.x/avataaars/png?seed=Jack" class="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition border border-gray-200 dark:border-gray-600"><img onclick="setAvatarPreset('notionists')" src="https://api.dicebear.com/9.x/notionists/png?seed=Abby" class="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition border border-gray-200 dark:border-gray-600"><img onclick="setAvatarPreset('fun-emoji')" src="https://api.dicebear.com/9.x/fun-emoji/png?seed=Leo" class="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition border border-gray-200 dark:border-gray-600"><img onclick="setAvatarPreset('lorelei')" src="https://api.dicebear.com/9.x/lorelei/png?seed=Sasha" class="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition border border-gray-200 dark:border-gray-600"><img onclick="setAvatarPreset('open-peeps')" src="https://api.dicebear.com/9.x/open-peeps/png?seed=Sam" class="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition border border-gray-200 dark:border-gray-600"><img onclick="setAvatarPreset('adventurer')" src="https://api.dicebear.com/9.x/adventurer/png?seed=Max" class="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition border border-gray-200 dark:border-gray-600">
+                    <div class="flex gap-2 mb-4">
+                        <button onclick="generateRandomAvatar()" class="px-3 py-1.5 bg-gray-100 dark:bg-[#2C2C2E] text-gray-600 dark:text-gray-300 font-medium text-xs rounded-lg hover:bg-gray-200 dark:hover:bg-[#3A3A3C] transition shadow-sm"><i class="fa-solid fa-dice mr-1"></i> 随机生成</button>
+                        <button onclick="document.getElementById('edit-avatar-file').click()" class="px-3 py-1.5 bg-gray-100 dark:bg-[#2C2C2E] text-gray-600 dark:text-gray-300 font-medium text-xs rounded-lg hover:bg-gray-200 dark:hover:bg-[#3A3A3C] transition shadow-sm"><i class="fa-solid fa-upload mr-1"></i> 上传图片</button>
+                    </div>
+                    <div class="grid grid-cols-4 gap-4 mt-2">
+                        <img onclick="setAvatarPreset('micah')" src="https://api.dicebear.com/9.x/micah/png?seed=Felix" class="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition border border-gray-200/50 dark:border-white/10 shadow-sm">
+                        <img onclick="setAvatarPreset('bottts')" src="https://api.dicebear.com/9.x/bottts/png?seed=Zoe" class="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition border border-gray-200/50 dark:border-white/10 shadow-sm">
+                        <img onclick="setAvatarPreset('avataaars')" src="https://api.dicebear.com/9.x/avataaars/png?seed=Jack" class="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition border border-gray-200/50 dark:border-white/10 shadow-sm">
+                        <img onclick="setAvatarPreset('notionists')" src="https://api.dicebear.com/9.x/notionists/png?seed=Abby" class="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition border border-gray-200/50 dark:border-white/10 shadow-sm">
+                        <img onclick="setAvatarPreset('fun-emoji')" src="https://api.dicebear.com/9.x/fun-emoji/png?seed=Leo" class="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition border border-gray-200/50 dark:border-white/10 shadow-sm">
+                        <img onclick="setAvatarPreset('lorelei')" src="https://api.dicebear.com/9.x/lorelei/png?seed=Sasha" class="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition border border-gray-200/50 dark:border-white/10 shadow-sm">
+                        <img onclick="setAvatarPreset('open-peeps')" src="https://api.dicebear.com/9.x/open-peeps/png?seed=Sam" class="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition border border-gray-200/50 dark:border-white/10 shadow-sm">
+                        <img onclick="setAvatarPreset('adventurer')" src="https://api.dicebear.com/9.x/adventurer/png?seed=Max" class="w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition border border-gray-200/50 dark:border-white/10 shadow-sm">
                     </div>
                 </div>
                 <div class="space-y-4">
-                    <div><label class="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">当前用户名</label><input type="text" id="edit-username" class="w-full px-4 py-2 rounded-lg border border-gray-200 bg-gray-100 dark:bg-gray-900/50 text-gray-500 cursor-not-allowed" disabled></div>
-                    <div><label class="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">重置密码</label><input type="password" id="edit-password" autocomplete="new-password" class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="如需修改请输入新密码，否则留空"></div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">当前用户名</label>
+                        <input type="text" id="edit-username" class="w-full px-4 py-2.5 rounded-xl border border-transparent bg-gray-100/50 dark:bg-black/20 text-gray-500 cursor-not-allowed text-[13px]" disabled>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">重置密码</label>
+                        <input type="password" id="edit-password" autocomplete="new-password" class="w-full px-4 py-2.5 rounded-xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-black/20 focus:ring-2 focus:ring-brand-500 outline-none transition-all text-[13px] shadow-sm" placeholder="如需修改请输入新密码，否则留空">
+                    </div>
                     <div class="grid grid-cols-2 gap-4">
-                        <div><label class="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">账号状态</label><select id="edit-disabled" class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition-all"><option value="false">✅ 活跃正常</option><option value="true">🚫 禁止访问</option></select></div>
-                        <div><label class="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">到期日期</label><input type="date" id="edit-expire" class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"></div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">账号状态</label>
+                            <select id="edit-disabled" class="w-full px-3 py-2.5 rounded-xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-black/20 focus:ring-2 focus:ring-brand-500 outline-none cursor-pointer transition-all text-[13px] shadow-sm">
+                                <option value="false">✅ 活跃正常</option>
+                                <option value="true">🚫 禁止访问</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">到期日期</label>
+                            <input type="date" id="edit-expire" class="w-full px-3 py-2.5 rounded-xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-black/20 focus:ring-2 focus:ring-brand-500 outline-none transition-all text-[13px] shadow-sm">
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div id="edit-tab-library" class="hidden space-y-6">
-                <div class="bg-indigo-50/50 dark:bg-indigo-900/10 p-5 rounded-xl border border-indigo-100 dark:border-indigo-800/30">
+            <div id="edit-tab-library" class="hidden space-y-5">
+                <div class="bg-brand-50/50 dark:bg-brand-500/5 p-5 rounded-xl border border-brand-100 dark:border-brand-500/10">
                     <div class="flex items-center justify-between mb-3">
-                        <label class="block text-sm font-bold text-indigo-800 dark:text-indigo-300 uppercase tracking-wide">镜像其他用户权限</label>
-                        <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i>
+                        <label class="block text-[13px] font-bold text-brand-600 dark:text-brand-400">镜像其他用户权限</label>
+                        <i class="fa-solid fa-wand-magic-sparkles text-brand-400"></i>
                     </div>
-                    <div class="flex gap-2 mb-3">
-                        <select id="edit-template-select" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none text-sm cursor-pointer"></select>
-                        <button onclick="applyEditTemplate()" id="apply-template-btn" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition shadow-md active:scale-95 whitespace-nowrap">一键套用</button>
+                    <div class="flex gap-2 mb-4">
+                        <select id="edit-template-select" class="flex-1 px-3 py-2 rounded-xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#2C2C2E] focus:ring-2 focus:ring-brand-500 outline-none text-[13px] cursor-pointer shadow-sm"></select>
+                        <button onclick="applyEditTemplate()" id="apply-template-btn" class="px-4 py-2 bg-gray-800 dark:bg-gray-200 hover:bg-gray-900 dark:hover:bg-white text-white dark:text-black rounded-xl text-[13px] font-bold transition shadow-md active:scale-95 whitespace-nowrap">一键套用</button>
                     </div>
                     <div class="flex flex-wrap gap-x-4 gap-y-2 px-1">
-                        <label class="flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-400 cursor-pointer"><input type="checkbox" id="apply-opt-lib" checked class="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500"> 媒体库</label>
-                        <label class="flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-400 cursor-pointer"><input type="checkbox" id="apply-opt-pol" checked class="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500"> 下载/转码</label>
-                        <label class="flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-400 cursor-pointer"><input type="checkbox" id="apply-opt-par" checked class="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500"> 年龄分级</label>
+                        <label class="flex items-center gap-1.5 text-[11px] font-bold text-brand-600 dark:text-brand-400 cursor-pointer"><input type="checkbox" id="apply-opt-lib" checked class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500"> 媒体库</label>
+                        <label class="flex items-center gap-1.5 text-[11px] font-bold text-brand-600 dark:text-brand-400 cursor-pointer"><input type="checkbox" id="apply-opt-pol" checked class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500"> 下载/转码</label>
+                        <label class="flex items-center gap-1.5 text-[11px] font-bold text-brand-600 dark:text-brand-400 cursor-pointer"><input type="checkbox" id="apply-opt-par" checked class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500"> 年龄分级</label>
                     </div>
                 </div>
                 
-                <label class="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-all shadow-sm">
-                    <div><div class="text-sm font-bold text-gray-800 dark:text-gray-100">开通所有媒体库访问权</div><div class="text-xs text-gray-500 dark:text-gray-400 mt-1">开启后，该账号将无视勾选，自动获得全部库权限</div></div>
-                    <div class="relative"><input type="checkbox" id="edit-enable-all" class="sr-only peer" onchange="toggleLibraryCheckboxes()"><div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div></div>
+                <label class="flex items-center justify-between p-4 border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#1C1C1E] rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-[#2C2C2E] transition-all shadow-sm">
+                    <div>
+                        <div class="text-[13px] font-bold text-gray-800 dark:text-gray-100">开通所有媒体库访问权</div>
+                        <div class="text-[11px] text-gray-500 mt-1">自动获得全部库权限</div>
+                    </div>
+                    <div class="relative">
+                        <input type="checkbox" id="edit-enable-all" class="sr-only peer" onchange="toggleLibraryCheckboxes()">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+                    </div>
                 </label>
                 <div>
-                    <div class="flex items-center justify-between mb-3"><label class="text-xs font-bold text-gray-400 uppercase tracking-wider">指定访问权限 (白名单)</label><button onclick="clearSubFolders()" id="clear-sub-btn" class="text-[10px] text-indigo-500 hover:text-indigo-700 border border-indigo-100 px-2 py-1 rounded bg-indigo-50/50 transition-all font-bold"><i class="fa-solid fa-broom mr-1"></i>重置子文件夹限制</button></div>
-                    <div id="edit-library-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-gray-100 dark:border-gray-700 max-h-56 overflow-y-auto custom-scrollbar"></div>
+                    <div class="flex items-center justify-between mb-3">
+                        <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">指定访问权限 (白名单)</label>
+                        <button onclick="clearSubFolders()" id="clear-sub-btn" class="text-[10px] text-brand-500 hover:text-brand-600 bg-brand-50 dark:bg-brand-500/10 px-2 py-1 rounded-md transition-all font-bold"><i class="fa-solid fa-broom mr-1"></i>重置子文件夹限制</button>
+                    </div>
+                    <div id="edit-library-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-white dark:bg-[#1C1C1E] p-3 rounded-xl border border-gray-200/80 dark:border-white/10 shadow-sm max-h-64 overflow-y-auto mac-scrollbar"></div>
                 </div>
             </div>
 
             <div id="edit-tab-policy" class="hidden space-y-4">
-                <label class="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-all shadow-sm">
-                    <div><div class="text-sm font-bold text-gray-800 dark:text-gray-100">允许下载媒体</div><div class="text-xs text-gray-500 dark:text-gray-400 mt-1">允许账号拉取原文件，可能消耗大量宽带</div></div>
-                    <div class="relative"><input type="checkbox" id="edit-enable-downloading" class="sr-only peer"><div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div></div>
+                <label class="flex items-center justify-between p-4 border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#1C1C1E] rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-[#2C2C2E] transition-all shadow-sm">
+                    <div><div class="text-[13px] font-bold text-gray-800 dark:text-gray-100">允许下载媒体</div><div class="text-[11px] text-gray-500 mt-1">允许拉取原文件，耗宽带</div></div>
+                    <div class="relative"><input type="checkbox" id="edit-enable-downloading" class="sr-only peer"><div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div></div>
                 </label>
                 
-                <label class="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-all shadow-sm">
-                    <div><div class="text-sm font-bold text-gray-800 dark:text-gray-100">允许视频转码</div><div class="text-xs text-gray-500 dark:text-gray-400 mt-1">关闭后强制原画播放，防止服务器 CPU 爆炸</div></div>
-                    <div class="relative"><input type="checkbox" id="edit-enable-video-transcode" class="sr-only peer"><div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div></div>
+                <label class="flex items-center justify-between p-4 border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#1C1C1E] rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-[#2C2C2E] transition-all shadow-sm">
+                    <div><div class="text-[13px] font-bold text-gray-800 dark:text-gray-100">允许视频转码</div><div class="text-[11px] text-gray-500 mt-1">关闭防止服务器 CPU 爆炸</div></div>
+                    <div class="relative"><input type="checkbox" id="edit-enable-video-transcode" class="sr-only peer"><div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div></div>
                 </label>
 
-                <label class="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-all shadow-sm">
-                    <div><div class="text-sm font-bold text-gray-800 dark:text-gray-100">允许音频转码</div><div class="text-xs text-gray-500 dark:text-gray-400 mt-1">设备不支持音频格式时的保底策略</div></div>
-                    <div class="relative"><input type="checkbox" id="edit-enable-audio-transcode" class="sr-only peer"><div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div></div>
+                <label class="flex items-center justify-between p-4 border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#1C1C1E] rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-[#2C2C2E] transition-all shadow-sm">
+                    <div><div class="text-[13px] font-bold text-gray-800 dark:text-gray-100">允许音频转码</div><div class="text-[11px] text-gray-500 mt-1">设备不支持时的保底策略</div></div>
+                    <div class="relative"><input type="checkbox" id="edit-enable-audio-transcode" class="sr-only peer"><div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div></div>
                 </label>
 
-                <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-800/30">
-                    <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wider"><i class="fa-solid fa-child-reaching mr-1 text-indigo-500"></i>家长控制 (最高年龄分级)</label>
-                    <select id="edit-max-parental-rating" class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition-all text-sm font-bold text-gray-800 dark:text-gray-100">
-                        <option value="-1">✅ 不限制 (允许观看所有分级)</option>
-                        <option value="0">0 岁以上 (G - 大众级 / 普遍级)</option>
+                <div class="p-4 border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#1C1C1E] rounded-xl shadow-sm">
+                    <label class="block text-[11px] font-bold text-gray-500 mb-2 uppercase tracking-wider"><i class="fa-solid fa-child-reaching mr-1"></i>家长控制 (最高分级)</label>
+                    <select id="edit-max-parental-rating" class="w-full px-4 py-3 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50 dark:bg-black/20 focus:ring-2 focus:ring-brand-500 outline-none cursor-pointer transition-all text-[13px] font-bold text-gray-800 dark:text-gray-100">
+                        <option value="-1">✅ 不限制 (允许观看所有)</option>
+                        <option value="0">0 岁以上 (G - 大众级)</option>
                         <option value="10">10 岁以上</option>
                         <option value="13">13 岁以上 (PG-13 / 辅导级)</option>
                         <option value="14">14 岁以上 (TV-14)</option>
@@ -294,93 +368,95 @@
             </div>
 
         </div>
-        <div class="p-6 pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3 shrink-0 bg-white dark:bg-gray-800 rounded-b-xl">
-            <button onclick="closeEditUserModal()" class="px-5 py-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors">取消</button>
-            <button onclick="submitEditUser()" id="save-user-btn" class="px-8 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-lg active:scale-95 transition-all"><span id="save-user-text">保存配置</span></button>
+        <div class="p-5 border-t border-gray-100 dark:border-white/5 flex justify-end gap-3 shrink-0 bg-white dark:bg-[#1C1C1E] rounded-b-2xl shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
+            <button onclick="closeEditUserModal()" class="px-5 py-2.5 bg-gray-100 dark:bg-[#2C2C2E] text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#3A3A3C] rounded-xl font-bold text-[13px] transition-colors">取消</button>
+            <button onclick="submitEditUser()" id="save-user-btn" class="px-8 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-bold text-[13px] shadow-md active:scale-95 transition-all"><span id="save-user-text">保存配置</span></button>
         </div>
     </div>
 </div>
 
-<div id="invite-modal" class="fixed inset-0 z-50 hidden items-center justify-center h-screen w-screen bg-black/50 backdrop-blur-sm px-4">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6">
-        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-link text-emerald-500"></i>生成邀请码</h3>
+<div id="invite-modal" class="fixed inset-0 z-[100] hidden items-center justify-center h-screen w-screen bg-black/50 backdrop-blur-sm px-4 py-6">
+    <div class="bg-white dark:bg-[#1C1C1E] rounded-2xl shadow-2xl w-full max-w-md p-6 border border-gray-100 dark:border-white/5 max-h-[90vh] overflow-y-auto mac-scrollbar">
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2"><i class="fa-solid fa-link text-emerald-500"></i>生成邀请码</h3>
         <div id="invite-form-step" class="space-y-5">
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">账号有效期</label>
+                <label class="block text-[11px] font-bold text-gray-500 mb-2 uppercase">账号有效期</label>
                 <div class="grid grid-cols-4 gap-2 mb-3">
-                    <button onclick="selectDuration(1)" class="dur-btn px-2 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-xs hover:bg-indigo-50 transition-all text-gray-600 dark:text-gray-400">1 天</button>
-                    <button onclick="selectDuration(7)" class="dur-btn px-2 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-xs hover:bg-indigo-50 transition-all text-gray-600 dark:text-gray-400">7 天</button>
-                    <button onclick="selectDuration(30)" class="dur-btn px-2 py-2 border border-indigo-500 bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-bold rounded-lg text-xs shadow-sm transition-all">30 天</button>
-                    <button onclick="selectDuration(90)" class="dur-btn px-2 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-xs hover:bg-indigo-50 transition-all text-gray-600 dark:text-gray-400">90 天</button>
-                    <button onclick="selectDuration(180)" class="dur-btn px-2 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-xs hover:bg-indigo-50 transition-all text-gray-600 dark:text-gray-400">180 天</button>
-                    <button onclick="selectDuration(365)" class="dur-btn px-2 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-xs hover:bg-indigo-50 transition-all text-gray-600 dark:text-gray-400">365 天</button>
-                    <button onclick="selectDuration(-1)" class="dur-btn px-2 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-xs hover:bg-indigo-50 col-span-2 transition-all text-gray-600 dark:text-gray-400">永久</button>
+                    <button onclick="selectDuration(1)" class="dur-btn px-2 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl text-xs hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all font-medium">1 天</button>
+                    <button onclick="selectDuration(7)" class="dur-btn px-2 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl text-xs hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all font-medium">7 天</button>
+                    <button onclick="selectDuration(30)" class="dur-btn px-2 py-2.5 border border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold rounded-xl text-xs shadow-sm transition-all">30 天</button>
+                    <button onclick="selectDuration(90)" class="dur-btn px-2 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl text-xs hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all font-medium">90 天</button>
+                    <button onclick="selectDuration(180)" class="dur-btn px-2 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl text-xs hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all font-medium">180 天</button>
+                    <button onclick="selectDuration(365)" class="dur-btn px-2 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl text-xs hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all font-medium">365 天</button>
+                    <button onclick="selectDuration(-1)" class="dur-btn px-2 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl text-xs hover:bg-emerald-50 dark:hover:bg-emerald-500/10 col-span-2 transition-all font-medium">永久</button>
                 </div>
                 <div class="relative w-full mt-2">
-                    <input type="number" id="custom-duration" placeholder="或自定义天数..." oninput="setCustomDuration()" min="1" class="w-full pl-3 pr-8 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 transition-all">
-                    <span class="absolute right-3 top-2.5 text-xs font-bold text-gray-400">天</span>
+                    <input type="number" id="custom-duration" placeholder="或自定义天数..." oninput="setCustomDuration()" min="1" class="w-full pl-4 pr-10 py-3 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50 dark:bg-black/20 outline-none text-[13px] focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm">
+                    <span class="absolute right-4 top-3 text-[11px] font-bold text-gray-400">天</span>
                 </div>
             </div>
             <div>
-                <label class="block text-sm mb-1 text-gray-700 dark:text-gray-300">生成数量 (1-50)</label>
-                <input type="number" id="invite-count" value="1" min="1" max="50" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none text-gray-800 dark:text-gray-100">
+                <label class="block text-[11px] font-bold text-gray-500 mb-2 uppercase">生成数量 (1-50)</label>
+                <input type="number" id="invite-count" value="1" min="1" max="50" class="w-full px-4 py-3 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50 dark:bg-black/20 outline-none text-[13px] focus:ring-2 focus:ring-emerald-500 shadow-sm">
             </div>
             <div>
-                <label class="block text-sm mb-1 text-gray-700 dark:text-gray-300">模板继承 (默认全权限)</label>
-                <select id="invite-template" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none text-gray-800 dark:text-gray-100"></select>
+                <label class="block text-[11px] font-bold text-gray-500 mb-2 uppercase">模板继承 (默认全权限)</label>
+                <select id="invite-template" class="w-full px-4 py-3 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50 dark:bg-black/20 outline-none text-[13px] focus:ring-2 focus:ring-emerald-500 shadow-sm cursor-pointer"></select>
             </div>
             <div class="flex justify-end gap-3 mt-8">
-                <button onclick="closeInviteModal()" class="px-5 py-2 text-gray-500">取消</button>
-                <button onclick="generateInvite(event)" class="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 transition text-white rounded-lg font-bold shadow-md active:scale-95">生成链接</button>
+                <button onclick="closeInviteModal()" class="px-5 py-2.5 bg-gray-100 dark:bg-[#2C2C2E] text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#3A3A3C] rounded-xl font-bold text-[13px] transition-colors">取消</button>
+                <button onclick="generateInvite(event)" class="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 transition text-white rounded-xl font-bold text-[13px] shadow-md active:scale-95">生成链接</button>
             </div>
         </div>
         <div id="invite-result-step" class="hidden space-y-4">
-            <div id="invite-links-container" class="space-y-3 max-h-72 overflow-y-auto p-2 bg-gray-50 dark:bg-gray-900 rounded-xl border dark:border-gray-700"></div>
-            <button onclick="copyAllInvites()" class="w-full py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold rounded-lg mt-2 transition hover:bg-indigo-100">复制全部</button>
-            <button onclick="closeInviteModal()" class="w-full py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-lg transition hover:bg-gray-300 dark:hover:bg-gray-600">关闭</button>
+            <div id="invite-links-container" class="space-y-3 max-h-72 overflow-y-auto mac-scrollbar p-2 bg-gray-50 dark:bg-black/20 rounded-xl border border-gray-200/80 dark:border-white/5"></div>
+            <button onclick="copyAllInvites()" class="w-full py-3 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold rounded-xl mt-2 transition hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-[13px]">复制全部</button>
+            <button onclick="closeInviteModal()" class="w-full py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition hover:bg-gray-300 dark:hover:bg-gray-600 text-[13px]">完成</button>
         </div>
     </div>
 </div>
-<div id="batch-template-modal" class="fixed inset-0 z-[60] hidden items-center justify-center h-screen w-screen bg-black/50 backdrop-blur-sm px-4">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all">
+
+<div id="batch-template-modal" class="fixed inset-0 z-[100] hidden items-center justify-center h-screen w-screen bg-black/50 backdrop-blur-sm px-4 py-6">
+    <div class="bg-white dark:bg-[#1C1C1E] rounded-2xl shadow-2xl w-full max-w-md p-6 transform transition-all border border-gray-100 dark:border-white/5 max-h-[90vh] overflow-y-auto mac-scrollbar">
         <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <i class="fa-solid fa-wand-magic-sparkles text-purple-500"></i> 批量套用模板
         </h3>
-        <p class="text-xs text-gray-500 mb-5">将模板的策略直接覆盖到已选的 <span id="batch-template-count" class="font-bold text-purple-500 text-sm"></span> 个用户上。</p>
+        <p class="text-[13px] text-gray-500 mb-5">将模板的策略直接覆盖到已选的 <span id="batch-template-count" class="font-bold text-purple-500"></span> 个用户上。</p>
         
-        <div class="space-y-4">
+        <div class="space-y-5">
             <div>
-                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">选择模板来源 <span class="text-xs font-normal text-gray-400">(以此号为基准)</span></label>
-                <select id="batch-template-select" class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-purple-500 outline-none appearance-none cursor-pointer"></select>
+                <label class="block text-[11px] font-bold text-gray-500 mb-2 uppercase">选择模板来源</label>
+                <select id="batch-template-select" class="w-full px-4 py-3 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50 dark:bg-black/20 focus:ring-2 focus:ring-purple-500 outline-none appearance-none cursor-pointer text-[13px] shadow-sm"></select>
             </div>
             
-            <div class="p-4 bg-purple-50/50 dark:bg-purple-900/10 rounded-xl border border-purple-100 dark:border-purple-800/30">
-                <label class="block text-xs font-bold text-purple-800 dark:text-purple-300 mb-3 uppercase tracking-wide">请勾选需要克隆的权限模块</label>
+            <div class="p-4 bg-purple-50/50 dark:bg-purple-500/5 rounded-xl border border-purple-100 dark:border-purple-500/10">
+                <label class="block text-[11px] font-bold text-purple-600 dark:text-purple-400 mb-3 uppercase tracking-wide">请勾选需要克隆的权限</label>
                 <div class="flex flex-col gap-y-3 px-1">
-                    <label class="flex items-center gap-2 text-sm font-bold text-purple-700 dark:text-purple-400 cursor-pointer">
+                    <label class="flex items-center gap-2 text-[13px] font-bold text-purple-700 dark:text-purple-300 cursor-pointer">
                         <input type="checkbox" id="batch-opt-lib" checked class="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"> 
-                        媒体库访问权限 <span class="text-xs text-gray-400 font-normal ml-auto">同步可见哪些库</span>
+                        媒体库访问 <span class="text-[11px] text-gray-400 font-normal ml-auto">同步可见库</span>
                     </label>
-                    <label class="flex items-center gap-2 text-sm font-bold text-purple-700 dark:text-purple-400 cursor-pointer">
+                    <label class="flex items-center gap-2 text-[13px] font-bold text-purple-700 dark:text-purple-300 cursor-pointer">
                         <input type="checkbox" id="batch-opt-pol" checked class="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"> 
-                        下载与转码策略 <span class="text-xs text-gray-400 font-normal ml-auto">防炸服必备</span>
+                        下载与转码 <span class="text-[11px] text-gray-400 font-normal ml-auto">防炸服必备</span>
                     </label>
-                    <label class="flex items-center gap-2 text-sm font-bold text-purple-700 dark:text-purple-400 cursor-pointer">
+                    <label class="flex items-center gap-2 text-[13px] font-bold text-purple-700 dark:text-purple-300 cursor-pointer">
                         <input type="checkbox" id="batch-opt-par" checked class="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"> 
-                        家长控制分级 <span class="text-xs text-gray-400 font-normal ml-auto">同步年龄限制</span>
+                        家长控制 <span class="text-[11px] text-gray-400 font-normal ml-auto">同步年龄限制</span>
                     </label>
                 </div>
             </div>
         </div>
 
         <div class="flex justify-end gap-3 mt-8">
-            <button onclick="closeBatchTemplateModal()" class="px-5 py-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm transition">取消</button>
-            <button onclick="submitBatchTemplate()" id="batch-template-btn" class="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-bold shadow-md transition flex items-center gap-2 active:scale-95">
+            <button onclick="closeBatchTemplateModal()" class="px-5 py-2.5 bg-gray-100 dark:bg-[#2C2C2E] text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#3A3A3C] rounded-xl text-[13px] font-bold transition">取消</button>
+            <button onclick="submitBatchTemplate()" id="batch-template-btn" class="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-[13px] font-bold shadow-md transition active:scale-95">
                 执行套用
             </button>
         </div>
     </div>
 </div>
+
 <script>
 let users = [];
 let allLibraries = []; 
@@ -388,46 +464,48 @@ let selectedDuration = 30;
 let currentAvatarUrl = "";
 let currentAvatarFile = null;
 let currentExcludedSubFolders = []; 
-
 let selectedUsers = new Set();
 let currentFilter = 'all';
-
 let invitesList = [];
 let selectedInvites = new Set();
 
-document.addEventListener('DOMContentLoaded', function() {
-    loadLibraries();
-    loadUsers();
+document.addEventListener('DOMContentLoaded', function() { 
+    loadLibraries(); 
+    loadUsers(); 
 });
 
 async function openInviteManageModal() {
-    document.getElementById('invite-manage-modal').classList.remove('hidden');
-    document.getElementById('invite-manage-modal').classList.add('flex');
+    const modal = document.getElementById('invite-manage-modal');
+    modal.classList.remove('hidden'); 
+    modal.classList.add('flex');
     await loadInvites();
 }
 
 function closeInviteManageModal() {
-    document.getElementById('invite-manage-modal').classList.add('hidden');
-    document.getElementById('invite-manage-modal').classList.remove('flex');
+    const modal = document.getElementById('invite-manage-modal');
+    modal.classList.add('hidden'); 
+    modal.classList.remove('flex'); 
     selectedInvites.clear();
 }
 
 async function loadInvites() {
-    try {
-        const res = await fetch('/api/manage/invites');
-        const json = await res.json();
-        if (json.status === 'success') {
-            invitesList = json.data;
-            renderInvites();
-        }
-    } catch(err) { console.error("加载邀请码失败", err); }
+    try { 
+        const res = await fetch('/api/manage/invites'); 
+        const json = await res.json(); 
+        if (json.status === 'success') { 
+            invitesList = json.data; 
+            renderInvites(); 
+        } 
+    } catch(err) {
+        console.error("Failed to load invites", err);
+    }
 }
 
 function renderInvites() {
     const container = document.getElementById('invite-list-tbody');
     if (invitesList.length === 0) {
-        container.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-gray-500">系统中目前没有生成的邀请码记录</td></tr>';
-        updateInviteBatchBtn();
+        container.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-gray-500">无邀请码记录</td></tr>'; 
+        updateInviteBatchBtn(); 
         return;
     }
     
@@ -435,105 +513,105 @@ function renderInvites() {
     invitesList.forEach(inv => {
         const isChecked = selectedInvites.has(inv.code) ? 'checked' : '';
         const isUsed = inv.used_count > 0 || inv.used_by || inv.is_used || inv.used_at;
-        const usedUserText = inv.used_by ? `已被: ${inv.used_by} 注册` : `已被使用`;
+        const usedUserText = inv.used_by ? `已被: ${inv.used_by}` : `已被使用`;
         const statusBadge = isUsed 
-            ? `<span class="px-2 py-1 text-xs font-bold rounded bg-gray-100 text-gray-500 border border-gray-200 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"><i class="fa-solid fa-check mr-1"></i>${usedUserText}</span>`
-            : `<span class="px-2 py-1 text-xs font-bold rounded bg-green-50 text-green-600 border border-green-200 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400">空闲可用</span>`;
-        const daysText = inv.days == -1 ? '永久权限' : `${inv.days} 天`;
-        const dateStr = inv.created_at ? new Date(inv.created_at).toLocaleString() : '未知';
+            ? `<span class="px-2 py-1 text-[11px] font-bold rounded bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">已用</span>` 
+            : `<span class="px-2 py-1 text-[11px] font-bold rounded bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400">空闲</span>`;
+        const daysText = inv.days == -1 ? '永久' : `${inv.days} 天`;
+        const dateStr = inv.created_at ? new Date(inv.created_at).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '未知';
         const fullLink = window.location.origin + '/invite/' + inv.code;
 
         html += `
-            <tr class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                <td class="px-4 py-3 text-center">
-                    <input type="checkbox" value="${inv.code}" onchange="toggleSelectInvite('${inv.code}', this.checked)" class="invite-checkbox w-4 h-4 text-indigo-600 rounded cursor-pointer" ${isChecked}>
+            <tr class="border-b border-gray-50 dark:border-white/5 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+                <td class="px-5 py-3 text-center whitespace-nowrap">
+                    <input type="checkbox" value="${inv.code}" onchange="toggleSelectInvite('${inv.code}', this.checked)" class="invite-checkbox w-4 h-4 text-brand-500 rounded cursor-pointer" ${isChecked}>
                 </td>
-                <td class="px-4 py-3 font-mono text-sm font-bold text-gray-600 dark:text-gray-300">
+                <td class="px-4 py-3 font-mono text-[12px] font-bold whitespace-nowrap">
                     ${inv.code}
-                    <button onclick="copyToClipboard('${fullLink}')" class="ml-2 px-1.5 py-0.5 text-xs text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 rounded border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 transition" title="复制链接">
-                        <i class="fa-regular fa-copy"></i>
-                    </button>
+                    <button onclick="copyToClipboard('${fullLink}')" class="ml-2 px-1.5 py-0.5 text-[10px] text-brand-500 bg-brand-50 dark:bg-brand-500/10 rounded hover:bg-brand-100 transition"><i class="fa-regular fa-copy"></i></button>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">${daysText}</td>
-                <td class="px-4 py-3">${statusBadge}</td>
-                <td class="px-4 py-3 text-xs text-gray-500 font-mono">${dateStr}</td>
-            </tr>
-        `;
+                <td class="px-4 py-3 text-[12px] whitespace-nowrap">${daysText}</td>
+                <td class="px-4 py-3 whitespace-nowrap">${statusBadge}</td>
+                <td class="px-4 py-3 text-[11px] text-gray-500 font-mono whitespace-nowrap">${dateStr}</td>
+            </tr>`;
     });
-    container.innerHTML = html;
+    container.innerHTML = html; 
     updateInviteBatchBtn();
 }
 
-function toggleSelectInvite(code, isChecked) {
-    if (isChecked) selectedInvites.add(code);
-    else selectedInvites.delete(code);
-    updateInviteBatchBtn();
+function toggleSelectInvite(code, isChecked) { 
+    if (isChecked) selectedInvites.add(code); 
+    else selectedInvites.delete(code); 
+    updateInviteBatchBtn(); 
 }
 
-function toggleSelectAllInvites(checkbox) {
-    const boxes = document.querySelectorAll('.invite-checkbox');
-    boxes.forEach(b => {
-        b.checked = checkbox.checked;
-        if (checkbox.checked) selectedInvites.add(b.value);
-        else selectedInvites.delete(b.value);
-    });
-    updateInviteBatchBtn();
+function toggleSelectAllInvites(checkbox) { 
+    document.querySelectorAll('.invite-checkbox').forEach(b => { 
+        b.checked = checkbox.checked; 
+        if (checkbox.checked) selectedInvites.add(b.value); 
+        else selectedInvites.delete(b.value); 
+    }); 
+    updateInviteBatchBtn(); 
 }
 
 function updateInviteBatchBtn() {
     const btn = document.getElementById('btn-batch-del-invite');
-    if (selectedInvites.size > 0) {
-        btn.classList.remove('opacity-50', 'cursor-not-allowed');
-        btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-trash mr-1"></i>删除已选 (${selectedInvites.size})`;
-    } else {
-        btn.classList.add('opacity-50', 'cursor-not-allowed');
-        btn.disabled = true;
-        btn.innerHTML = `<i class="fa-solid fa-trash mr-1"></i>批量删除`;
+    if (selectedInvites.size > 0) { 
+        btn.classList.remove('opacity-50', 'cursor-not-allowed'); 
+        btn.disabled = false; 
+        btn.innerHTML = `<i class="fa-solid fa-trash mr-1"></i>删除已选 (${selectedInvites.size})`; 
+    } else { 
+        btn.classList.add('opacity-50', 'cursor-not-allowed'); 
+        btn.disabled = true; 
+        btn.innerHTML = `<i class="fa-solid fa-trash mr-1"></i>批量删除`; 
     }
 }
 
 async function batchDeleteInvites() {
-    if (selectedInvites.size === 0) return;
-    if (!confirm(`确认物理删除选定的 ${selectedInvites.size} 个邀请码吗？该操作不可逆！`)) return;
-    const codes = Array.from(selectedInvites);
+    if (selectedInvites.size === 0) return; 
+    if (!confirm(`确认删除 ${selectedInvites.size} 个邀请码？不可逆！`)) return;
     try {
-        const res = await fetch('/api/manage/invites/batch', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ codes: codes, action: 'delete' })
+        const res = await fetch('/api/manage/invites/batch', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ codes: Array.from(selectedInvites), action: 'delete' }) 
         });
-        const json = await res.json();
-        if (json.status === 'success') {
-            selectedInvites.clear(); loadInvites();
-        } else alert("删除失败: " + json.message);
-    } catch(e) { alert("网络异常"); }
+        const json = await res.json(); 
+        if (json.status === 'success') { 
+            selectedInvites.clear(); 
+            loadInvites(); 
+        } else {
+            alert("删除失败");
+        }
+    } catch(e) {
+        console.error(e);
+    }
 }
 
-async function loadLibraries() {
-    try {
-        const response = await fetch('/api/manage/libraries');
-        const json = await response.json();
-        if (json.status === 'success') allLibraries = json.data;
-    } catch (err) {}
+async function loadLibraries() { 
+    try { 
+        const response = await fetch('/api/manage/libraries'); 
+        const json = await response.json(); 
+        if (json.status === 'success') allLibraries = json.data; 
+    } catch (err) {} 
 }
 
 async function loadUsers() {
     try {
-        const response = await fetch('/api/manage/users');
+        const response = await fetch('/api/manage/users'); 
         const json = await response.json();
         if (json.status === 'success') {
-            users = json.data;
-            const today = new Date();
+            users = json.data; 
+            const today = new Date(); 
             today.setHours(0,0,0,0);
             users.forEach(u => {
-                let diffDays = Infinity;
-                if (u.ExpireDate) {
-                    const exp = new Date(u.ExpireDate);
-                    diffDays = (exp - today) / (1000 * 3600 * 24);
+                let diffDays = Infinity; 
+                if (u.ExpireDate) { 
+                    diffDays = (new Date(u.ExpireDate) - today) / 86400000; 
                 }
-                if (u.IsDisabled) u.StatusCat = 'disabled';
-                else if (diffDays < 0) u.StatusCat = 'expired';
-                else if (diffDays <= 7) u.StatusCat = 'expiring';
+                if (u.IsDisabled) u.StatusCat = 'disabled'; 
+                else if (diffDays < 0) u.StatusCat = 'expired'; 
+                else if (diffDays <= 7) u.StatusCat = 'expiring'; 
                 else u.StatusCat = 'normal';
                 u.DiffDays = diffDays;
             });
@@ -542,28 +620,23 @@ async function loadUsers() {
     } catch (err) {}
 }
 
-function setFilter(filter) {
-    currentFilter = filter;
-    selectedUsers.clear();
-    renderUsers();
-    updateStickyBar();
+function setFilter(filter) { 
+    currentFilter = filter; 
+    selectedUsers.clear(); 
+    renderUsers(); 
+    updateStickyBar(); 
 }
 
 function renderUsers() {
-    const desktopBody = document.getElementById('user-list-body-desktop');
+    const desktopBody = document.getElementById('user-list-body-desktop'); 
     const mobileBody = document.getElementById('user-list-body-mobile');
-    const searchQ = document.getElementById('search-input').value.toLowerCase();
+    const searchQ = document.getElementById('search-input').value.toLowerCase(); 
     const sortOpt = document.getElementById('sort-select').value;
     
-    let stTotal = users.length;
-    let stActive = users.filter(u => u.StatusCat === 'normal' || u.StatusCat === 'expiring').length;
-    let stExpiring = users.filter(u => u.StatusCat === 'expiring').length;
-    let stError = users.filter(u => u.StatusCat === 'disabled' || u.StatusCat === 'expired').length;
-    
-    document.getElementById('stat-total').innerText = stTotal;
-    document.getElementById('stat-active').innerText = stActive;
-    document.getElementById('stat-expiring').innerText = stExpiring;
-    document.getElementById('stat-error').innerText = stError;
+    document.getElementById('stat-total').innerText = users.length;
+    document.getElementById('stat-active').innerText = users.filter(u => u.StatusCat === 'normal' || u.StatusCat === 'expiring').length;
+    document.getElementById('stat-expiring').innerText = users.filter(u => u.StatusCat === 'expiring').length;
+    document.getElementById('stat-error').innerText = users.filter(u => u.StatusCat === 'disabled' || u.StatusCat === 'expired').length;
 
     let filtered = users.filter(u => {
         if (searchQ && !u.Name.toLowerCase().includes(searchQ)) return false;
@@ -577,361 +650,388 @@ function renderUsers() {
     else if (sortOpt === 'login') filtered.sort((a,b) => new Date(b.LastLoginDate||0) - new Date(a.LastLoginDate||0));
     else if (sortOpt === 'expire_asc') filtered.sort((a,b) => new Date(a.ExpireDate||'2099-12-31') - new Date(b.ExpireDate||'2099-12-31'));
 
-    let desktopHtml = ""; let mobileHtml = "";
-
+    let desktopHtml = ""; 
+    let mobileHtml = "";
+    
     filtered.forEach(u => {
         const avatarUrl = "/api/user/image/" + u.Id + "?v=" + (u.PrimaryImageTag || Date.now());
         const avatarTag = u.PrimaryImageTag 
-            ? `<div class="relative w-10 h-10"><img src="${avatarUrl}" class="w-full h-full rounded-full object-cover absolute inset-0 shadow-sm" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"><div class="w-full h-full rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold hidden uppercase text-sm">${u.Name[0]}</div></div>`
-            : `<div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold uppercase text-sm shadow-inner">${u.Name[0]}</div>`;
-
+            ? `<div class="relative w-10 h-10 shrink-0"><img src="${avatarUrl}" class="w-full h-full rounded-full object-cover absolute inset-0 shadow-sm" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"><div class="w-full h-full rounded-full bg-brand-50 flex items-center justify-center text-brand-500 font-bold hidden uppercase text-sm">${u.Name[0]}</div></div>` 
+            : `<div class="w-10 h-10 rounded-full bg-brand-50 dark:bg-[#2C2C2E] flex items-center justify-center text-brand-500 font-bold uppercase text-[15px] shadow-sm shrink-0 border border-gray-100 dark:border-white/5">${u.Name[0]}</div>`;
+        
         let badge = "";
-        if (u.StatusCat === 'disabled') badge = '<span class="px-2 py-1 rounded border bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 text-xs font-bold border-red-200 dark:border-red-800">被禁用</span>';
-        else if (u.StatusCat === 'expired') badge = '<span class="px-2 py-1 rounded border bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 text-xs font-bold border-gray-300 dark:border-gray-600">已过期</span>';
-        else if (u.StatusCat === 'expiring') badge = '<span class="px-2 py-1 rounded border bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 text-xs font-bold border-amber-200 dark:border-amber-800">即将到期</span>';
-        else badge = '<span class="px-2 py-1 rounded border bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 text-xs font-bold border-green-200 dark:border-green-800">活跃中</span>';
+        if (u.StatusCat === 'disabled') badge = '<span class="px-2 py-1 rounded bg-red-50 text-red-500 dark:bg-red-500/10 dark:text-red-400 text-[11px] font-bold">已禁用</span>';
+        else if (u.StatusCat === 'expired') badge = '<span class="px-2 py-1 rounded bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 text-[11px] font-bold">已过期</span>';
+        else if (u.StatusCat === 'expiring') badge = '<span class="px-2 py-1 rounded bg-amber-50 text-amber-500 dark:bg-amber-500/10 dark:text-amber-400 text-[11px] font-bold">将到期</span>';
+        else badge = '<span class="px-2 py-1 rounded bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400 text-[11px] font-bold">活跃</span>';
 
         const isChecked = selectedUsers.has(u.Id) ? 'checked' : '';
-
+        
         desktopHtml += `
-            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-all border-b border-gray-50 dark:border-gray-700/50">
-                <td class="px-4 py-4 text-center"><input type="checkbox" value="${u.Id}" onchange="toggleSelectUser('${u.Id}', this.checked)" class="user-checkbox w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer" ${isChecked}></td>
-                <td class="px-2 py-4"><div class="flex items-center gap-3">${avatarTag}<div><div class="font-bold text-gray-900 dark:text-white">${u.Name}</div>${u.IsAdmin ? '<span class="text-[9px] font-bold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 px-1.5 py-0.5 rounded border border-yellow-200 dark:border-yellow-800">ADMIN</span>' : ''}</div></div></td>
-                <td class="px-6 py-4">${badge}</td>
-                <td class="px-6 py-4 text-sm font-mono font-medium text-gray-600 dark:text-gray-400">${u.ExpireDate || '永久有效'}</td>
-                <td class="px-6 py-4 text-sm text-gray-500">${u.LastLoginDate ? new Date(u.LastLoginDate).toLocaleDateString() : '从未'}</td>
-                <td class="px-6 py-4 text-right whitespace-nowrap"><button onclick="openEditUserModal('${u.Id}')" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-bold transition-all">配置</button><button onclick="deleteUser('${u.Id}')" class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ml-4 font-medium opacity-60 hover:opacity-100 transition-all">注销</button></td>
-            </tr>
-        `;
+            <tr class="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-all border-b border-gray-50 dark:border-white/5">
+                <td class="px-5 py-4 text-center whitespace-nowrap">
+                    <input type="checkbox" value="${u.Id}" onchange="toggleSelectUser('${u.Id}', this.checked)" class="user-checkbox w-4 h-4 rounded text-brand-500 cursor-pointer" ${isChecked}>
+                </td>
+                <td class="px-2 py-4 whitespace-nowrap">
+                    <div class="flex items-center gap-3">
+                        ${avatarTag}
+                        <div>
+                            <div class="font-bold text-gray-900 dark:text-white text-[14px]">${u.Name}</div>
+                            ${u.IsAdmin ? '<span class="text-[9px] font-bold bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-400 px-1.5 py-0.5 rounded">ADMIN</span>' : ''}
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">${badge}</td>
+                <td class="px-6 py-4 text-[12px] font-mono font-medium text-gray-500 whitespace-nowrap">${u.ExpireDate || '永久有效'}</td>
+                <td class="px-6 py-4 text-[12px] text-gray-500 whitespace-nowrap">${u.LastLoginDate ? new Date(u.LastLoginDate).toLocaleDateString() : '从未'}</td>
+                <td class="px-6 py-4 text-right whitespace-nowrap">
+                    <button onclick="openEditUserModal('${u.Id}')" class="text-brand-500 font-bold transition-all px-3 py-1.5 bg-brand-50 dark:bg-brand-500/10 rounded-lg hover:bg-brand-100">配置</button>
+                    <button onclick="deleteUser('${u.Id}')" class="text-red-500 font-medium opacity-60 hover:opacity-100 transition-all ml-2 px-2 py-1.5">注销</button>
+                </td>
+            </tr>`;
 
         mobileHtml += `
-            <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mb-1 flex items-start gap-3">
-                <input type="checkbox" value="${u.Id}" onchange="toggleSelectUser('${u.Id}', this.checked)" class="user-checkbox mt-1 w-4 h-4 rounded text-indigo-600" ${isChecked}>
+            <div class="apple-card p-4 !rounded-2xl flex items-start gap-3 shadow-sm border border-gray-100 dark:border-white/5">
+                <input type="checkbox" value="${u.Id}" onchange="toggleSelectUser('${u.Id}', this.checked)" class="user-checkbox mt-1.5 w-4 h-4 rounded text-brand-500" ${isChecked}>
                 <div class="flex-1 min-w-0">
-                    <div class="flex justify-between items-start mb-2"><div class="flex items-center gap-2">${avatarTag}<div><div class="font-bold text-gray-900 dark:text-white">${u.Name}</div><div class="text-[10px] text-gray-400 uppercase font-mono">到期: ${u.ExpireDate||'永久'}</div></div></div>${badge}</div>
-                    <div class="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-gray-50 dark:border-gray-700/50"><button onclick="openEditUserModal('${u.Id}')" class="w-full py-1.5 text-xs font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg active:scale-95 transition-all">配置</button><button onclick="deleteUser('${u.Id}')" class="w-full py-1.5 text-xs font-bold bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg active:scale-95 transition-all">注销账号</button></div>
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            ${avatarTag}
+                            <div>
+                                <div class="font-bold text-gray-900 dark:text-white text-[15px]">${u.Name}</div>
+                                <div class="text-[10px] text-gray-400 uppercase font-mono mt-0.5">到期: ${u.ExpireDate||'永久'}</div>
+                            </div>
+                        </div>
+                        ${badge}
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-gray-100 dark:border-white/5">
+                        <button onclick="openEditUserModal('${u.Id}')" class="w-full py-2 text-[12px] font-bold bg-gray-100 dark:bg-[#2C2C2E] text-gray-700 dark:text-gray-200 rounded-xl active:scale-95 transition-all">配置</button>
+                        <button onclick="deleteUser('${u.Id}')" class="w-full py-2 text-[12px] font-bold bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl active:scale-95 transition-all">注销</button>
+                    </div>
                 </div>
-            </div>
-        `;
+            </div>`;
     });
     
-    desktopBody.innerHTML = desktopHtml || '<tr><td colspan="6" class="text-center py-8 text-gray-400">无符合条件的用户</td></tr>';
-    mobileBody.innerHTML = mobileHtml || '<div class="text-center py-8 text-gray-400">无符合条件的用户</div>';
+    desktopBody.innerHTML = desktopHtml || '<tr><td colspan="6" class="text-center py-8 text-gray-400 text-[13px]">无符合条件的用户</td></tr>';
+    mobileBody.innerHTML = mobileHtml || '<div class="text-center py-8 text-gray-400 text-[13px]">无符合条件的用户</div>';
     
-    const allBoxD = document.getElementById('selectAll-desktop');
+    const allBoxD = document.getElementById('selectAll-desktop'); 
     const allBoxM = document.getElementById('selectAll-mobile');
-    const renderedIds = filtered.map(u => u.Id);
+    const renderedIds = filtered.map(u => u.Id); 
     const allSelected = renderedIds.length > 0 && renderedIds.every(id => selectedUsers.has(id));
     
-    if(allBoxD) allBoxD.checked = allSelected;
+    if(allBoxD) allBoxD.checked = allSelected; 
     if(allBoxM) allBoxM.checked = allSelected;
     
     updateStickyBar();
 }
 
-function toggleSelectUser(uid, isChecked) {
-    if (isChecked) selectedUsers.add(uid);
-    else selectedUsers.delete(uid);
-    updateStickyBar();
+function toggleSelectUser(uid, isChecked) { 
+    if (isChecked) selectedUsers.add(uid); 
+    else selectedUsers.delete(uid); 
+    updateStickyBar(); 
 }
 
-function toggleSelectAll(checkbox) {
-    const boxes = document.querySelectorAll('.user-checkbox');
-    boxes.forEach(b => {
-        b.checked = checkbox.checked;
-        if (checkbox.checked) selectedUsers.add(b.value);
-        else selectedUsers.delete(b.value);
-    });
-    updateStickyBar();
+function toggleSelectAll(checkbox) { 
+    document.querySelectorAll('.user-checkbox').forEach(b => { 
+        b.checked = checkbox.checked; 
+        if (checkbox.checked) selectedUsers.add(b.value); 
+        else selectedUsers.delete(b.value); 
+    }); 
+    updateStickyBar(); 
 }
 
 function updateStickyBar() {
-    const bar = document.getElementById('batch-action-bar');
+    const bar = document.getElementById('batch-action-bar'); 
     const countSpan = document.getElementById('batch-count');
-    if (selectedUsers.size > 0) {
-        countSpan.innerText = selectedUsers.size;
-        bar.classList.remove('translate-y-24', 'opacity-0');
-        bar.classList.add('translate-y-0', 'opacity-100');
-    } else {
-        bar.classList.remove('translate-y-0', 'opacity-100');
-        bar.classList.add('translate-y-24', 'opacity-0');
+    if (selectedUsers.size > 0) { 
+        countSpan.innerText = selectedUsers.size; 
+        bar.classList.remove('translate-y-24', 'opacity-0'); 
+        bar.classList.add('translate-y-0', 'opacity-100'); 
+    } else { 
+        bar.classList.remove('translate-y-0', 'opacity-100'); 
+        bar.classList.add('translate-y-24', 'opacity-0'); 
     }
 }
 
 async function deleteUser(uid) {
-    if (!confirm('危险操作：该用户将被物理删除且无法恢复，确认注销？')) return;
-    try {
-        const response = await fetch("/api/manage/user/" + uid, { method: 'DELETE' });
-        const json = await response.json();
-        if (json.status === 'success') {
-            selectedUsers.delete(uid);
-            loadUsers();
-        } else alert('注销失败: ' + (json.message || '未知错误'));
-    } catch(e) { alert("删除请求异常"); }
+    if (!confirm('物理删除，确认注销？')) return;
+    try { 
+        const res = await fetch("/api/manage/user/" + uid, { method: 'DELETE' }); 
+        const json = await res.json(); 
+        if (json.status === 'success') { 
+            selectedUsers.delete(uid); 
+            loadUsers(); 
+        } else {
+            alert('失败'); 
+        }
+    } catch(e) {}
 }
 
 async function batchAction(actionName) {
-    if (selectedUsers.size === 0) return;
-    if (actionName === 'delete') {
-        if (!confirm(`⚠️ 危险警告：将彻底物理删除选中的 ${selectedUsers.size} 个账号且无法恢复，确认删除？`)) return;
-    }
-    const ids = Array.from(selectedUsers);
-    try {
-        const res = await fetch('/api/manage/users/batch', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ user_ids: ids, action: actionName })
+    if (selectedUsers.size === 0) return; 
+    if (actionName === 'delete' && !confirm(`彻底删除 ${selectedUsers.size} 个账号？`)) return;
+    try { 
+        const res = await fetch('/api/manage/users/batch', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ user_ids: Array.from(selectedUsers), action: actionName }) 
         });
-        const json = await res.json();
-        if (json.status === 'success') {
-            selectedUsers.clear();
-            loadUsers();
-        } else alert('操作失败: ' + json.message);
-    } catch(e) { alert('网络错误'); }
+        if ((await res.json()).status === 'success') { 
+            selectedUsers.clear(); 
+            loadUsers(); 
+        } 
+    } catch(e) {}
 }
 
-function openBatchRenewModal() {
-    document.getElementById('renew-count-text').innerText = selectedUsers.size;
-    const modal = document.getElementById('batch-renew-modal');
-    modal.classList.remove('hidden'); modal.classList.add('flex');
+function openBatchRenewModal() { 
+    document.getElementById('renew-count-text').innerText = selectedUsers.size; 
+    const modal = document.getElementById('batch-renew-modal'); 
+    modal.classList.remove('hidden'); 
+    modal.classList.add('flex'); 
 }
 
-function closeBatchRenewModal() {
-    const modal = document.getElementById('batch-renew-modal');
-    modal.classList.add('hidden'); modal.classList.remove('flex');
+function closeBatchRenewModal() { 
+    const modal = document.getElementById('batch-renew-modal'); 
+    modal.classList.add('hidden'); 
+    modal.classList.remove('flex'); 
 }
 
 async function submitBatchRenew(val) {
-    if (selectedUsers.size === 0) return;
+    if (selectedUsers.size === 0) return; 
     let finalValue = val;
-    if (val === 'date') {
-        finalValue = document.getElementById('batch-date-picker').value;
-        if (!finalValue) return alert('请选择指定的日期');
+    if (val === 'date') { 
+        finalValue = document.getElementById('batch-date-picker').value; 
+        if (!finalValue) return alert('选日期'); 
     }
-    const ids = Array.from(selectedUsers);
-    try {
-        const res = await fetch('/api/manage/users/batch', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ user_ids: ids, action: 'renew', value: finalValue })
+    try { 
+        const res = await fetch('/api/manage/users/batch', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ user_ids: Array.from(selectedUsers), action: 'renew', value: finalValue }) 
         });
-        const json = await res.json();
-        if (json.status === 'success') {
-            closeBatchRenewModal(); selectedUsers.clear(); loadUsers();
-        } else alert('续期失败: ' + json.message);
-    } catch(e) { alert('网络错误'); }
+        if ((await res.json()).status === 'success') { 
+            closeBatchRenewModal(); 
+            selectedUsers.clear(); 
+            loadUsers(); 
+        } 
+    } catch(e) {}
 }
 
 function populateTemplates(selectId, excludeUserId = null) {
-    const sel = document.getElementById(selectId);
-    sel.innerHTML = '<option value="">默认模板 (全库访问权限)</option>';
-    for (let i = 0; i < users.length; i++) {
-        let user = users[i];
-        if (excludeUserId && user.Id === excludeUserId) continue;
-        const option = document.createElement('option');
-        option.value = user.Id; option.textContent = "👤 " + user.Name;
-        sel.appendChild(option);
-    }
+    const sel = document.getElementById(selectId); 
+    sel.innerHTML = '<option value="">默认模板 (全库)</option>';
+    users.forEach(user => { 
+        if (excludeUserId && user.Id === excludeUserId) return; 
+        const option = document.createElement('option'); 
+        option.value = user.Id; 
+        option.textContent = user.Name; 
+        sel.appendChild(option); 
+    });
     if (selectId === 'new-template') toggleNewTemplateOpts();
 }
 
-// 🔥 动态显示/隐藏模板细粒度选项
-function toggleNewTemplateOpts() {
-    const val = document.getElementById('new-template').value;
-    const opts = document.getElementById('new-template-opts');
-    if (val) opts.classList.remove('hidden');
-    else opts.classList.add('hidden');
+function toggleNewTemplateOpts() { 
+    const val = document.getElementById('new-template').value; 
+    const opts = document.getElementById('new-template-opts'); 
+    if (val) opts.classList.remove('hidden'); 
+    else opts.classList.add('hidden'); 
 }
 
 function selectDuration(days) {
-    selectedDuration = parseInt(days);
+    selectedDuration = parseInt(days); 
     const buttons = document.querySelectorAll('.dur-btn');
-    for (let b of buttons) b.className = "dur-btn px-2 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-xs hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all text-gray-600 dark:text-gray-400";
+    buttons.forEach(b => b.className = "dur-btn px-2 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl text-xs hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all font-medium");
     const target = Array.from(buttons).find(btn => btn.getAttribute('onclick').includes("(" + days + ")"));
-    if (target) target.className = "dur-btn px-2 py-2 border border-indigo-500 bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-bold rounded-lg text-xs shadow-sm transition-all";
-    const customInput = document.getElementById('custom-duration');
-    if (customInput) customInput.value = '';
+    if (target) target.className = "dur-btn px-2 py-2.5 border border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold rounded-xl text-xs shadow-sm transition-all";
 }
 
-function setCustomDuration() {
-    const val = document.getElementById('custom-duration').value;
-    if (val && parseInt(val) > 0) {
-        selectedDuration = parseInt(val);
-        const buttons = document.querySelectorAll('.dur-btn');
-        for (let b of buttons) b.className = "dur-btn px-2 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-xs hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all text-gray-600 dark:text-gray-400";
-    } else selectDuration(30); 
+function setCustomDuration() { 
+    const val = document.getElementById('custom-duration').value; 
+    if (val && parseInt(val) > 0) { 
+        selectedDuration = parseInt(val); 
+        document.querySelectorAll('.dur-btn').forEach(b => b.className = "dur-btn px-2 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl text-xs hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all font-medium"); 
+    } else {
+        selectDuration(30); 
+    }
 }
 
 async function generateInvite(e) {
-    const countInput = document.getElementById('invite-count');
-    const count = parseInt(countInput.value) || 1;
+    const count = parseInt(document.getElementById('invite-count').value) || 1; 
     const templateId = document.getElementById('invite-template').value;
-    const submitBtn = e.target;
-    submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 排队生成中...';
-    
+    const submitBtn = e.target; 
+    submitBtn.disabled = true; 
+    submitBtn.innerHTML = '生成中...';
     try {
-        const response = await fetch('/api/manage/invite/gen', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
+        const response = await fetch('/api/manage/invite/gen', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
             body: JSON.stringify({ days: selectedDuration, count: count, template_user_id: templateId || null }) 
         });
         const json = await response.json();
         if (json.status === 'success') {
-            const container = document.getElementById('invite-links-container');
+            const container = document.getElementById('invite-links-container'); 
             container.innerHTML = ""; 
-            for (let i = 0; i < json.codes.length; i++) {
-                const link = window.location.origin + '/invite/' + json.codes[i];
-                const itemDiv = document.createElement('div');
-                itemDiv.className = "flex items-center gap-2 bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm";
-                itemDiv.innerHTML = `<span class="flex-1 truncate font-mono text-[11px] text-gray-500 dark:text-gray-400 select-all">${link}</span><button onclick="copyToClipboard('${link}')" class="text-indigo-600 dark:text-indigo-400 font-bold px-3 py-1 text-xs border-l border-gray-100 dark:border-gray-700 hover:text-indigo-800 transition">复制</button>`;
-                container.appendChild(itemDiv);
-            }
-            document.getElementById('invite-form-step').classList.add('hidden');
+            json.codes.forEach(c => { 
+                const link = window.location.origin + '/invite/' + c; 
+                container.innerHTML += `
+                    <div class="flex items-center gap-2 bg-white dark:bg-[#2C2C2E] p-2.5 rounded-xl border border-gray-100 dark:border-white/5 shadow-sm">
+                        <span class="flex-1 truncate font-mono text-[11px] select-all">${link}</span>
+                        <button onclick="copyToClipboard('${link}')" class="text-emerald-500 font-bold px-3 py-1 text-xs border-l border-gray-100 dark:border-white/10 hover:text-emerald-600">复制</button>
+                    </div>`; 
+            });
+            document.getElementById('invite-form-step').classList.add('hidden'); 
             document.getElementById('invite-result-step').classList.remove('hidden');
         }
-    } catch (e) { alert("网络连接超时"); } 
-    finally { submitBtn.disabled = false; submitBtn.textContent = "生成链接"; }
+    } catch (e) {
+        console.error(e);
+    } finally { 
+        submitBtn.disabled = false; 
+        submitBtn.textContent = "生成链接"; 
+    }
 }
 
-function copyAllInvites() {
-    const spans = document.querySelectorAll('#invite-links-container span');
-    let allLinks = "";
-    for (let i = 0; i < spans.length; i++) allLinks += spans[i].textContent + "\n";
-    copyToClipboard(allLinks.trim());
+function copyAllInvites() { 
+    let allLinks = ""; 
+    document.querySelectorAll('#invite-links-container span').forEach(s => allLinks += s.textContent + "\n"); 
+    copyToClipboard(allLinks.trim()); 
 }
 
-function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => alert('✅ 已复制到剪贴板')); }
+function copyToClipboard(text) { 
+    navigator.clipboard.writeText(text).then(() => alert('已复制')); 
+}
 
-// 🔥 编辑界面的三级 Tab 切换
 function switchEditTab(tabName) {
-    const tabs = ['basic', 'library', 'policy'];
-    tabs.forEach(t => {
+    ['basic', 'library', 'policy'].forEach(t => {
         document.getElementById(`edit-tab-${t}`).style.display = (t === tabName) ? 'block' : 'none';
-        const btn = document.getElementById(`tab-btn-${t}`);
-        if (t === tabName) {
-            btn.className = "pb-2 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition-all";
-        } else {
-            btn.className = "pb-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 dark:text-gray-400 transition-all";
-        }
+        document.getElementById(`tab-btn-${t}`).className = (t === tabName) 
+            ? "pb-3 text-[13px] font-bold text-brand-500 border-b-2 border-brand-500 transition-all" 
+            : "pb-3 text-[13px] font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 dark:text-gray-300 transition-all";
     });
 }
 
-// 打开编辑用户弹窗并拉取高级 Policy 字段
 async function openEditUserModal(uid) {
-    const user = users.find(u => u.Id === uid);
-    if (!user) return;
+    const user = users.find(u => u.Id === uid); 
+    if (!user) return; 
     switchEditTab('basic');
-    document.getElementById('edit-userid').value = uid;
-    document.getElementById('edit-username').value = user.Name;
-    document.getElementById('edit-disabled').value = String(user.IsDisabled);
-    document.getElementById('edit-expire').value = user.ExpireDate || '';
-    document.getElementById('edit-password').value = '';
-    const preview = document.getElementById('edit-avatar-preview');
-    if (user.PrimaryImageTag) preview.src = "/api/user/image/" + uid + "?t=" + Date.now();
-    else preview.src = "https://api.dicebear.com/9.x/notionists/png?seed=" + user.Name;
     
-    const modal = document.getElementById('edit-user-modal');
-    modal.classList.remove('hidden'); setTimeout(() => { modal.classList.add('flex'); }, 10);
+    document.getElementById('edit-userid').value = uid; 
+    document.getElementById('edit-username').value = user.Name; 
+    document.getElementById('edit-disabled').value = String(user.IsDisabled); 
+    document.getElementById('edit-expire').value = user.ExpireDate || ''; 
+    document.getElementById('edit-password').value = '';
+    
+    const preview = document.getElementById('edit-avatar-preview');
+    if (user.PrimaryImageTag) {
+        preview.src = "/api/user/image/" + uid + "?t=" + Date.now(); 
+    } else {
+        preview.src = "https://api.dicebear.com/9.x/notionists/png?seed=" + user.Name;
+    }
+    
+    const modal = document.getElementById('edit-user-modal'); 
+    modal.classList.remove('hidden'); 
+    setTimeout(() => { modal.classList.add('flex'); }, 10);
+    
     try {
-        const res = await fetch("/api/manage/user/" + uid);
+        const res = await fetch("/api/manage/user/" + uid); 
         const json = await res.json();
         if (json.status === 'success') {
-            user.EnableAllFolders = json.data.EnableAllFolders;
-            user.EnabledFolders = json.data.EnabledFolders;
+            user.EnableAllFolders = json.data.EnableAllFolders; 
+            user.EnabledFolders = json.data.EnabledFolders; 
             currentExcludedSubFolders = json.data.ExcludedSubFolders || [];
-            
-            // 渲染高级策略开关
-            document.getElementById('edit-enable-downloading').checked = json.data.EnableDownloading !== false;
-            document.getElementById('edit-enable-video-transcode').checked = json.data.EnableVideoTranscoding !== false;
+            document.getElementById('edit-enable-downloading').checked = json.data.EnableDownloading !== false; 
+            document.getElementById('edit-enable-video-transcode').checked = json.data.EnableVideoTranscoding !== false; 
             document.getElementById('edit-enable-audio-transcode').checked = json.data.EnableAudioTranscoding !== false;
-            
-            // 渲染年龄分级 (若为 null，则默认 -1)
             document.getElementById('edit-max-parental-rating').value = (json.data.MaxParentalRating !== null && json.data.MaxParentalRating !== undefined) ? json.data.MaxParentalRating : "-1";
         }
     } catch(err) {}
-    renderLibraryCheckboxes(user); populateTemplates('edit-template-select', uid);
+    renderLibraryCheckboxes(user); 
+    populateTemplates('edit-template-select', uid);
 }
 
 function renderLibraryCheckboxes(user) {
-    const container = document.getElementById('edit-library-list');
+    const container = document.getElementById('edit-library-list'); 
     container.innerHTML = "";
-    if (allLibraries.length === 0) container.innerHTML = '<div class="p-4 text-center text-gray-400 text-xs italic col-span-2">未获取到媒体库数据</div>';
-    else {
-        for (let i = 0; i < allLibraries.length; i++) {
-            const lib = allLibraries[i];
+    if (allLibraries.length === 0) {
+        container.innerHTML = '<div class="p-4 text-center text-gray-400 text-xs italic col-span-2">未获取到数据</div>';
+    } else {
+        allLibraries.forEach(lib => {
             const isChecked = user.EnabledFolders.includes(lib.Id) ? 'checked' : '';
-            const label = document.createElement('label');
-            label.className = "flex items-center gap-3 p-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl cursor-pointer hover:shadow-sm transition-all";
-            label.innerHTML = `<input type="checkbox" value="${lib.Id}" class="lib-checkbox w-4 h-4 text-indigo-600 rounded cursor-pointer" ${isChecked}><span class="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">${lib.Name}</span>`;
-            container.appendChild(label);
-        }
+            container.innerHTML += `
+                <label class="flex items-center gap-3 p-2.5 bg-gray-50 dark:bg-[#2C2C2E] border border-gray-100 dark:border-white/5 rounded-xl cursor-pointer hover:shadow-sm transition-all">
+                    <input type="checkbox" value="${lib.Id}" class="lib-checkbox w-4 h-4 text-brand-500 rounded cursor-pointer" ${isChecked}>
+                    <span class="text-[12px] font-bold text-gray-700 dark:text-gray-300 truncate">${lib.Name}</span>
+                </label>`;
+        });
     }
-    document.getElementById('edit-enable-all').checked = user.EnableAllFolders;
+    document.getElementById('edit-enable-all').checked = user.EnableAllFolders; 
     toggleLibraryCheckboxes();
 }
 
-function toggleLibraryCheckboxes() {
-    const isAll = document.getElementById('edit-enable-all').checked;
-    const list = document.getElementById('edit-library-list');
-    const boxes = document.querySelectorAll('.lib-checkbox');
-    for (let b of boxes) b.disabled = isAll;
-    list.style.opacity = isAll ? '0.2' : '1'; list.style.pointerEvents = isAll ? 'none' : 'auto';
+function toggleLibraryCheckboxes() { 
+    const isAll = document.getElementById('edit-enable-all').checked; 
+    const list = document.getElementById('edit-library-list'); 
+    document.querySelectorAll('.lib-checkbox').forEach(b => b.disabled = isAll); 
+    list.style.opacity = isAll ? '0.3' : '1'; 
+    list.style.pointerEvents = isAll ? 'none' : 'auto'; 
 }
 
-function clearSubFolders() {
-    if (confirm('确认重置该用户对所有子文件夹的访问限制？')) { currentExcludedSubFolders = []; alert("已重置，保存后生效"); }
+function clearSubFolders() { 
+    if (confirm('确认重置限制？')) { 
+        currentExcludedSubFolders = []; 
+        alert("已重置"); 
+    } 
 }
 
-// 🔥 支持颗粒度下发的模板套用逻辑
 async function applyEditTemplate() {
-    const tid = document.getElementById('edit-template-select').value;
+    const tid = document.getElementById('edit-template-select').value; 
     if (!tid) return;
     try {
-        const response = await fetch("/api/manage/user/" + tid);
-        const json = await response.json();
+        const res = await fetch("/api/manage/user/" + tid); 
+        const json = await res.json();
         if (json.status === 'success') {
             const tData = json.data;
-            
-            // 1. 媒体库同步
-            if (document.getElementById('apply-opt-lib').checked) {
-                document.getElementById('edit-enable-all').checked = tData.EnableAllFolders;
-                const boxes = document.querySelectorAll('.lib-checkbox');
-                for (let i = 0; i < boxes.length; i++) boxes[i].checked = tData.EnabledFolders.includes(boxes[i].value);
-                currentExcludedSubFolders = tData.ExcludedSubFolders || [];
-                toggleLibraryCheckboxes();
+            if (document.getElementById('apply-opt-lib').checked) { 
+                document.getElementById('edit-enable-all').checked = tData.EnableAllFolders; 
+                document.querySelectorAll('.lib-checkbox').forEach(b => b.checked = tData.EnabledFolders.includes(b.value)); 
+                currentExcludedSubFolders = tData.ExcludedSubFolders || []; 
+                toggleLibraryCheckboxes(); 
             }
-            
-            // 2. 策略同步
-            if (document.getElementById('apply-opt-pol').checked) {
-                document.getElementById('edit-enable-downloading').checked = tData.EnableDownloading !== false;
-                document.getElementById('edit-enable-video-transcode').checked = tData.EnableVideoTranscoding !== false;
-                document.getElementById('edit-enable-audio-transcode').checked = tData.EnableAudioTranscoding !== false;
+            if (document.getElementById('apply-opt-pol').checked) { 
+                document.getElementById('edit-enable-downloading').checked = tData.EnableDownloading !== false; 
+                document.getElementById('edit-enable-video-transcode').checked = tData.EnableVideoTranscoding !== false; 
+                document.getElementById('edit-enable-audio-transcode').checked = tData.EnableAudioTranscoding !== false; 
             }
-            
-            // 3. 家长分级同步
-            if (document.getElementById('apply-opt-par').checked) {
-                document.getElementById('edit-max-parental-rating').value = (tData.MaxParentalRating !== null && tData.MaxParentalRating !== undefined) ? tData.MaxParentalRating : "-1";
+            if (document.getElementById('apply-opt-par').checked) { 
+                document.getElementById('edit-max-parental-rating').value = (tData.MaxParentalRating !== null && tData.MaxParentalRating !== undefined) ? tData.MaxParentalRating : "-1"; 
             }
-            
-            alert("✅ 选定的权限模块已成功同步！(请点击下方保存使配置生效)");
+            alert("✅ 已同步！请保存");
         }
-    } catch(err) { alert("同步失败！"); }
+    } catch(err) {}
 }
 
 async function submitEditUser() {
-    const saveBtn = document.getElementById('save-user-btn');
-    const labelSpan = document.getElementById('save-user-text');
+    const saveBtn = document.getElementById('save-user-btn'); 
+    const labelSpan = document.getElementById('save-user-text'); 
     const uid = document.getElementById('edit-userid').value;
+    const isEnableAll = document.getElementById('edit-enable-all').checked; 
     
-    const isEnableAll = document.getElementById('edit-enable-all').checked;
-    const boxes = document.querySelectorAll('.lib-checkbox:checked');
-    let guids = [];
-    if (!isEnableAll) { for (let i = 0; i < boxes.length; i++) guids.push(boxes[i].value); }
+    let guids = []; 
+    if (!isEnableAll) { 
+        document.querySelectorAll('.lib-checkbox:checked').forEach(b => guids.push(b.value)); 
+    }
     
-    saveBtn.disabled = true; labelSpan.textContent = "正在保存...";
+    saveBtn.disabled = true; 
+    labelSpan.textContent = "保存中...";
     
-    if (currentAvatarUrl || currentAvatarFile) {
-        const formData = new FormData();
-        formData.append('user_id', uid);
-        if (currentAvatarFile) formData.append('file', currentAvatarFile); else formData.append('url', currentAvatarUrl);
-        try { await fetch('/api/manage/user/image', { method: 'POST', body: formData }); } catch (e) {}
+    if (currentAvatarUrl || currentAvatarFile) { 
+        const formData = new FormData(); 
+        formData.append('user_id', uid); 
+        if (currentAvatarFile) formData.append('file', currentAvatarFile); 
+        else formData.append('url', currentAvatarUrl); 
+        try { 
+            await fetch('/api/manage/user/image', { method: 'POST', body: formData }); 
+        } catch (e) {} 
     }
     
     try {
@@ -942,173 +1042,177 @@ async function submitEditUser() {
             password: document.getElementById('edit-password').value || null, 
             enable_all_folders: isEnableAll, 
             enabled_folders: guids, 
-            excluded_sub_folders: currentExcludedSubFolders,
-            // 🔥 高级策略数据打包
-            enable_downloading: document.getElementById('edit-enable-downloading').checked,
-            enable_video_transcoding: document.getElementById('edit-enable-video-transcode').checked,
-            enable_audio_transcoding: document.getElementById('edit-enable-audio-transcode').checked,
-            max_parental_rating: parseInt(document.getElementById('edit-max-parental-rating').value)
+            excluded_sub_folders: currentExcludedSubFolders, 
+            enable_downloading: document.getElementById('edit-enable-downloading').checked, 
+            enable_video_transcoding: document.getElementById('edit-enable-video-transcode').checked, 
+            enable_audio_transcoding: document.getElementById('edit-enable-audio-transcode').checked, 
+            max_parental_rating: parseInt(document.getElementById('edit-max-parental-rating').value) 
         };
         
-        const response = await fetch('/api/manage/user/update', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        });
-        const json = await response.json();
-        if (json.status === 'success') { closeEditUserModal(); loadUsers(); } else { alert("保存失败: " + json.message); }
-    } catch (err) {} finally { saveBtn.disabled = false; labelSpan.textContent = "保存配置"; }
+        const res = await fetch('/api/manage/user/update', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify(payload) 
+        }); 
+        const json = await res.json();
+        if (json.status === 'success') { 
+            closeEditUserModal(); 
+            loadUsers(); 
+        } else {
+            alert("失败: " + json.message);
+        }
+    } catch (err) {} 
+    finally { 
+        saveBtn.disabled = false; 
+        labelSpan.textContent = "保存配置"; 
+    }
 }
 
-function openNewUserModal() {
-    const modal = document.getElementById('new-user-modal');
-    modal.classList.remove('hidden');
+function openNewUserModal() { 
+    const modal = document.getElementById('new-user-modal'); 
+    modal.classList.remove('hidden'); 
     document.getElementById('new-username').value = ""; 
     document.getElementById('new-password').value = ""; 
-    document.getElementById('new-expire').value = "";
-    populateTemplates('new-template'); setTimeout(() => { modal.classList.add('flex'); }, 10);
+    document.getElementById('new-expire').value = ""; 
+    populateTemplates('new-template'); 
+    setTimeout(() => { modal.classList.add('flex'); }, 10); 
 }
 
-function closeNewUserModal() { document.getElementById('new-user-modal').classList.remove('flex'); document.getElementById('new-user-modal').classList.add('hidden'); }
+function closeNewUserModal() { 
+    document.getElementById('new-user-modal').classList.remove('flex'); 
+    document.getElementById('new-user-modal').classList.add('hidden'); 
+}
 
 async function submitNewUser() {
-    const btn = document.getElementById('new-user-btn');
-    const name = document.getElementById('new-username').value;
-    if (!name) return alert("必须填写用户名");
-    
-    btn.disabled = true; btn.textContent = "处理中...";
+    const btn = document.getElementById('new-user-btn'); 
+    const name = document.getElementById('new-username').value; 
+    if (!name) return alert("填用户名");
+    btn.disabled = true; 
+    btn.textContent = "处理中...";
     try {
-        const payload = { 
-            name: name, 
-            password: document.getElementById('new-password').value, 
-            expire_date: document.getElementById('new-expire').value || null, 
-            template_user_id: document.getElementById('new-template').value || null,
-            // 🔥 颗粒度创建控制
-            copy_library: document.getElementById('new-opt-lib').checked,
-            copy_policy: document.getElementById('new-opt-pol').checked,
-            copy_parental: document.getElementById('new-opt-par').checked
-        };
-        
-        const response = await fetch('/api/manage/user/new', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
+        const res = await fetch('/api/manage/user/new', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ 
+                name: name, 
+                password: document.getElementById('new-password').value, 
+                expire_date: document.getElementById('new-expire').value || null, 
+                template_user_id: document.getElementById('new-template').value || null, 
+                copy_library: document.getElementById('new-opt-lib').checked, 
+                copy_policy: document.getElementById('new-opt-pol').checked, 
+                copy_parental: document.getElementById('new-opt-par').checked 
+            }) 
         });
-        if ((await response.json()).status === 'success') { closeNewUserModal(); loadUsers(); }
-    } catch(e) {}
-    btn.disabled = false; btn.textContent = "立即创建";
+        if ((await res.json()).status === 'success') { 
+            closeNewUserModal(); 
+            loadUsers(); 
+        }
+    } catch(e) {} 
+    btn.disabled = false; 
+    btn.textContent = "立即创建";
 }
 
-function openInviteModal() {
-    const modal = document.getElementById('invite-modal');
-    modal.classList.remove('hidden');
-    document.getElementById('invite-form-step').classList.remove('hidden');
-    document.getElementById('invite-result-step').classList.add('hidden');
-    document.getElementById('custom-duration').value = ''; selectDuration(30);
-    populateTemplates('invite-template'); setTimeout(() => { modal.classList.add('flex'); }, 10);
-}
-
-function closeInviteModal() { document.getElementById('invite-modal').classList.remove('flex'); document.getElementById('invite-modal').classList.add('hidden'); }
-
-function generateRandomAvatar() {
-    const seed = Math.random().toString(36).substring(7);
-    currentAvatarUrl = "https://api.dicebear.com/9.x/notionists/png?seed=" + seed;
-    currentAvatarFile = null;
-    document.getElementById('edit-avatar-preview').src = currentAvatarUrl;
-}
-
-function setAvatarPreset(style) {
-    const seed = Math.random().toString(36).substring(7);
-    currentAvatarUrl = "https://api.dicebear.com/9.x/" + style + "/png?seed=" + seed;
-    currentAvatarFile = null;
-    document.getElementById('edit-avatar-preview').src = currentAvatarUrl;
-}
-
-function previewFileAvatar() {
-    const input = document.getElementById('edit-avatar-file');
-    if (input.files && input.files[0]) {
-        currentAvatarFile = input.files[0]; currentAvatarUrl = "";
-        const reader = new FileReader();
-        reader.onload = e => document.getElementById('edit-avatar-preview').src = e.target.result;
-        reader.readAsDataURL(input.files[0]);
-    }
-}
-
-function closeEditUserModal() { document.getElementById('edit-user-modal').classList.remove('flex'); document.getElementById('edit-user-modal').classList.add('hidden'); }
-// 🔥 批量套用功能逻辑
-function openBatchTemplateModal() {
-    document.getElementById('batch-template-count').innerText = selectedUsers.size;
-    populateTemplates('batch-template-select');
-    
-    // 去掉批量套用时的“默认模板”选项，因为必须选个实体账号作模板
-    const sel = document.getElementById('batch-template-select');
-    if (sel.options.length > 0 && sel.options[0].value === "") {
-        sel.remove(0); 
-    }
-    
-    const modal = document.getElementById('batch-template-modal');
+function openInviteModal() { 
+    const modal = document.getElementById('invite-modal'); 
     modal.classList.remove('hidden'); 
-    setTimeout(() => modal.classList.add('flex'), 10);
+    document.getElementById('invite-form-step').classList.remove('hidden'); 
+    document.getElementById('invite-result-step').classList.add('hidden'); 
+    document.getElementById('custom-duration').value = ''; 
+    selectDuration(30); 
+    populateTemplates('invite-template'); 
+    setTimeout(() => { modal.classList.add('flex'); }, 10); 
 }
 
-function closeBatchTemplateModal() {
-    const modal = document.getElementById('batch-template-modal');
-    modal.classList.remove('flex'); 
-    modal.classList.add('hidden');
+function closeInviteModal() { 
+    document.getElementById('invite-modal').classList.remove('flex'); 
+    document.getElementById('invite-modal').classList.add('hidden'); 
+}
+
+function generateRandomAvatar() { 
+    const seed = Math.random().toString(36).substring(7); 
+    currentAvatarUrl = "https://api.dicebear.com/9.x/notionists/png?seed=" + seed; 
+    currentAvatarFile = null; 
+    document.getElementById('edit-avatar-preview').src = currentAvatarUrl; 
+}
+
+function setAvatarPreset(style) { 
+    const seed = Math.random().toString(36).substring(7); 
+    currentAvatarUrl = "https://api.dicebear.com/9.x/" + style + "/png?seed=" + seed; 
+    currentAvatarFile = null; 
+    document.getElementById('edit-avatar-preview').src = currentAvatarUrl; 
+}
+
+function previewFileAvatar() { 
+    const input = document.getElementById('edit-avatar-file'); 
+    if (input.files && input.files[0]) { 
+        currentAvatarFile = input.files[0]; 
+        currentAvatarUrl = ""; 
+        const reader = new FileReader(); 
+        reader.onload = e => document.getElementById('edit-avatar-preview').src = e.target.result; 
+        reader.readAsDataURL(input.files[0]); 
+    } 
+}
+
+function closeEditUserModal() { 
+    document.getElementById('edit-user-modal').classList.remove('flex'); 
+    document.getElementById('edit-user-modal').classList.add('hidden'); 
+}
+
+function openBatchTemplateModal() { 
+    document.getElementById('batch-template-count').innerText = selectedUsers.size; 
+    populateTemplates('batch-template-select'); 
+    const sel = document.getElementById('batch-template-select'); 
+    if (sel.options.length > 0 && sel.options[0].value === "") sel.remove(0); 
+    const modal = document.getElementById('batch-template-modal'); 
+    modal.classList.remove('hidden'); 
+    setTimeout(() => modal.classList.add('flex'), 10); 
+}
+
+function closeBatchTemplateModal() { 
+    document.getElementById('batch-template-modal').classList.remove('flex'); 
+    document.getElementById('batch-template-modal').classList.add('hidden'); 
 }
 
 async function submitBatchTemplate() {
-    if (selectedUsers.size === 0) return;
-    const templateId = document.getElementById('batch-template-select').value;
-    if (!templateId) return alert('请先选择一个模板用户！');
-
-    const copyLib = document.getElementById('batch-opt-lib').checked;
-    const copyPol = document.getElementById('batch-opt-pol').checked;
-    const copyPar = document.getElementById('batch-opt-par').checked;
-
-    if (!copyLib && !copyPol && !copyPar) return alert('请至少勾选一项需要克隆的内容！');
-
-    const btn = document.getElementById('batch-template-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 执行中...';
-
-    const ids = Array.from(selectedUsers);
+    if (selectedUsers.size === 0) return; 
+    const tid = document.getElementById('batch-template-select').value; 
+    if (!tid) return alert('选模板');
+    const cLib = document.getElementById('batch-opt-lib').checked; 
+    const cPol = document.getElementById('batch-opt-pol').checked; 
+    const cPar = document.getElementById('batch-opt-par').checked;
+    
+    if (!cLib && !cPol && !cPar) return alert('至少勾一项');
+    const btn = document.getElementById('batch-template-btn'); 
+    btn.disabled = true; 
+    btn.innerHTML = '执行中...';
+    
     try {
-        const res = await fetch('/api/manage/users/batch', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
+        const res = await fetch('/api/manage/users/batch', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
             body: JSON.stringify({ 
-                user_ids: ids, 
+                user_ids: Array.from(selectedUsers), 
                 action: 'apply_template', 
-                value: templateId,
-                copy_library: copyLib,
-                copy_policy: copyPol,
-                copy_parental: copyPar
-            })
+                value: tid, 
+                copy_library: cLib, 
+                copy_policy: cPol, 
+                copy_parental: cPar 
+            }) 
         });
-        const json = await res.json();
-        if (json.status === 'success') {
+        const json = await res.json(); 
+        if (json.status === 'success') { 
             closeBatchTemplateModal(); 
             selectedUsers.clear(); 
-            loadUsers();
-            alert(`🎉 完美！成功将模板权限同步给 ${ids.length} 个用户！`);
+            loadUsers(); 
+            alert(`成功套用给 ${Array.from(selectedUsers).length} 个用户！`); 
         } else {
-            alert('套用失败: ' + json.message);
+            alert('失败');
         }
-    } catch(e) { 
-        alert('网络错误'); 
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '执行套用';
+    } catch(e) {} 
+    finally { 
+        btn.disabled = false; 
+        btn.innerHTML = '执行套用'; 
     }
 }
-
 </script>
-
-<style>
-.custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #4a5568; }
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active{ -webkit-box-shadow: 0 0 0 30px white inset !important; }
-.dark input:-webkit-autofill, .dark input:-webkit-autofill:hover, .dark input:-webkit-autofill:focus, .dark input:-webkit-autofill:active{ -webkit-box-shadow: 0 0 0 30px #1f2937 inset !important; -webkit-text-fill-color: white !important; }
-</style>
 {% endblock %}
