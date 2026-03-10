@@ -4,133 +4,179 @@
 
 {% block title %}资源求片与反馈大厅 - EmbyPulse{% endblock %}
 
-{% block content %}
+{% block head %}
 <style>
-    [x-cloak] { display: none !important; }
-    .pulse-list-row { transition: all 0.2s ease-in-out; }
-    .pulse-list-row:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); }
-    html.dark .pulse-list-row:hover { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4); }
-    .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    html.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
-</style>
-
-<div x-data="adminApp()" x-init="init()" class="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6" x-cloak>
+    /* === 🔥 Apple 级极简卡片质感 === */
+    .apple-card { 
+        background-color: rgba(255, 255, 255, 0.95); 
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 24px; 
+        padding: 24px; 
+        box-shadow: 0 4px 24px -8px rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.02);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
     
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <div class="flex items-center gap-3">
-            <div class="w-12 h-12 bg-red-50 dark:bg-red-900/20 rounded-xl flex items-center justify-center text-2xl text-red-500">🍿</div>
+    html.dark .apple-card {
+        background-color: rgba(28, 28, 30, 0.85); 
+        box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255,255,255,0.04);
+    }
+
+    @media (min-width: 768px) {
+        .apple-card:hover { transform: translateY(-2px); box-shadow: 0 12px 32px -8px rgba(0,0,0,0.08); }
+        html.dark .apple-card:hover { box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.6); }
+    }
+
+    [x-cloak] { display: none !important; }
+    
+    .pulse-list-row { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .pulse-list-row:hover { transform: translateY(-2px); box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.08); }
+    html.dark .pulse-list-row:hover { box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.5); }
+    
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="adminApp()" x-init="init()" class="w-full max-w-[1600px] mx-auto py-4 pb-32 px-4 sm:px-6 md:px-8 space-y-4 md:space-y-6" x-cloak>
+    
+    <div class="apple-card flex flex-col xl:flex-row xl:items-center justify-between gap-5 w-full mb-2 p-5 md:p-6">
+        <div class="flex items-center gap-4 pl-1 shrink-0">
+            <div class="w-12 h-12 rounded-[14px] text-white flex items-center justify-center text-xl shadow-lg shrink-0 transition-all duration-300"
+                 :class="viewMode === 'request' ? 'bg-gradient-to-br from-brand-400 to-brand-600 shadow-brand-500/30' : 'bg-gradient-to-br from-red-400 to-rose-600 shadow-rose-500/30'">
+                <i class="fa-solid" :class="viewMode === 'request' ? 'fa-clapperboard' : 'fa-triangle-exclamation'"></i>
+            </div>
             <div>
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white" x-text="viewMode === 'request' ? '资源求片大厅' : '用户报错工单'"></h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5" x-text="viewMode === 'request' ? '多渠道精准接单 · 全场景闭环审批' : '追踪资源质量 · 及时修复用户反馈'"></p>
+                <h2 class="text-xl md:text-[22px] font-bold tracking-tight text-gray-900 dark:text-white" x-text="viewMode === 'request' ? '资源求片大厅' : '用户报错工单'"></h2>
+                <div class="text-[12px] text-gray-500 mt-1 font-medium flex items-center gap-1.5">
+                    <i class="fa-solid" :class="viewMode === 'request' ? 'fa-satellite-dish opacity-70' : 'fa-bug opacity-70'"></i> 
+                    <span x-text="viewMode === 'request' ? '多渠道精准接单 · 全场景闭环审批' : '追踪资源质量 · 及时修复用户反馈'"></span>
+                </div>
             </div>
         </div>
         
-        <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-            <div class="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-xl shadow-inner border border-gray-200 dark:border-gray-700">
-                <button @click="switchView('request')" class="px-4 py-2 rounded-lg text-sm font-bold transition-all" :class="viewMode === 'request' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'">🎬 求片</button>
-                <button @click="switchView('feedback')" class="px-4 py-2 rounded-lg text-sm font-bold transition-all" :class="viewMode === 'feedback' ? 'bg-white dark:bg-gray-700 shadow-sm text-red-600 dark:text-red-400' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'">⚠️ 报错</button>
+        <div class="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
+            <div class="flex bg-gray-100 dark:bg-[#2C2C2E] p-1 rounded-[14px] shadow-inner border border-transparent dark:border-white/5 w-full sm:w-auto relative">
+                <button @click="switchView('request')" class="flex-1 sm:flex-none px-6 py-2 rounded-[10px] text-[13px] font-bold transition-all z-10" :class="viewMode === 'request' ? 'bg-white dark:bg-[#1C1C1E] shadow-sm text-brand-500' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'">
+                    <i class="fa-solid fa-film mr-1.5"></i> 求片
+                </button>
+                <button @click="switchView('feedback')" class="flex-1 sm:flex-none px-6 py-2 rounded-[10px] text-[13px] font-bold transition-all z-10" :class="viewMode === 'feedback' ? 'bg-white dark:bg-[#1C1C1E] shadow-sm text-red-500' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'">
+                    <i class="fa-solid fa-triangle-exclamation mr-1.5"></i> 报错
+                </button>
             </div>
 
-            <button @click="viewMode === 'request' ? loadData() : loadFeedback()" class="px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 dark:text-gray-200 rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm">
-                <i class="fa-solid fa-rotate-right" :class="isOperating ? 'animate-spin' : ''"></i>
-            </button>
-            <a href="/request" target="_blank" class="px-4 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-bold transition shadow-lg shadow-green-500/20 flex items-center gap-2">
-                👉 前往求片前台
-            </a>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <button @click="viewMode === 'request' ? loadData() : loadFeedback()" class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-gray-700 dark:text-gray-200 rounded-[14px] text-[13px] font-bold transition-colors shadow-sm border border-transparent dark:border-white/5 active:scale-95">
+                    <i class="fa-solid fa-rotate-right" :class="isOperating ? 'animate-spin text-brand-500' : ''"></i> <span class="sm:hidden">刷新</span>
+                </button>
+                <a href="/request" target="_blank" class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-[14px] text-[13px] font-bold transition-all shadow-md shadow-emerald-500/20 active:scale-95 whitespace-nowrap">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> 前往用户前台
+                </a>
+            </div>
         </div>
     </div>
 
-    <div x-show="viewMode === 'request'" x-transition>
-        <div class="flex flex-col md:flex-row justify-between gap-4 items-center bg-white dark:bg-gray-800 p-2 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
-            <div class="flex gap-2 overflow-x-auto hide-scrollbar w-full md:w-auto pl-2">
-                <button @click="filterStatus = 'all'" :class="filterStatus === 'all' ? 'bg-gray-800 text-white dark:bg-white dark:text-gray-900 shadow-md' : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'" class="px-4 py-2 rounded-full text-sm font-bold transition whitespace-nowrap">全部</button>
-                <button @click="filterStatus = 0" :class="filterStatus === 0 ? 'bg-blue-600 text-white shadow-md' : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'" class="px-4 py-2 rounded-full text-sm font-bold transition whitespace-nowrap">待审批 <span x-text="requests.filter(r => r.status===0).length" class="ml-1 opacity-70"></span></button>
-                <button @click="filterStatus = 1" :class="filterStatus === 1 ? 'bg-yellow-500 text-white shadow-md' : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'" class="px-4 py-2 rounded-full text-sm font-bold transition whitespace-nowrap">自动化下载中</button>
-                <button @click="filterStatus = 4" :class="filterStatus === 4 ? 'bg-purple-500 text-white shadow-md' : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'" class="px-4 py-2 rounded-full text-sm font-bold transition whitespace-nowrap">手动入库中</button>
-                <button @click="filterStatus = 2" :class="filterStatus === 2 ? 'bg-green-600 text-white shadow-md' : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'" class="px-4 py-2 rounded-full text-sm font-bold transition whitespace-nowrap">已入库</button>
-                <button @click="filterStatus = 3" :class="filterStatus === 3 ? 'bg-red-500 text-white shadow-md' : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'" class="px-4 py-2 rounded-full text-sm font-bold transition whitespace-nowrap">已拒绝</button>
+    <div x-show="viewMode === 'request'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0">
+        
+        <div class="flex flex-col md:flex-row justify-between gap-3 items-center apple-card !p-3 !rounded-[20px] mb-5">
+            <div class="flex gap-2 overflow-x-auto no-scrollbar w-full md:w-auto pl-1 pr-4">
+                <button @click="filterStatus = 'all'" :class="filterStatus === 'all' ? 'bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900 shadow-md' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2C2C2E]'" class="px-4 py-2 rounded-[12px] text-[12px] font-bold transition-all whitespace-nowrap">全部</button>
+                <button @click="filterStatus = 0" :class="filterStatus === 0 ? 'bg-brand-500 text-white shadow-md' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2C2C2E]'" class="px-4 py-2 rounded-[12px] text-[12px] font-bold transition-all whitespace-nowrap">待审批 <span x-text="requests.filter(r => r.status===0).length" class="ml-1 opacity-70 font-mono"></span></button>
+                <button @click="filterStatus = 1" :class="filterStatus === 1 ? 'bg-yellow-500 text-white shadow-md' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2C2C2E]'" class="px-4 py-2 rounded-[12px] text-[12px] font-bold transition-all whitespace-nowrap">自动下载中</button>
+                <button @click="filterStatus = 4" :class="filterStatus === 4 ? 'bg-purple-500 text-white shadow-md' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2C2C2E]'" class="px-4 py-2 rounded-[12px] text-[12px] font-bold transition-all whitespace-nowrap">手动接单中</button>
+                <button @click="filterStatus = 2" :class="filterStatus === 2 ? 'bg-emerald-500 text-white shadow-md' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2C2C2E]'" class="px-4 py-2 rounded-[12px] text-[12px] font-bold transition-all whitespace-nowrap">已入库</button>
+                <button @click="filterStatus = 3" :class="filterStatus === 3 ? 'bg-red-500 text-white shadow-md' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2C2C2E]'" class="px-4 py-2 rounded-[12px] text-[12px] font-bold transition-all whitespace-nowrap">已拒绝</button>
             </div>
             
-            <div x-show="selectedKeys.length > 0" x-transition class="flex items-center gap-2 pr-2">
-                <span class="text-sm font-bold text-blue-600 dark:text-blue-400 mr-2">已选 <span x-text="selectedKeys.length"></span> 项</span>
-                <button @click="batchAction('approve')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition shadow-sm active:scale-95" title="推送给 MP 下载"><i class="fa-solid fa-robot mr-1"></i>批量推MP</button>
-                <button @click="batchAction('manual')" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold transition shadow-sm active:scale-95" title="不推送给 MP，自己找资源下载"><i class="fa-solid fa-hand mr-1"></i>批量接单</button>
-                <button @click="openBatchRejectModal()" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 rounded-lg text-xs font-bold transition active:scale-95"><i class="fa-solid fa-ban mr-1"></i>批量拒绝</button>
-                <button @click="batchAction('delete')" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-300 rounded-lg text-xs font-bold transition active:scale-95"><i class="fa-regular fa-trash-can"></i></button>
+            <div x-show="selectedKeys.length > 0" x-transition class="flex items-center gap-2 pr-1 w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0 shrink-0">
+                <span class="text-[12px] font-black text-brand-500 whitespace-nowrap px-2">已选 <span x-text="selectedKeys.length"></span></span>
+                <button @click="batchAction('approve')" class="px-3 py-1.5 bg-brand-50 hover:bg-brand-100 dark:bg-brand-500/10 dark:hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 rounded-xl text-[12px] font-bold transition shadow-sm active:scale-95 whitespace-nowrap border border-brand-200/50 dark:border-brand-500/20"><i class="fa-solid fa-robot mr-1"></i>批量推MP</button>
+                <button @click="batchAction('manual')" class="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 dark:bg-purple-500/10 dark:hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-xl text-[12px] font-bold transition shadow-sm active:scale-95 whitespace-nowrap border border-purple-200/50 dark:border-purple-500/20"><i class="fa-solid fa-hand mr-1"></i>批量接单</button>
+                <button @click="openBatchRejectModal()" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-400 rounded-xl text-[12px] font-bold transition active:scale-95 whitespace-nowrap border border-red-200/50 dark:border-red-500/20"><i class="fa-solid fa-ban mr-1"></i>批量拒绝</button>
+                <button @click="batchAction('delete')" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-500 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] dark:text-gray-300 rounded-xl text-[12px] transition active:scale-95 border border-transparent dark:border-white/5"><i class="fa-regular fa-trash-can"></i></button>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
-            <div class="col-span-full flex items-center px-2 pb-1" x-show="filteredRequests.length > 0">
+        <div class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4 md:gap-5">
+            <div class="col-span-full flex items-center px-3 pb-1" x-show="filteredRequests.length > 0">
                 <label class="flex items-center gap-2 cursor-pointer group">
-                    <input type="checkbox" @click="toggleSelectAll()" :checked="selectedKeys.length === filteredRequests.length && filteredRequests.length > 0" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 transition">
-                    <span class="text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-gray-200 font-medium transition">全选当前列表</span>
+                    <input type="checkbox" @click="toggleSelectAll()" :checked="selectedKeys.length === filteredRequests.length && filteredRequests.length > 0" class="w-4 h-4 text-brand-500 rounded cursor-pointer">
+                    <span class="text-[13px] text-gray-500 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-gray-200 font-bold transition">全选当前列表</span>
                 </label>
             </div>
 
             <template x-for="item in filteredRequests" :key="item.tmdb_id + '_' + item.season">
-                <div class="pulse-list-row bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex gap-4 relative"
-                     :class="selectedKeys.includes(item.tmdb_id + '_' + item.season) ? 'ring-2 ring-blue-500 dark:ring-blue-400 bg-blue-50/30 dark:bg-blue-900/10' : ''">
+                <div class="pulse-list-row bg-white dark:bg-[#1C1C1E] p-4 md:p-5 rounded-[24px] border border-gray-100 dark:border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)] flex gap-4 md:gap-5 relative"
+                     :class="selectedKeys.includes(item.tmdb_id + '_' + item.season) ? 'ring-2 ring-brand-500 bg-brand-50/30 dark:bg-brand-900/10' : ''">
                     
-                    <div class="absolute top-4 left-4 z-10">
-                        <input type="checkbox" :value="item.tmdb_id + '_' + item.season" x-model="selectedKeys" class="w-5 h-5 text-blue-600 bg-white border-2 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-500 cursor-pointer shadow-sm transition">
+                    <div class="absolute top-5 left-5 z-10">
+                        <input type="checkbox" :value="item.tmdb_id + '_' + item.season" x-model="selectedKeys" class="w-4 h-4 text-brand-500 rounded cursor-pointer bg-white dark:bg-[#2C2C2E] border-gray-300 dark:border-gray-600">
                     </div>
 
-                    <div class="shrink-0 ml-6">
-                        <img :src="item.poster_path || 'https://via.placeholder.com/150'" class="w-16 h-24 rounded-lg object-cover shadow-sm bg-gray-100 dark:bg-gray-900 border border-gray-100 dark:border-gray-700">
+                    <div class="shrink-0 ml-7">
+                        <img :src="item.poster_path || 'https://via.placeholder.com/150'" class="w-16 h-24 md:w-20 md:h-28 rounded-xl object-cover shadow-md bg-gray-100 dark:bg-[#2C2C2E] border border-gray-100 dark:border-white/5">
                     </div>
 
                     <div class="flex-1 min-w-0 flex flex-col justify-between">
                         <div>
-                            <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-start justify-between gap-2 mb-1.5">
                                 <div class="min-w-0">
-                                    <h3 class="font-bold text-gray-900 dark:text-white truncate text-base mb-1" x-text="item.title"></h3>
-                                    <div class="flex items-center gap-2 text-[10px]">
-                                        <span class="px-1.5 py-0.5 bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 rounded font-bold uppercase" x-text="item.media_type === 'movie' ? 'Movie' : 'TV'"></span>
-                                        <span class="text-gray-400" x-text="item.year"></span>
+                                    <h3 class="font-bold text-gray-900 dark:text-white truncate text-[14px] md:text-[15px]" x-text="item.title"></h3>
+                                    <div class="flex items-center gap-2 text-[10px] mt-1">
+                                        <span class="px-2 py-0.5 bg-gray-100 dark:bg-[#2C2C2E] border border-gray-200/50 dark:border-white/5 text-gray-600 dark:text-gray-300 rounded-md font-black uppercase tracking-wider" x-text="item.media_type === 'movie' ? 'Movie' : 'TV'"></span>
+                                        <span class="text-gray-400 font-mono font-bold" x-text="item.year"></span>
                                     </div>
                                 </div>
-                                <div class="shrink-0">
-                                    <span x-show="item.status === 0" class="text-blue-500 text-[11px] font-bold bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-500/20">待审批</span>
-                                    <span x-show="item.status === 1" class="text-yellow-600 dark:text-yellow-500 text-[11px] font-bold bg-yellow-50 dark:bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-100 dark:border-yellow-500/20 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse"></span>自动下载中</span>
-                                    <span x-show="item.status === 4" class="text-purple-600 dark:text-purple-500 text-[11px] font-bold bg-purple-50 dark:bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-100 dark:border-purple-500/20 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>手动接单中</span>
-                                    <span x-show="item.status === 2" class="text-green-600 dark:text-green-500 text-[11px] font-bold bg-green-50 dark:bg-green-500/10 px-2 py-0.5 rounded-full border border-green-100 dark:border-green-500/20">已入库</span>
-                                    <span x-show="item.status === 3" class="text-red-500 text-[11px] font-bold bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded-full border border-red-100 dark:border-red-500/20">已拒绝</span>
+                                <div class="shrink-0 pt-0.5">
+                                    <span x-show="item.status === 0" class="text-brand-500 text-[10px] font-bold bg-brand-50 dark:bg-brand-500/10 px-2 py-1 rounded-md border border-brand-100 dark:border-brand-500/20 shadow-sm whitespace-nowrap">待审批</span>
+                                    <span x-show="item.status === 1" class="text-yellow-600 dark:text-yellow-500 text-[10px] font-bold bg-yellow-50 dark:bg-yellow-500/10 px-2 py-1 rounded-md border border-yellow-200/50 dark:border-yellow-500/20 shadow-sm flex items-center gap-1.5 whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse"></span>自动下载中</span>
+                                    <span x-show="item.status === 4" class="text-purple-600 dark:text-purple-400 text-[10px] font-bold bg-purple-50 dark:bg-purple-500/10 px-2 py-1 rounded-md border border-purple-200/50 dark:border-purple-500/20 shadow-sm flex items-center gap-1.5 whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>手动接单中</span>
+                                    <span x-show="item.status === 2" class="text-emerald-600 dark:text-emerald-400 text-[10px] font-bold bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-200/50 dark:border-emerald-500/20 shadow-sm whitespace-nowrap">已入库</span>
+                                    <span x-show="item.status === 3" class="text-red-500 text-[10px] font-bold bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-md border border-red-100 dark:border-red-500/20 shadow-sm whitespace-nowrap">已拒绝</span>
                                 </div>
                             </div>
                             
-                            <div class="mt-3 space-y-1">
-                                <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                                    <i class="fa-solid fa-users text-blue-400/80 w-4"></i>
-                                    <span class="truncate">支持者: <span class="font-medium text-gray-700 dark:text-gray-300" x-text="item.requested_by"></span></span>
+                            <div class="mt-2.5 md:mt-3 space-y-1.5">
+                                <div class="flex items-center gap-1.5 text-[11px] md:text-xs text-gray-500 dark:text-gray-400">
+                                    <i class="fa-solid fa-users text-gray-400 w-4 text-center"></i>
+                                    <span class="truncate font-medium">支持者: <span class="font-bold text-gray-700 dark:text-gray-300" x-text="item.requested_by"></span></span>
                                 </div>
-                                <div x-show="item.status === 3 && item.reject_reason" class="flex items-start gap-1.5 text-[11px] text-red-500 mt-2 bg-red-50 dark:bg-red-500/5 p-1.5 rounded-lg border border-red-100 dark:border-red-900/30">
+                                <div x-show="item.status === 3 && item.reject_reason" class="flex items-start gap-1.5 text-[11px] text-red-500 mt-2 bg-red-50 dark:bg-red-500/10 p-2 rounded-lg border border-red-100 dark:border-red-900/30 shadow-inner leading-relaxed">
                                     <i class="fa-solid fa-ban mt-0.5"></i>
-                                    <span>原因: <span x-text="item.reject_reason"></span></span>
+                                    <span>原因: <span class="font-bold" x-text="item.reject_reason"></span></span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="mt-4 flex items-center justify-between pt-3 border-t border-gray-50 dark:border-gray-700/50">
-                            <div class="text-[10px] text-gray-400 font-mono" x-text="item.created_at.substring(5, 16)"></div>
-                            <div class="flex items-center gap-2">
+                        <div class="mt-3 md:mt-4 pt-3 border-t border-gray-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="text-[10px] text-gray-400 font-mono hidden sm:block" x-text="item.created_at.substring(5, 16)"></div>
+                            
+                            <div class="flex flex-wrap items-center gap-1.5 md:gap-2 w-full sm:w-auto justify-end">
                                 <template x-if="item.status === 0">
-                                    <div class="flex items-center gap-2">
-                                        <button @click="doAction(item.tmdb_id, item.season, 'approve')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition shadow-md shadow-blue-500/20 active:scale-95"><i class="fa-solid fa-robot mr-1"></i>推给 MP</button>
-                                        <button @click="doAction(item.tmdb_id, item.season, 'manual')" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold transition shadow-md shadow-purple-500/20 active:scale-95"><i class="fa-solid fa-hand mr-1"></i>手动接单</button>
+                                    <div class="flex items-center gap-1.5 md:gap-2 w-full sm:w-auto">
+                                        <button @click="doAction(item.tmdb_id, item.season, 'approve')" class="flex-1 sm:flex-none justify-center px-2.5 md:px-3 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-[10px] md:rounded-xl text-[11px] md:text-[12px] font-bold transition shadow-md shadow-brand-500/20 active:scale-95 flex items-center whitespace-nowrap">
+                                            <i class="fa-solid fa-robot mr-1.5"></i><span class="hidden sm:inline">推给 MP</span><span class="sm:hidden">发MP</span>
+                                        </button>
+                                        <button @click="doAction(item.tmdb_id, item.season, 'manual')" class="flex-1 sm:flex-none justify-center px-2.5 md:px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-[10px] md:rounded-xl text-[11px] md:text-[12px] font-bold transition shadow-md shadow-purple-500/20 active:scale-95 flex items-center whitespace-nowrap">
+                                            <i class="fa-solid fa-hand mr-1.5"></i><span class="hidden sm:inline">手动接单</span><span class="sm:hidden">自己接</span>
+                                        </button>
                                     </div>
                                 </template>
                                 <template x-if="item.status === 1 || item.status === 4">
-                                    <button @click="doAction(item.tmdb_id, item.season, 'finish')" class="px-4 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs font-bold transition shadow-md shadow-green-500/20 active:scale-95"><i class="fa-solid fa-check mr-1"></i>强制入库</button>
-                                </template>
-                                <template x-if="item.status === 0 || item.status === 1 || item.status === 4">
-                                    <button @click="openRejectModal([{tmdb_id: item.tmdb_id, season: item.season}])" class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition" title="拒绝">
-                                        <i class="fa-solid fa-circle-xmark"></i>
+                                    <button @click="doAction(item.tmdb_id, item.season, 'finish')" class="flex-1 sm:flex-none justify-center px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-[10px] md:rounded-xl text-[11px] md:text-[12px] font-bold transition shadow-md shadow-emerald-500/20 active:scale-95 flex items-center whitespace-nowrap">
+                                        <i class="fa-solid fa-check mr-1.5"></i>强制入库
                                     </button>
                                 </template>
-                                <button @click="if(confirm('彻底删除将无法恢复，确定吗？')) doAction(item.tmdb_id, item.season, 'delete')" class="p-1.5 text-gray-300 hover:text-gray-600 dark:hover:text-red-400 rounded-lg transition" title="删除">
-                                    <i class="fa-regular fa-trash-can"></i>
+                                <template x-if="item.status === 0 || item.status === 1 || item.status === 4">
+                                    <button @click="openRejectModal([{tmdb_id: item.tmdb_id, season: item.season}])" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-[10px] transition shrink-0" title="拒绝">
+                                        <i class="fa-solid fa-circle-xmark text-sm md:text-base"></i>
+                                    </button>
+                                </template>
+                                <button @click="if(confirm('物理删除将无法恢复，确定吗？')) doAction(item.tmdb_id, item.season, 'delete')" class="p-2 text-gray-300 hover:text-gray-600 dark:text-gray-600 dark:hover:text-red-400 rounded-[10px] transition shrink-0" title="删除">
+                                    <i class="fa-regular fa-trash-can text-sm md:text-base"></i>
                                 </button>
                             </div>
                         </div>
@@ -139,115 +185,117 @@
             </template>
         </div>
 
-        <div x-show="filteredRequests.length === 0" class="text-center py-24 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm" x-cloak>
-            <div class="text-6xl mb-4 opacity-20">📂</div>
-            <p class="text-gray-400 dark:text-gray-500 font-medium">当前分类下没有数据</p>
+        <div x-show="filteredRequests.length === 0" class="text-center py-32 apple-card !rounded-[24px]" x-cloak>
+            <div class="text-5xl mb-4 opacity-20"><i class="fa-solid fa-ghost"></i></div>
+            <p class="text-gray-400 dark:text-gray-500 font-bold tracking-widest text-[13px] uppercase">当前分类下空空如也</p>
         </div>
     </div>
 
     <div x-show="viewMode === 'feedback'" x-transition x-cloak>
         
-        <div class="flex flex-col md:flex-row justify-between gap-4 items-center bg-white dark:bg-gray-800 p-2 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
-            <div class="flex gap-2 overflow-x-auto hide-scrollbar w-full md:w-auto pl-2">
-                <button @click="feedFilter = 'all'" :class="feedFilter === 'all' ? 'bg-gray-800 text-white dark:bg-white dark:text-gray-900 shadow-md' : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'" class="px-4 py-2 rounded-full text-sm font-bold transition whitespace-nowrap">全部报错</button>
-                <button @click="feedFilter = 0" :class="feedFilter === 0 ? 'bg-red-500 text-white shadow-md' : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'" class="px-4 py-2 rounded-full text-sm font-bold transition whitespace-nowrap">待核实 <span x-text="feedbacks.filter(f => f.status===0).length" class="ml-1 opacity-70"></span></button>
-                <button @click="feedFilter = 1" :class="feedFilter === 1 ? 'bg-blue-500 text-white shadow-md' : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'" class="px-4 py-2 rounded-full text-sm font-bold transition whitespace-nowrap">修复中</button>
-                <button @click="feedFilter = 2" :class="feedFilter === 2 ? 'bg-green-600 text-white shadow-md' : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'" class="px-4 py-2 rounded-full text-sm font-bold transition whitespace-nowrap">已解决</button>
-                <button @click="feedFilter = 3" :class="feedFilter === 3 ? 'bg-gray-500 text-white shadow-md' : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'" class="px-4 py-2 rounded-full text-sm font-bold transition whitespace-nowrap">已忽略</button>
+        <div class="flex flex-col md:flex-row justify-between gap-3 items-center apple-card !p-3 !rounded-[20px] mb-5">
+            <div class="flex gap-2 overflow-x-auto no-scrollbar w-full md:w-auto pl-1 pr-4">
+                <button @click="feedFilter = 'all'" :class="feedFilter === 'all' ? 'bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900 shadow-md' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2C2C2E]'" class="px-4 py-2 rounded-[12px] text-[12px] font-bold transition-all whitespace-nowrap">全部</button>
+                <button @click="feedFilter = 0" :class="feedFilter === 0 ? 'bg-red-500 text-white shadow-md' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2C2C2E]'" class="px-4 py-2 rounded-[12px] text-[12px] font-bold transition-all whitespace-nowrap">待核实 <span x-text="feedbacks.filter(f => f.status===0).length" class="ml-1 opacity-70 font-mono"></span></button>
+                <button @click="feedFilter = 1" :class="feedFilter === 1 ? 'bg-blue-500 text-white shadow-md' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2C2C2E]'" class="px-4 py-2 rounded-[12px] text-[12px] font-bold transition-all whitespace-nowrap">修复中</button>
+                <button @click="feedFilter = 2" :class="feedFilter === 2 ? 'bg-emerald-500 text-white shadow-md' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2C2C2E]'" class="px-4 py-2 rounded-[12px] text-[12px] font-bold transition-all whitespace-nowrap">已解决</button>
+                <button @click="feedFilter = 3" :class="feedFilter === 3 ? 'bg-gray-500 text-white shadow-md' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2C2C2E]'" class="px-4 py-2 rounded-[12px] text-[12px] font-bold transition-all whitespace-nowrap">已忽略</button>
             </div>
             
-            <div x-show="selectedFeedbacks.length > 0" x-transition class="flex items-center gap-2 pr-2">
-                <span class="text-sm font-bold text-red-600 dark:text-red-400 mr-2">已选 <span x-text="selectedFeedbacks.length"></span> 项</span>
-                <button @click="batchFeedAction('fix')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition shadow-sm active:scale-95"><i class="fa-solid fa-wrench mr-1"></i>批量修复中</button>
-                <button @click="batchFeedAction('done')" class="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs font-bold transition shadow-sm active:scale-95"><i class="fa-solid fa-check mr-1"></i>批量解决</button>
-                <button @click="batchFeedAction('reject')" class="px-3 py-1.5 bg-gray-500 hover:bg-gray-400 text-white rounded-lg text-xs font-bold transition shadow-sm active:scale-95"><i class="fa-solid fa-ban mr-1"></i>批量忽略</button>
-                <button @click="batchFeedAction('delete')" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-300 rounded-lg text-xs font-bold transition active:scale-95"><i class="fa-regular fa-trash-can"></i></button>
+            <div x-show="selectedFeedbacks.length > 0" x-transition class="flex items-center gap-2 pr-1 w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0 shrink-0">
+                <span class="text-[12px] font-black text-red-500 whitespace-nowrap px-2">已选 <span x-text="selectedFeedbacks.length"></span></span>
+                <button @click="batchFeedAction('fix')" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl text-[12px] font-bold transition shadow-sm active:scale-95 whitespace-nowrap border border-blue-200/50 dark:border-blue-500/20"><i class="fa-solid fa-wrench mr-1"></i>批量修复</button>
+                <button @click="batchFeedAction('done')" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl text-[12px] font-bold transition shadow-sm active:scale-95 whitespace-nowrap border border-emerald-200/50 dark:border-emerald-500/20"><i class="fa-solid fa-check mr-1"></i>批量解决</button>
+                <button @click="batchFeedAction('reject')" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-gray-600 dark:text-gray-300 rounded-xl text-[12px] font-bold transition shadow-sm active:scale-95 whitespace-nowrap border border-transparent dark:border-white/5"><i class="fa-solid fa-ban mr-1"></i>批量忽略</button>
+                <button @click="batchFeedAction('delete')" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-500 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] dark:text-gray-400 rounded-xl text-[12px] transition active:scale-95 border border-transparent dark:border-white/5"><i class="fa-regular fa-trash-can"></i></button>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
-            <div class="col-span-full flex items-center px-2 pb-1" x-show="filteredFeedbacks.length > 0">
+        <div class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4 md:gap-5">
+            <div class="col-span-full flex items-center px-3 pb-1" x-show="filteredFeedbacks.length > 0">
                 <label class="flex items-center gap-2 cursor-pointer group">
-                    <input type="checkbox" @click="toggleSelectAllFeeds()" :checked="selectedFeedbacks.length === filteredFeedbacks.length && filteredFeedbacks.length > 0" class="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 dark:focus:ring-red-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 transition">
-                    <span class="text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-gray-200 font-medium transition">全选当前列表</span>
+                    <input type="checkbox" @click="toggleSelectAllFeeds()" :checked="selectedFeedbacks.length === filteredFeedbacks.length && filteredFeedbacks.length > 0" class="w-4 h-4 text-red-500 rounded cursor-pointer bg-white dark:bg-[#2C2C2E] border-gray-300 dark:border-gray-600">
+                    <span class="text-[13px] text-gray-500 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-gray-200 font-bold transition">全选当前列表</span>
                 </label>
             </div>
 
             <template x-for="item in filteredFeedbacks" :key="item.id">
-                <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col justify-between relative transition-all"
-                     :class="selectedFeedbacks.includes(item.id) ? 'ring-2 ring-red-400 dark:ring-red-500 bg-red-50/30 dark:bg-red-900/10' : ''">
+                <div class="pulse-list-row bg-white dark:bg-[#1C1C1E] p-5 md:p-6 rounded-[24px] border border-gray-100 dark:border-white/5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)] flex flex-col justify-between relative transition-all"
+                     :class="selectedFeedbacks.includes(item.id) ? 'ring-2 ring-red-500 bg-red-50/30 dark:bg-red-900/10' : ''">
                     
-                    <div class="absolute top-5 left-4 z-10">
-                        <input type="checkbox" :value="item.id" x-model="selectedFeedbacks" class="w-5 h-5 text-red-600 bg-white border-2 border-gray-300 rounded focus:ring-red-500 dark:focus:ring-red-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-500 cursor-pointer shadow-sm transition">
+                    <div class="absolute top-6 left-5 z-10">
+                        <input type="checkbox" :value="item.id" x-model="selectedFeedbacks" class="w-4 h-4 text-red-500 rounded cursor-pointer bg-white dark:bg-[#2C2C2E] border-gray-300 dark:border-gray-600 shadow-sm transition">
                     </div>
 
                     <div class="pl-8">
-                        <div class="flex items-start justify-between gap-2 mb-3">
-                            <h3 class="font-bold text-gray-900 dark:text-white text-lg leading-tight" x-text="item.item_name"></h3>
-                            <div class="shrink-0">
-                                <span x-show="item.status === 0" class="text-red-500 text-[11px] font-bold bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-md border border-red-100 dark:border-red-500/20">🔍 待核实</span>
-                                <span x-show="item.status === 1" class="text-blue-500 text-[11px] font-bold bg-blue-50 dark:bg-blue-500/10 px-2 py-1 rounded-md border border-blue-100 dark:border-blue-500/20"><i class="fa-solid fa-wrench fa-spin mr-1"></i>修复中</span>
-                                <span x-show="item.status === 2" class="text-green-500 text-[11px] font-bold bg-green-50 dark:bg-green-500/10 px-2 py-1 rounded-md border border-green-100 dark:border-green-500/20">✅ 已解决</span>
-                                <span x-show="item.status === 3" class="text-gray-400 text-[11px] font-bold bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md border border-gray-200 dark:border-gray-600">❌ 忽略</span>
+                        <div class="flex items-start justify-between gap-3 mb-4">
+                            <h3 class="font-bold text-gray-900 dark:text-white text-[15px] md:text-base leading-tight line-clamp-2" x-text="item.item_name"></h3>
+                            <div class="shrink-0 pt-0.5">
+                                <span x-show="item.status === 0" class="text-red-500 text-[10px] font-bold bg-red-50 dark:bg-red-500/10 px-2.5 py-1 rounded-md border border-red-100 dark:border-red-500/20 whitespace-nowrap shadow-sm"><i class="fa-solid fa-magnifying-glass mr-1"></i>待核实</span>
+                                <span x-show="item.status === 1" class="text-brand-500 text-[10px] font-bold bg-brand-50 dark:bg-brand-500/10 px-2.5 py-1 rounded-md border border-brand-100 dark:border-brand-500/20 whitespace-nowrap shadow-sm"><i class="fa-solid fa-wrench fa-spin mr-1"></i>修复中</span>
+                                <span x-show="item.status === 2" class="text-emerald-600 dark:text-emerald-400 text-[10px] font-bold bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-200/50 dark:border-emerald-500/20 whitespace-nowrap shadow-sm"><i class="fa-solid fa-check mr-1"></i>已解决</span>
+                                <span x-show="item.status === 3" class="text-gray-500 text-[10px] font-bold bg-gray-100 dark:bg-[#3A3A3C] px-2.5 py-1 rounded-md border border-gray-200 dark:border-white/5 whitespace-nowrap shadow-sm"><i class="fa-solid fa-xmark mr-1"></i>已忽略</span>
                             </div>
                         </div>
 
-                        <div class="space-y-2 mb-4">
-                            <p class="text-xs text-gray-600 dark:text-gray-400"><i class="fa-solid fa-user text-gray-400 w-4"></i> 反馈用户：<span class="font-bold text-gray-800 dark:text-gray-200" x-text="item.username"></span></p>
-                            <p class="text-xs text-rose-500 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-500/10 w-fit px-2 py-0.5 rounded border border-rose-100 dark:border-rose-900/30"><i class="fa-solid fa-tag w-4"></i> 问题：<span x-text="item.issue_type"></span></p>
-                            <div x-show="item.description" class="text-[11px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700">
+                        <div class="space-y-2.5 mb-5">
+                            <p class="text-[11px] md:text-xs text-gray-600 dark:text-gray-400 font-medium"><i class="fa-solid fa-user text-gray-400 w-5"></i> 反馈用户：<span class="font-bold text-gray-800 dark:text-gray-200" x-text="item.username"></span></p>
+                            <p class="text-[11px] md:text-xs text-rose-500 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-500/10 w-fit px-2.5 py-1 rounded-lg border border-rose-100/50 dark:border-rose-900/30 shadow-inner"><i class="fa-solid fa-tag w-5"></i> 问题：<span x-text="item.issue_type"></span></p>
+                            <div x-show="item.description" class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-black/20 p-3 rounded-xl border border-gray-100 dark:border-white/5 shadow-inner leading-relaxed">
                                 "<span x-text="item.description"></span>"
                             </div>
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700 pl-8">
-                        <span class="text-[10px] text-gray-400 font-mono" x-text="item.created_at.substring(5, 16)"></span>
-                        <div class="flex gap-2">
-                            <button x-show="item.status === 0 || item.status === 3" @click="feedAction(item.id, 'fix')" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 rounded-lg text-xs font-bold transition">修复中</button>
-                            <button x-show="item.status === 0 || item.status === 1" @click="feedAction(item.id, 'done')" class="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-bold transition shadow-sm">已解决</button>
-                            <button x-show="item.status === 0 || item.status === 1" @click="feedAction(item.id, 'reject')" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-lg text-xs font-bold transition">忽略</button>
-                            <button @click="if(confirm('删除工单？')) feedAction(item.id, 'delete')" class="p-1.5 text-gray-300 hover:text-red-500 rounded-lg transition" title="删除记录"><i class="fa-solid fa-trash"></i></button>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between pt-3 md:pt-4 border-t border-gray-100 dark:border-white/5 pl-8 gap-3">
+                        <span class="text-[10px] text-gray-400 font-mono hidden sm:block" x-text="item.created_at.substring(5, 16)"></span>
+                        <div class="flex flex-wrap items-center gap-1.5 md:gap-2 w-full sm:w-auto justify-end">
+                            <button x-show="item.status === 0 || item.status === 3" @click="feedAction(item.id, 'fix')" class="flex-1 sm:flex-none justify-center px-3 py-2 bg-brand-50 hover:bg-brand-100 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 rounded-[10px] text-[11px] md:text-xs font-bold transition border border-transparent dark:border-brand-500/20 active:scale-95 whitespace-nowrap">修复中</button>
+                            <button x-show="item.status === 0 || item.status === 1" @click="feedAction(item.id, 'done')" class="flex-1 sm:flex-none justify-center px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-[10px] text-[11px] md:text-xs font-bold transition shadow-md shadow-emerald-500/20 active:scale-95 whitespace-nowrap"><i class="fa-solid fa-check mr-1.5"></i>已解决</button>
+                            <button x-show="item.status === 0 || item.status === 1" @click="feedAction(item.id, 'reject')" class="flex-1 sm:flex-none justify-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] dark:text-gray-300 rounded-[10px] text-[11px] md:text-xs font-bold transition border border-transparent dark:border-white/5 active:scale-95 whitespace-nowrap">忽略</button>
+                            <button @click="if(confirm('删除工单？')) feedAction(item.id, 'delete')" class="p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded-[10px] transition shrink-0 bg-gray-50 dark:bg-[#2C2C2E] border border-transparent dark:border-white/5" title="删除记录"><i class="fa-solid fa-trash text-xs md:text-sm"></i></button>
                         </div>
                     </div>
                 </div>
             </template>
         </div>
         
-        <div x-show="filteredFeedbacks.length === 0" class="text-center py-24 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm" x-cloak>
-            <div class="text-6xl mb-4 opacity-20">✨</div>
-            <p class="text-gray-400 dark:text-gray-500 font-medium">当前分类下没有工单记录</p>
+        <div x-show="filteredFeedbacks.length === 0" class="text-center py-32 apple-card !rounded-[24px]" x-cloak>
+            <div class="text-5xl mb-4 opacity-20"><i class="fa-solid fa-check-double text-emerald-500"></i></div>
+            <p class="text-gray-400 dark:text-gray-500 font-bold tracking-widest text-[13px] uppercase">没有需要处理的报错</p>
         </div>
     </div>
 
     <div x-show="rejectModal.open" class="fixed inset-0 z-[100] flex items-center justify-center p-4" x-cloak>
-        <div class="absolute inset-0 bg-gray-900/60 dark:bg-black/80 backdrop-blur-sm transition-opacity" @click="rejectModal.open = false" x-transition.opacity></div>
-        <div class="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl w-full max-w-md p-6 shadow-2xl"
-             x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
-            <div class="flex items-center gap-3 mb-4 text-red-500">
-                <i class="fa-solid fa-triangle-exclamation text-xl"></i>
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white" x-text="rejectModal.items.length > 1 ? '确认批量拒绝 ' + rejectModal.items.length + ' 项？' : '确认拒绝该求片？'"></h3>
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" @click="rejectModal.open = false" x-transition.opacity></div>
+        <div class="relative bg-white dark:bg-[#1C1C1E] border border-transparent dark:border-white/5 rounded-[24px] w-full max-w-md p-6 md:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
+             x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95 translate-y-4" x-transition:enter-end="opacity-100 scale-100 translate-y-0">
+            <div class="flex items-center gap-3 mb-6 text-red-500">
+                <div class="w-10 h-10 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center shadow-inner border border-red-100 dark:border-red-500/20">
+                    <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+                </div>
+                <h3 class="text-[17px] font-black text-gray-900 dark:text-white" x-text="rejectModal.items.length > 1 ? '批量拒绝 ' + rejectModal.items.length + ' 项求片' : '确认拒绝该求片？'"></h3>
             </div>
             
-            <div class="mb-5">
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-3 font-medium">请选择拒绝原因：</p>
-                <div class="flex flex-wrap gap-2 mb-4">
+            <div class="mb-6">
+                <p class="text-[11px] text-gray-500 dark:text-gray-400 mb-3 font-bold uppercase tracking-widest pl-1">请选择拒绝原因：</p>
+                <div class="flex flex-wrap gap-2.5 mb-4">
                     <template x-for="reason in predefinedReasons" :key="reason">
                         <button @click="rejectModal.reasonType = reason" 
-                                class="px-3 py-2 rounded-lg text-xs border font-bold transition-all"
-                                :class="rejectModal.reasonType === reason ? 'bg-red-50 border-red-400 text-red-600 dark:bg-red-500/20 dark:border-red-500 dark:text-red-400 shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'">
+                                class="px-3.5 py-2 rounded-xl text-[12px] font-bold transition-all shadow-sm active:scale-95"
+                                :class="rejectModal.reasonType === reason ? 'bg-red-50 border border-red-200 text-red-600 dark:bg-red-500/20 dark:border-red-500/30 dark:text-red-400' : 'bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 dark:bg-[#2C2C2E] dark:border-white/5 dark:text-gray-300 dark:hover:bg-[#3A3A3C]'">
                             <span x-text="reason"></span>
                         </button>
                     </template>
                 </div>
                 <div x-show="rejectModal.reasonType === '其他原因...'" x-collapse>
-                    <textarea x-model="rejectModal.customReason" rows="3" placeholder="请输入具体原因..." class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30 text-gray-800 dark:text-white"></textarea>
+                    <textarea x-model="rejectModal.customReason" rows="3" placeholder="请输入具体原因（将发送给用户）..." class="w-full bg-gray-50 dark:bg-black/20 border border-gray-200/80 dark:border-white/10 rounded-xl p-4 text-[13px] font-medium focus:outline-none focus:ring-2 focus:ring-red-500/50 text-gray-800 dark:text-white transition-all resize-none shadow-inner"></textarea>
                 </div>
             </div>
 
-            <div class="flex gap-3 justify-end">
-                <button @click="rejectModal.open = false" class="px-5 py-2.5 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 font-bold transition">取消</button>
-                <button @click="submitReject()" class="px-5 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-500 font-bold transition shadow-lg shadow-red-500/30 flex items-center gap-2 active:scale-95">
+            <div class="flex gap-3 justify-end pt-2 border-t border-gray-100 dark:border-white/5 mt-4">
+                <button @click="rejectModal.open = false" class="px-6 py-3 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:text-gray-200 dark:hover:bg-[#3A3A3C] font-bold text-[13px] transition-colors">取消</button>
+                <button @click="submitReject()" class="px-6 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 font-bold text-[13px] transition shadow-md shadow-red-500/30 flex items-center justify-center gap-2 active:scale-95 min-w-[100px]">
                     <span x-show="isOperating" class="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full"></span>
                     <span x-show="!isOperating">确认拒绝</span>
                 </button>
@@ -255,8 +303,8 @@
         </div>
     </div>
 
-    <div x-show="toast.show" x-transition x-cloak class="fixed top-20 left-1/2 -translate-x-1/2 z-[110] px-6 py-3 rounded-full shadow-2xl border backdrop-blur-xl flex items-center gap-2 font-bold bg-white/90 dark:bg-gray-800/90"
-         :class="toast.type === 'success' ? 'border-green-300 text-green-600 dark:border-green-500/30 dark:text-green-400' : 'border-red-300 text-red-600 dark:border-red-500/30 dark:text-red-400'">
+    <div x-show="toast.show" x-transition x-cloak class="fixed top-20 left-1/2 -translate-x-1/2 z-[110] px-6 py-3 rounded-full shadow-2xl border backdrop-blur-2xl flex items-center gap-2 font-bold text-[13px]"
+         :class="toast.type === 'success' ? 'bg-white/95 dark:bg-[#1C1C1E]/95 border-emerald-200 text-emerald-600 dark:border-emerald-500/30 dark:text-emerald-400' : 'bg-white/95 dark:bg-[#1C1C1E]/95 border-red-200 text-red-600 dark:border-red-500/30 dark:text-red-400'">
         <i :class="toast.type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark'"></i>
         <span x-text="toast.message"></span>
     </div>
@@ -272,17 +320,16 @@
             requests: [],
             feedbacks: [],
             filterStatus: 'all',
-            feedFilter: 'all', // 反馈的独立过滤器
+            feedFilter: 'all', 
             isOperating: false,
             toast: { show: false, message: '', type: 'success' },
             selectedKeys: [], 
-            selectedFeedbacks: [], // 反馈的多选数组
+            selectedFeedbacks: [], 
             
             rejectModal: { open: false, items: [], reasonType: '未找到可用资源', customReason: '' },
             predefinedReasons: ['影片未上映', '剧集未开播', '未找到可用资源', '质量太差等待洗版', '其他原因...'],
 
             init() {
-                // 支持从全局铃铛直接带参数跳入反馈 tab
                 const urlParams = new URLSearchParams(window.location.search);
                 if (urlParams.get('tab') === 'feedback') {
                     this.viewMode = 'feedback';
@@ -297,7 +344,6 @@
 
             switchView(mode) {
                 this.viewMode = mode;
-                // 清理 URL 参数，让显示更清爽
                 window.history.replaceState({}, '', '/requests_admin');
                 if(mode === 'request') this.loadData();
                 else this.loadFeedback();
@@ -390,7 +436,7 @@
             },
 
             async batchAction(action) {
-                if (action === 'delete' && !confirm('确认批量删除选中的项目吗？不可恢复！')) return;
+                if (action === 'delete' && !confirm('确认物理删除选中的求片项目吗？不可恢复！')) return;
                 
                 this.isOperating = true;
                 try {
@@ -437,7 +483,7 @@
 
             async submitReject() {
                 let finalReason = this.rejectModal.reasonType === '其他原因...' ? this.rejectModal.customReason.trim() : this.rejectModal.reasonType;
-                if (!finalReason) return this.showToast('请输入原因', 'error');
+                if (!finalReason) return this.showToast('请输入具体拒绝原因', 'error');
                 
                 this.isOperating = true;
                 try {
