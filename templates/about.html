@@ -2,51 +2,88 @@
 {% block title %}关于与支持 - EmbyPulse{% endblock %}
 
 {% block content %}
-<div class="w-full max-w-4xl mx-auto px-4 md:px-6 py-8 pb-24">
-    
-    <div class="flex flex-col items-center justify-center text-center mb-10 mt-4">
-        <div class="w-24 h-24 bg-white dark:bg-gray-800 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700 flex items-center justify-center p-4 mb-5 transform hover:scale-105 transition-all">
-            <img src="/static/img/logo-app.png" alt="Logo" class="w-full h-full object-contain rounded-xl">
+<div class="w-full max-w-5xl mx-auto px-4 md:px-6 py-8 pb-24">
+
+    <div class="relative overflow-hidden rounded-[28px] border border-gray-100 dark:border-gray-700/60 bg-gradient-to-br from-white via-white to-indigo-50/70 dark:from-gray-900 dark:via-gray-900 dark:to-indigo-950/40 shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-6 sm:p-8 mb-10">
+        <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-indigo-200/40 blur-3xl dark:bg-indigo-600/10"></div>
+        <div class="absolute -bottom-12 -left-8 w-52 h-52 rounded-full bg-blue-200/40 blur-3xl dark:bg-blue-600/10"></div>
+
+        <div class="relative z-10 flex flex-col sm:flex-row items-center gap-6">
+            <div class="w-24 h-24 bg-white dark:bg-gray-800 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700 flex items-center justify-center p-4">
+                <img src="/static/img/logo-app.png" alt="Logo" class="w-full h-full object-contain rounded-xl">
+            </div>
+            <div class="text-center sm:text-left">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <h1 class="text-3xl font-black text-gray-900 dark:text-white tracking-tight">EmbyPulse 映迹</h1>
+                    <span class="inline-flex items-center justify-center text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-500/30">
+                        Version {{ version }}
+                    </span>
+                </div>
+                <p class="text-gray-600 dark:text-gray-400 mt-3 max-w-xl leading-relaxed text-sm">
+                    打造极客级别的 Emby 态势感知与自动化管控中心。监控、排期、阻断，一切尽在掌握。
+                </p>
+            </div>
         </div>
-        <h1 class="text-3xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-            EmbyPulse 映迹
-        </h1>
-        <p class="text-sm font-mono text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full mt-3 border border-indigo-100 dark:border-indigo-500/30">
-            Version {{ version }}
-        </p>
-        <p class="text-gray-500 dark:text-gray-400 mt-5 max-w-lg leading-relaxed text-sm">
-            打造极客级别的 Emby 态势感知与自动化管控中心。监控、排期、阻断，一切尽在掌握。
-        </p>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-        <a href="https://github.com/zeyu8023/emby-pulse" target="_blank" class="flex flex-col items-center p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all group">
-            <i class="fa-brands fa-github text-3xl text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors mb-3"></i>
-            <h3 class="font-bold text-gray-900 dark:text-white text-sm">GitHub 仓库</h3>
-            <p class="text-xs text-gray-500 mt-1">给项目点个 Star ⭐</p>
-        </a>
-        
-        <a href="https://t.me/Emby_Pulse2" target="_blank" class="flex flex-col items-center p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500/50 transition-all group">
-            <i class="fa-solid fa-bullhorn text-3xl text-blue-500 mb-3 group-hover:scale-110 transition-transform"></i>
-            <h3 class="font-bold text-gray-900 dark:text-white text-sm">官方 TG 频道</h3>
-            <p class="text-xs text-gray-500 mt-1">获取最新版本资讯</p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-12">
+        <a href="https://github.com/zeyu8023/emby-pulse" target="_blank" class="group relative overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-700/60 bg-white/90 dark:bg-gray-800/90 shadow-sm hover:shadow-lg transition-all">
+            <div class="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-indigo-50/60 dark:to-indigo-900/20"></div>
+            <div class="relative p-6 flex flex-col gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    <i class="fa-brands fa-github text-2xl"></i>
+                </div>
+                <div class="flex items-center justify-between">
+                    <h3 class="font-bold text-gray-900 dark:text-white text-sm">GitHub 仓库</h3>
+                    <span class="text-xs text-gray-400 group-hover:text-indigo-500 transition-colors">→</span>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">给项目点个 Star，关注更新动态</p>
+            </div>
         </a>
 
-        <a href="https://t.me/Emby_Pulse" target="_blank" class="flex flex-col items-center p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500/50 transition-all group">
-            <i class="fa-brands fa-telegram text-3xl text-blue-500 mb-3 group-hover:scale-110 transition-transform"></i>
-            <h3 class="font-bold text-gray-900 dark:text-white text-sm">TG 交流群组</h3>
-            <p class="text-xs text-gray-500 mt-1">遇到问题？来这里交流</p>
+        <a href="https://t.me/Emby_Pulse2" target="_blank" class="group relative overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-700/60 bg-white/90 dark:bg-gray-800/90 shadow-sm hover:shadow-lg transition-all">
+            <div class="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-blue-50/70 dark:to-blue-900/20"></div>
+            <div class="relative p-6 flex flex-col gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-500 group-hover:scale-105 transition-transform">
+                    <i class="fa-solid fa-bullhorn text-2xl"></i>
+                </div>
+                <div class="flex items-center justify-between">
+                    <h3 class="font-bold text-gray-900 dark:text-white text-sm">官方 TG 频道</h3>
+                    <span class="text-xs text-gray-400 group-hover:text-blue-500 transition-colors">→</span>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">获取最新版本资讯与公告</p>
+            </div>
+        </a>
+
+        <a href="https://t.me/Emby_Pulse" target="_blank" class="group relative overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-700/60 bg-white/90 dark:bg-gray-800/90 shadow-sm hover:shadow-lg transition-all">
+            <div class="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-sky-50/70 dark:to-sky-900/20"></div>
+            <div class="relative p-6 flex flex-col gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center text-sky-500 group-hover:scale-105 transition-transform">
+                    <i class="fa-brands fa-telegram text-2xl"></i>
+                </div>
+                <div class="flex items-center justify-between">
+                    <h3 class="font-bold text-gray-900 dark:text-white text-sm">TG 交流群组</h3>
+                    <span class="text-xs text-gray-400 group-hover:text-sky-500 transition-colors">→</span>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">遇到问题？来这里交流</p>
+            </div>
         </a>
     </div>
 
-    <div class="flex flex-col items-center">
-        <button onclick="toggleDonate()" class="flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-black shadow-lg shadow-orange-500/30 active:scale-95 transition-all">
-            <i class="fa-solid fa-mug-hot"></i> 赞赏作者 (Buy me a coffee)
-        </button>
-        
+    <div class="rounded-3xl border border-gray-100 dark:border-gray-700/60 bg-white dark:bg-gray-800 shadow-sm p-6 sm:p-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h3 class="text-lg font-black text-gray-900 dark:text-white">支持开发与维护</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">开源不易，感谢你为服务器充入的一度电</p>
+            </div>
+            <button onclick="toggleDonate()" class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-black shadow-lg shadow-orange-500/30 active:scale-95 transition-all">
+                <i class="fa-solid fa-mug-hot"></i> 赞赏作者 (Buy me a coffee)
+            </button>
+        </div>
+
         <div id="donate-card" class="mt-6 overflow-hidden transition-all duration-500 ease-in-out max-h-0 opacity-0">
-            <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center">
-                <p class="text-sm text-gray-600 dark:text-gray-300 font-bold mb-4">开源不易，感谢你为服务器充入的一度电 ⚡</p>
+            <div class="bg-gray-50 dark:bg-gray-900/40 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 flex flex-col items-center">
+                <p class="text-sm text-gray-600 dark:text-gray-300 font-bold mb-4">扫码支持，感谢你的认可</p>
                 <div class="w-48 md:w-56 rounded-2xl overflow-hidden border-4 border-gray-50 dark:border-gray-900 shadow-inner">
                     <img src="/static/img/zanshangma.png" alt="赞赏码" class="w-full h-auto object-contain">
                 </div>
@@ -61,7 +98,6 @@
         if (card.classList.contains('max-h-0')) {
             card.classList.remove('max-h-0', 'opacity-0');
             card.classList.add('max-h-[500px]', 'opacity-100');
-            // 滑动到底部展示二维码
             setTimeout(() => {
                 card.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 300);
