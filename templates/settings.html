@@ -1,181 +1,222 @@
 {% extends "layout.html" %}
+{% block title %}系统设置 - EmbyPulse{% endblock %}
+
+{% block head %}
+<style>
+    /* === 🔥 Apple 级极简卡片质感 === */
+    .apple-card { 
+        background-color: rgba(255, 255, 255, 0.95); 
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 24px; 
+        padding: 24px; 
+        box-shadow: 0 4px 24px -8px rgba(0,0,0,0.04);
+        border: 1px solid rgba(0,0,0,0.02);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    html.dark .apple-card {
+        background-color: rgba(28, 28, 30, 0.85); 
+        box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255,255,255,0.04);
+    }
+
+    @media (min-width: 768px) {
+        .apple-card:hover { transform: translateY(-2px); box-shadow: 0 12px 32px -8px rgba(0,0,0,0.08); }
+        html.dark .apple-card:hover { box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.6); }
+    }
+
+    .mac-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+    .mac-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .mac-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.4); border-radius: 10px; }
+    html.dark .mac-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(255, 255, 255, 0.15); }
+    html.dark .mac-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.3); }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="w-full max-w-[1600px] mx-auto px-4 md:px-6 py-6 pb-20">
+<div class="w-full max-w-[1600px] mx-auto py-4 pb-32 px-4 sm:px-6 md:px-8 space-y-4 md:space-y-6">
     
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div>
-            <h1 class="text-2xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-                <i class="fa-solid fa-sliders text-indigo-500"></i>系统设置
-            </h1>
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mt-1">全局参数、API 密钥与自动化规则配置</p>
+    <div class="apple-card flex flex-col md:flex-row md:items-center justify-between gap-6 w-full mb-2 p-5 md:p-6">
+        <div class="flex items-center gap-4 pl-1 shrink-0">
+            <div class="w-12 h-12 rounded-[14px] bg-gradient-to-br from-gray-600 to-slate-800 text-white flex items-center justify-center text-[22px] shadow-lg shadow-slate-500/30 shrink-0">
+                <i class="fa-solid fa-sliders"></i>
+            </div>
+            <div>
+                <h2 class="text-xl md:text-[22px] font-bold tracking-tight text-gray-900 dark:text-white">系统设置</h2>
+                <div class="text-[12px] text-gray-500 mt-1 font-medium flex items-center gap-1.5">
+                    <i class="fa-solid fa-gear opacity-70"></i> <span>全局参数、API 密钥与自动化规则配置</span>
+                </div>
+            </div>
         </div>
-        <button onclick="saveSettings()" id="top-save-btn" class="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm shadow-sm transition-all active:scale-95">
+        
+        <button onclick="saveSettings()" id="top-save-btn" class="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white rounded-[14px] font-bold text-[13px] shadow-md shadow-brand-500/20 transition-all active:scale-95 shrink-0 border border-transparent">
             <i class="fa-solid fa-floppy-disk"></i>
             <span id="save-btn-text">保存配置</span>
         </button>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5 items-stretch">
+    <div class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5 md:gap-6 items-stretch">
         
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700/80 flex flex-col">
-            <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/50 flex items-center gap-2.5 bg-gray-50/50 dark:bg-gray-800/30 rounded-t-xl">
-                <i class="fa-solid fa-server text-indigo-500 text-base"></i>
-                <h3 class="font-bold text-gray-800 dark:text-gray-100 text-sm">Emby 核心连接</h3>
-            </div>
-            <div class="p-5 flex-1 flex flex-col space-y-4">
+        <div class="apple-card flex flex-col h-full p-5 md:p-6">
+            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center shrink-0">
+                <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 flex items-center justify-center mr-3 shadow-sm"><i class="fa-solid fa-server text-sm"></i></div> 
+                Emby 核心连接
+            </h3>
+            <div class="flex-1 flex flex-col justify-start space-y-5">
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">内网通信地址</label>
-                    <input type="text" id="emby_host" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder-gray-400" placeholder="http://172.17.0.1:8096">
+                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">内网通信地址</label>
+                    <input type="text" id="emby_host" class="w-full px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder-gray-400" placeholder="http://172.17.0.1:8096">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">系统 API Key</label>
+                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">系统 API Key</label>
                     <div class="relative">
-                        <input type="password" id="emby_api_key" class="w-full pl-3 pr-10 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all">
-                        <button type="button" onclick="toggleShow('emby_api_key')" class="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 text-gray-400 hover:text-indigo-500 transition-colors">
+                        <input type="password" id="emby_api_key" class="w-full px-4 pr-10 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all">
+                        <button type="button" onclick="toggleShow('emby_api_key')" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 text-gray-400 hover:text-indigo-500 transition-colors flex items-center justify-center">
                             <i id="icon-emby_api_key" class="fa-solid fa-eye text-sm"></i>
                         </button>
                     </div>
                 </div>
 
-                <div class="pt-4 mt-2 border-t border-gray-100 dark:border-gray-700/50">
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide flex items-center gap-1">
-                        统计数据获取模式 <i class="fa-solid fa-circle-info text-gray-400 cursor-help" title="若使用 Docker 挂载了 PlaybackReporting.db 请选本地直读（性能最好）；若未挂载，请选官方 API 穿透"></i>
+                <div class="pt-2 mt-auto">
+                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1 flex items-center gap-1.5">
+                        数据获取引擎 
+                        <i class="fa-solid fa-circle-info text-gray-400 cursor-help" title="若挂载了 PlaybackReporting.db 选本地直读（性能最好）；否则选 API 穿透"></i>
                     </label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <label class="relative flex items-center justify-center p-3 border rounded-xl cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-700/50 has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50 dark:has-[:checked]:bg-indigo-500/10 dark:border-gray-600">
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="relative flex items-center justify-center p-3 rounded-xl cursor-pointer transition-all bg-gray-50 hover:bg-gray-100 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] border border-transparent has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50 dark:has-[:checked]:bg-indigo-900/20 shadow-sm">
                             <input type="radio" name="playback_data_mode" value="sqlite" class="peer sr-only">
                             <div class="text-center">
-                                <i class="fa-solid fa-hard-drive block text-lg mb-1 text-gray-400 peer-checked:text-indigo-500"></i>
-                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 mt-1 block">本地直读 (挂载)</span>
+                                <i class="fa-solid fa-hard-drive block text-lg mb-1.5 text-gray-400 peer-checked:text-indigo-500 transition-colors"></i>
+                                <span class="text-[11px] font-bold text-gray-600 dark:text-gray-400 peer-checked:text-indigo-600 dark:peer-checked:text-indigo-400 block">直读挂载库</span>
                             </div>
-                            <i class="fa-solid fa-circle-check absolute top-2 right-2 text-indigo-500 opacity-0 peer-checked:opacity-100 transition-opacity"></i>
+                            <i class="fa-solid fa-circle-check absolute top-2 right-2 text-indigo-500 opacity-0 peer-checked:opacity-100 transition-opacity text-[11px]"></i>
                         </label>
-                        <label class="relative flex items-center justify-center p-3 border rounded-xl cursor-pointer transition-all hover:bg-gray-50 dark:hover:bg-gray-700/50 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50/50 dark:has-[:checked]:bg-emerald-500/10 dark:border-gray-600">
+                        <label class="relative flex items-center justify-center p-3 rounded-xl cursor-pointer transition-all bg-gray-50 hover:bg-gray-100 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] border border-transparent has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50/50 dark:has-[:checked]:bg-emerald-900/20 shadow-sm">
                             <input type="radio" name="playback_data_mode" value="api" class="peer sr-only">
                             <div class="text-center">
-                                <i class="fa-solid fa-cloud-arrow-down block text-lg mb-1 text-gray-400 peer-checked:text-emerald-500"></i>
-                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 mt-1 block">官方 API 穿透</span>
+                                <i class="fa-solid fa-cloud-arrow-down block text-lg mb-1.5 text-gray-400 peer-checked:text-emerald-500 transition-colors"></i>
+                                <span class="text-[11px] font-bold text-gray-600 dark:text-gray-400 peer-checked:text-emerald-600 dark:peer-checked:text-emerald-400 block">API 穿透</span>
                             </div>
-                            <i class="fa-solid fa-circle-check absolute top-2 right-2 text-emerald-500 opacity-0 peer-checked:opacity-100 transition-opacity"></i>
+                            <i class="fa-solid fa-circle-check absolute top-2 right-2 text-emerald-500 opacity-0 peer-checked:opacity-100 transition-opacity text-[11px]"></i>
                         </label>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700/80 flex flex-col">
-            <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/50 flex items-center gap-2.5 bg-gray-50/50 dark:bg-gray-800/30 rounded-t-xl">
-                <i class="fa-solid fa-globe text-emerald-500 text-base"></i>
-                <h3 class="font-bold text-gray-800 dark:text-gray-100 text-sm">对外服务门户</h3>
-            </div>
-            <div class="p-5 flex-1 flex flex-col space-y-4">
+        <div class="apple-card flex flex-col h-full p-5 md:p-6">
+            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center shrink-0">
+                <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 flex items-center justify-center mr-3 shadow-sm"><i class="fa-solid fa-globe text-sm"></i></div> 
+                对外服务门户
+            </h3>
+            <div class="flex-1 flex flex-col justify-start space-y-5">
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">公网访问入口</label>
-                    <input type="text" id="emby_public_url" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all placeholder-gray-400" placeholder="https://emby.yourdomain.com">
+                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">公网访问入口</label>
+                    <input type="text" id="emby_public_url" class="w-full px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all placeholder-gray-400" placeholder="https://emby.yourdomain.com">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">客户端引导链接 (可选)</label>
-                    <input type="text" id="client_download_url" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all placeholder-gray-400" placeholder="https://emby.media/download.html">
+                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">客户端引导链接 (可选)</label>
+                    <input type="text" id="client_download_url" class="w-full px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all placeholder-gray-400" placeholder="https://emby.media/download.html">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">入职欢迎语 (可选)</label>
-                    <textarea id="welcome_message" rows="2" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all placeholder-gray-400 custom-scrollbar" placeholder="推荐使用 Infuse 客户端登录，祝观影愉快。"></textarea>
+                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">入职欢迎语 (可选)</label>
+                    <textarea id="welcome_message" rows="3" class="w-full px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all placeholder-gray-400 mac-scrollbar resize-none" placeholder="推荐使用 Infuse 客户端登录，祝观影愉快。"></textarea>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700/80 flex flex-col">
-            <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/50 flex items-center gap-2.5 bg-gray-50/50 dark:bg-gray-800/30 rounded-t-xl">
-                <i class="fa-solid fa-bolt text-purple-500 text-base"></i>
-                <h3 class="font-bold text-gray-800 dark:text-gray-100 text-sm">MoviePilot 自动化流水线</h3>
-            </div>
-            <div class="p-5 flex-1 flex flex-col space-y-4">
+        <div class="apple-card flex flex-col h-full p-5 md:p-6">
+            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center shrink-0">
+                <div class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-500 flex items-center justify-center mr-3 shadow-sm"><i class="fa-solid fa-bolt text-sm"></i></div> 
+                MoviePilot 自动化联控
+            </h3>
+            <div class="flex-1 flex flex-col justify-start space-y-5">
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">通信地址</label>
-                    <input type="text" id="moviepilot_url" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all placeholder-gray-400" placeholder="http://192.168.31.2:3000">
+                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">MP 通信地址</label>
+                    <input type="text" id="moviepilot_url" class="w-full px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all placeholder-gray-400" placeholder="http://192.168.31.2:3000">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">API Token</label>
+                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">API Token</label>
                     <div class="relative">
-                        <input type="password" id="moviepilot_token" class="w-full pl-3 pr-10 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all">
-                        <button type="button" onclick="toggleShow('moviepilot_token')" class="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 text-gray-400 hover:text-purple-500 transition-colors">
+                        <input type="password" id="moviepilot_token" class="w-full px-4 pr-10 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all">
+                        <button type="button" onclick="toggleShow('moviepilot_token')" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 text-gray-400 hover:text-purple-500 transition-colors flex items-center justify-center">
                             <i id="icon-moviepilot_token" class="fa-solid fa-eye text-sm"></i>
                         </button>
                     </div>
                 </div>
-                <div class="flex justify-end mt-2">
-                    <button type="button" onclick="testMPConnection(this)" class="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800/50 rounded-xl text-sm font-bold shadow-sm transition-all active:scale-95">
-                        <i class="fa-solid fa-plug"></i> 测试 MP 连通性
+                <div>
+                    <button type="button" onclick="testMPConnection(this)" class="w-full flex items-center justify-center gap-2 px-5 py-3 bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:hover:bg-purple-900/40 rounded-xl text-[13px] font-bold shadow-sm transition-all active:scale-95 border border-purple-100 dark:border-purple-800/30">
+                        <i class="fa-solid fa-plug"></i> 探测连通性
                     </button>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Pulse 审批回跳地址</label>
-                    <input type="text" id="pulse_url" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all placeholder-gray-400" placeholder="请输入Emby Pulse公网地址">
+                <div class="mt-auto pt-2">
+                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">Pulse 审批回跳地址</label>
+                    <input type="text" id="pulse_url" class="w-full px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all placeholder-gray-400" placeholder="当前系统对外的公网地址">
                 </div>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700/80 flex flex-col">
-            <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/50 flex items-center gap-2.5 bg-gray-50/50 dark:bg-gray-800/30 rounded-t-xl">
-                <i class="fa-solid fa-network-wired text-blue-500 text-base"></i>
-                <h3 class="font-bold text-gray-800 dark:text-gray-100 text-sm">TMDB & 网络</h3>
-            </div>
-            <div class="p-5 flex-1 flex flex-col space-y-4">
+        <div class="apple-card flex flex-col h-full p-5 md:p-6">
+            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center shrink-0">
+                <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-500 flex items-center justify-center mr-3 shadow-sm"><i class="fa-solid fa-network-wired text-sm"></i></div> 
+                TMDB & 数据库体检
+            </h3>
+            <div class="flex-1 flex flex-col justify-start space-y-5">
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">TMDB API Key (v3)</label>
+                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">TMDB API Key (v3)</label>
                     <div class="relative">
-                        <input type="password" id="tmdb_api_key" class="w-full pl-3 pr-10 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all">
-                        <button type="button" onclick="toggleShow('tmdb_api_key')" class="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 text-gray-400 hover:text-blue-500 transition-colors">
+                        <input type="password" id="tmdb_api_key" class="w-full px-4 pr-10 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all">
+                        <button type="button" onclick="toggleShow('tmdb_api_key')" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 text-gray-400 hover:text-blue-500 transition-colors flex items-center justify-center">
                             <i id="icon-tmdb_api_key" class="fa-solid fa-eye text-sm"></i>
                         </button>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">系统全局科学代理 (可选)</label>
-                    <input type="text" id="proxy_url" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all placeholder-gray-400" placeholder="http://127.0.0.1:7890">
+                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">全局科学代理 (可选)</label>
+                    <input type="text" id="proxy_url" class="w-full px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all placeholder-gray-400" placeholder="http://127.0.0.1:7890">
                 </div>
-                <div class="pt-4 border-t border-gray-100 dark:border-gray-700/50">
-                    <button onclick="runHealthCheck(this)" class="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-800/50 rounded-xl text-sm font-bold shadow-sm transition-all active:scale-95">
-                        <i class="fa-solid fa-stethoscope"></i> 数据库深度体检
+                <div class="mt-auto pt-4 border-t border-gray-100 dark:border-white/5">
+                    <button onclick="runHealthCheck(this)" class="w-full flex items-center justify-center gap-2 px-5 py-3 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:hover:bg-rose-900/40 rounded-[14px] text-[13px] font-bold shadow-sm transition-all active:scale-95 border border-rose-100 dark:border-rose-800/30">
+                        <i class="fa-solid fa-stethoscope"></i> 全库深度体检与自愈
                     </button>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700/80 flex flex-col">
-            <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/50 flex items-center gap-2.5 bg-gray-50/50 dark:bg-gray-800/30 rounded-t-xl">
-                <i class="fa-solid fa-shield-halved text-orange-500 text-base"></i>
-                <h3 class="font-bold text-gray-800 dark:text-gray-100 text-sm">Webhook 安全</h3>
-            </div>
-            <div class="p-5 flex-1 flex flex-col space-y-4">
+        <div class="apple-card flex flex-col h-full p-5 md:p-6">
+            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center shrink-0">
+                <div class="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-500/10 text-orange-500 flex items-center justify-center mr-3 shadow-sm"><i class="fa-solid fa-shield-halved text-sm"></i></div> 
+                Webhook 安全凭证
+            </h3>
+            <div class="flex-1 flex flex-col justify-start space-y-5">
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">验证 Token</label>
-                    <input type="text" id="webhook_token" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-sm text-gray-800 dark:text-gray-100 font-mono focus:ring-2 focus:ring-orange-500/50 outline-none transition-all">
+                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">接口验证 Token</label>
+                    <input type="text" id="webhook_token" class="w-full px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-orange-500/50 outline-none transition-all">
                 </div>
-                <div class="bg-slate-50 dark:bg-gray-900/50 p-3 rounded-lg border border-slate-200 dark:border-gray-700 mt-2">
-                    <p class="text-[10px] text-slate-500 font-bold mb-1 uppercase tracking-wider">填入 Emby 的完整 URL：</p>
-                    <p class="text-xs font-mono text-orange-600 dark:text-orange-400 break-all select-all leading-relaxed" id="webhook-url-preview">...</p>
+                <div class="bg-gray-50 dark:bg-black/20 p-4 rounded-xl border border-gray-200/80 dark:border-white/5 shadow-sm mt-2">
+                    <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-2 uppercase tracking-wider">在 Emby 中填入以下完整地址：</p>
+                    <p class="text-[11px] font-mono text-orange-600 dark:text-orange-400 break-all select-all leading-relaxed bg-white dark:bg-[#1C1C1E] p-2 rounded-lg border border-gray-100 dark:border-white/5 shadow-inner" id="webhook-url-preview">...</p>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700/80 flex flex-col">
-            <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/50 flex items-center gap-2.5 bg-gray-50/50 dark:bg-gray-800/30 rounded-t-xl">
-                <i class="fa-solid fa-user-ninja text-gray-500 text-base"></i>
-                <h3 class="font-bold text-gray-800 dark:text-gray-100 text-sm">隐藏黑名单</h3>
-            </div>
-            <div class="p-5 flex-1 flex flex-col space-y-4">
+        <div class="apple-card flex flex-col h-full p-5 md:p-6 lg:col-span-2 2xl:col-span-1">
+            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center shrink-0">
+                <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-[#2C2C2E] text-slate-500 flex items-center justify-center mr-3 shadow-sm border border-gray-200/50 dark:border-white/5"><i class="fa-solid fa-user-ninja text-sm"></i></div> 
+                隐藏黑名单
+            </h3>
+            <div class="flex-1 flex flex-col justify-start space-y-5">
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">添加不参与排行的账号</label>
-                    <div class="flex gap-2">
-                        <select id="user-selector" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-sm text-gray-700 dark:text-gray-300 outline-none focus:ring-2 focus:ring-gray-400 transition-all cursor-pointer">
-                            <option value="">选择用户...</option>
+                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">添加不参与排行的账号</label>
+                    <div class="flex gap-2.5">
+                        <select id="user-selector" class="flex-1 px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] text-gray-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-slate-500/50 transition-all cursor-pointer shadow-sm">
+                            <option value="">选择需要隐藏的用户...</option>
                         </select>
-                        <button onclick="addHiddenUser()" class="px-4 py-2 bg-gray-800 dark:bg-gray-700 hover:bg-black dark:hover:bg-gray-600 text-white rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 shrink-0">添加</button>
+                        <button onclick="addHiddenUser()" class="px-5 py-3 bg-gray-800 hover:bg-black dark:bg-gray-200 dark:hover:bg-white text-white dark:text-black rounded-xl text-[13px] font-bold shadow-sm transition-all active:scale-95 shrink-0">拦截</button>
                     </div>
                 </div>
-                <div id="hidden-users-container" class="flex flex-wrap gap-2 empty:hidden pt-1"></div>
+                <div id="hidden-users-container" class="flex flex-wrap gap-2.5 empty:hidden pt-2"></div>
             </div>
         </div>
 
@@ -183,46 +224,46 @@
 </div>
 
 <div id="check-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-    <div class="bg-white dark:bg-gray-800 rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 dark:border-gray-700 transform transition-all scale-95 opacity-0 duration-300" id="modal-container">
-        <div class="p-6">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center text-indigo-500 border border-indigo-100 dark:border-indigo-800/50">
-                        <i class="fa-solid fa-stethoscope text-lg"></i>
+    <div class="bg-white dark:bg-[#1C1C1E] rounded-[28px] shadow-2xl w-full max-w-lg overflow-hidden border border-transparent dark:border-white/5 transform transition-all scale-95 opacity-0 duration-300" id="modal-container">
+        <div class="p-6 md:p-8">
+            <div class="flex items-center justify-between mb-8">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center text-indigo-500 border border-indigo-100 dark:border-indigo-800/50 shadow-sm">
+                        <i class="fa-solid fa-stethoscope text-xl"></i>
                     </div>
                     <div>
-                        <h3 class="text-base font-black text-gray-900 dark:text-white">全库体检与自愈报告</h3>
-                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Health Check & Auto Fix</p>
+                        <h3 class="text-[17px] font-black text-gray-900 dark:text-white tracking-tight">全库体检与自愈报告</h3>
+                        <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest mt-0.5">Health Check & Auto Fix</p>
                     </div>
                 </div>
-                <button onclick="closeCheckModal()" class="text-gray-400 hover:text-red-500 transition w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center">
-                    <i class="fa-solid fa-xmark text-lg"></i>
+                <button onclick="closeCheckModal()" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-[#2C2C2E] flex items-center justify-center text-gray-500 hover:text-red-500 transition-colors shadow-sm">
+                    <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="check-items-list"></div>
 
-            <div id="fix-section" class="hidden mt-6 pt-6 border-t border-gray-50 dark:border-gray-700/50 animate-fade-in">
-                <div class="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-xl mb-4 flex items-start gap-3 border border-orange-100 dark:border-orange-900/30">
-                    <i class="fa-solid fa-screwdriver-wrench text-orange-500 mt-0.5"></i>
-                    <p class="text-[11px] text-orange-700 dark:text-orange-400 font-bold leading-relaxed">检测到部分关键数据表或字段缺失。<br>系统已自动为您原地重建并修复完毕，历史数据未受影响。</p>
+            <div id="fix-section" class="hidden mt-8 pt-6 border-t border-gray-100 dark:border-white/5 animate-fade-in">
+                <div class="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-2xl mb-5 flex items-start gap-3 border border-orange-200/60 dark:border-orange-900/30 shadow-sm">
+                    <i class="fa-solid fa-screwdriver-wrench text-orange-500 mt-1"></i>
+                    <p class="text-[12px] text-orange-700 dark:text-orange-400 font-bold leading-relaxed">检测到部分关键数据表或字段缺失。<br>系统已自动为您原地重建并修复完毕，历史数据未受影响。</p>
                 </div>
-                <button onclick="closeCheckModal()" class="w-full py-3 bg-gray-800 hover:bg-black dark:bg-gray-700 dark:hover:bg-gray-600 text-white rounded-xl font-black text-sm shadow-md transition active:scale-[0.98]">
+                <button onclick="closeCheckModal()" class="w-full py-3.5 bg-gray-900 hover:bg-black dark:bg-gray-200 dark:hover:bg-white text-white dark:text-black rounded-[14px] font-bold text-[13px] shadow-md transition active:scale-[0.98]">
                     我知道了
                 </button>
             </div>
 
-            <div id="healthy-section" class="hidden mt-6 text-center py-4 animate-fade-in">
-                <div class="w-14 h-14 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3 border border-emerald-100 dark:border-emerald-800">
-                    <i class="fa-solid fa-check text-2xl"></i>
+            <div id="healthy-section" class="hidden mt-8 pt-4 pb-2 text-center animate-fade-in">
+                <div class="w-16 h-16 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100 dark:border-emerald-800 shadow-sm">
+                    <i class="fa-solid fa-check text-3xl"></i>
                 </div>
-                <p class="text-sm font-black text-emerald-600 dark:text-emerald-400">8 大核心数据表结构完整，极度健康！</p>
+                <p class="text-[14px] font-black text-emerald-600 dark:text-emerald-400 tracking-wide">8 大核心数据表结构完整，极度健康！</p>
             </div>
         </div>
     </div>
 </div>
 
-<div id="settings-toast" class="fixed top-10 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-2xl border backdrop-blur-xl flex items-center gap-2 font-bold transition-all duration-300 transform -translate-y-20 opacity-0 pointer-events-none text-sm">
+<div id="settings-toast" class="fixed top-10 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-xl border backdrop-blur-2xl flex items-center gap-2 font-bold transition-all duration-400 transform -translate-y-20 opacity-0 pointer-events-none text-[13px]">
     <span id="settings-toast-msg"></span>
 </div>
 
@@ -263,7 +304,6 @@ async function loadSettings() {
         document.getElementById('moviepilot_token').value = d.moviepilot_token || '';
         document.getElementById('pulse_url').value = d.pulse_url || '';
 
-        // 🔥 注入点：双擎模式开关回显
         const mode = d.playback_data_mode || 'sqlite';
         const radio = document.querySelector(`input[name="playback_data_mode"][value="${mode}"]`);
         if (radio) radio.checked = true;
@@ -282,10 +322,10 @@ function renderHiddenUsers() {
         const name = user ? user.UserName : uid;
         
         const tag = document.createElement('div');
-        tag.className = 'flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-gray-700 rounded-md text-xs font-bold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600';
+        tag.className = 'flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-[#2C2C2E] rounded-lg text-[11px] font-bold text-gray-700 dark:text-gray-300 border border-transparent dark:border-white/5 shadow-sm';
         tag.innerHTML = `
             <span>${name}</span>
-            <button onclick="removeHiddenUser('${uid}')" class="text-gray-400 hover:text-red-500 focus:outline-none">
+            <button onclick="removeHiddenUser('${uid}')" class="text-gray-400 hover:text-red-500 focus:outline-none transition-colors">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         `;
@@ -324,9 +364,9 @@ function showToast(msg, type = 'success') {
     toast.className = toast.className.replace(/bg-white.*?border-\w+-300 text-\w+-600/g, '');
     
     if (type === 'success') {
-        toast.classList.add('bg-white/90', 'dark:bg-zinc-800/90', 'border-green-300', 'text-green-600', 'dark:border-green-500/30', 'dark:text-green-400');
+        toast.classList.add('bg-white/95', 'dark:bg-[#2C2C2E]/95', 'border-green-200', 'text-green-600', 'dark:border-white/10', 'dark:text-green-400');
     } else {
-        toast.classList.add('bg-white/90', 'dark:bg-zinc-800/90', 'border-red-300', 'text-red-600', 'dark:border-red-500/30', 'dark:text-red-400');
+        toast.classList.add('bg-white/95', 'dark:bg-[#2C2C2E]/95', 'border-red-200', 'text-red-600', 'dark:border-white/10', 'dark:text-red-400');
     }
     
     toast.classList.remove('-translate-y-20', 'opacity-0');
@@ -351,7 +391,6 @@ async function saveSettings() {
         moviepilot_url: document.getElementById('moviepilot_url').value,
         moviepilot_token: document.getElementById('moviepilot_token').value,
         pulse_url: document.getElementById('pulse_url').value,
-        // 🔥 注入点：获取当前选中的双擎模式
         playback_data_mode: document.querySelector('input[name="playback_data_mode"]:checked')?.value || 'sqlite'
     };
 
@@ -373,15 +412,15 @@ async function saveSettings() {
         
         icon.className = "fa-solid fa-check";
         textSpan.textContent = "保存成功";
-        btnBtn.classList.replace('bg-indigo-600', 'bg-emerald-500');
-        btnBtn.classList.replace('hover:bg-indigo-700', 'hover:bg-emerald-600');
+        btnBtn.classList.replace('bg-brand-500', 'bg-emerald-500');
+        btnBtn.classList.replace('hover:bg-brand-600', 'hover:bg-emerald-600');
         showToast('设置保存成功', 'success');
         
         setTimeout(() => {
             icon.className = "fa-solid fa-floppy-disk";
             textSpan.textContent = "保存配置";
-            btnBtn.classList.replace('bg-emerald-500', 'bg-indigo-600');
-            btnBtn.classList.replace('hover:bg-emerald-600', 'hover:bg-indigo-700');
+            btnBtn.classList.replace('bg-emerald-500', 'bg-brand-500');
+            btnBtn.classList.replace('hover:bg-emerald-600', 'hover:bg-brand-600');
             btnBtn.disabled = false;
         }, 1500);
         
@@ -432,18 +471,9 @@ async function testMPConnection(btn) {
     }
 }
 
-async function testTMDB() {
-    showToast('正在测试 TMDB 连通性...', 'info');
-    try {
-        const res = await fetch('/api/settings/test_tmdb', {method:'POST'});
-        const d = await res.json();
-        showToast(d.message, d.status === 'success' ? 'success' : 'error');
-    } catch(e) { showToast('测试失败', 'error'); }
-}
-
 async function runHealthCheck(btn) {
     const originalHtml = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> 全面体检中...';
+    btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> 全库体检中...';
     btn.disabled = true;
 
     try {
@@ -452,7 +482,6 @@ async function runHealthCheck(btn) {
         const fixSection = document.getElementById('fix-section');
         const healthySection = document.getElementById('healthy-section');
         
-        // 映射后端的 8 大核心组件
         const items = [
             { id: 'playback', name: '播放活动引擎', keys: ['播放活动'] },
             { id: 'users', name: '用户数据中心', keys: ['用户元数据'] },
@@ -463,34 +492,29 @@ async function runHealthCheck(btn) {
             { id: 'gaps', name: '缺集扫描组件', keys: ['缺集记录'] }
         ];
         
-        // 渲染骨架屏 (Spinners)
         listContainer.innerHTML = items.map(item => `
-            <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700/50">
-                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2"><i class="fa-solid fa-database text-gray-400"></i> ${item.name}</span>
-                <i class="fa-solid fa-circle-notch fa-spin text-indigo-500" id="check-icon-${item.id}"></i>
+            <div class="flex items-center justify-between p-3.5 bg-gray-50 dark:bg-[#2C2C2E] rounded-xl border border-gray-100 dark:border-white/5 shadow-sm">
+                <span class="text-[12px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2"><i class="fa-solid fa-database text-gray-400"></i> ${item.name}</span>
+                <i class="fa-solid fa-circle-notch fa-spin text-indigo-500 text-sm" id="check-icon-${item.id}"></i>
             </div>
         `).join('');
 
-        // 触发展开全库体检与自动修复接口
         const checkRes = await fetch('/api/settings/fix_db', { method: 'POST' });
         const checkJson = await checkRes.json();
         const msg = checkJson.message || "";
         
         let anyFixed = false;
 
-        // 假装扫描的延迟动画效果 (让用户感觉在深度扫描)
         setTimeout(() => {
             items.forEach(item => {
-                // 如果后端的反馈信息里包含了这个组件的关键词，说明它被修复了
                 const wasFixed = item.keys.some(k => msg.includes(k));
                 if (wasFixed) anyFixed = true;
                 
                 document.getElementById(`check-icon-${item.id}`).outerHTML = wasFixed 
-                    ? '<span class="text-[10px] bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-md font-black border border-orange-200 dark:border-orange-500/30 shadow-sm">已自动修复</span>'
-                    : '<i class="fa-solid fa-circle-check text-emerald-500 text-lg"></i>';
+                    ? '<span class="text-[10px] bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded font-black border border-orange-200 dark:border-orange-500/30 shadow-sm">已自动修复</span>'
+                    : '<i class="fa-solid fa-circle-check text-emerald-500 text-lg shadow-sm rounded-full"></i>';
             });
 
-            // 根据是否发生了修复，显示不同的结果版块
             if (anyFixed) {
                 fixSection.classList.remove('hidden');
                 healthySection.classList.add('hidden');
@@ -498,28 +522,13 @@ async function runHealthCheck(btn) {
                 fixSection.classList.add('hidden');
                 healthySection.classList.remove('hidden');
             }
-        }, 800);
+        }, 1200);
 
     } catch (e) {
         showToast('体检异常', 'error');
     } finally {
         btn.innerHTML = originalHtml;
         btn.disabled = false;
-    }
-}
-
-async function executeDatabaseFix(btn) {
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> 正在修复结构...';
-    btn.disabled = true;
-
-    try {
-        const res = await fetch('/api/settings/fix_db', { method: 'POST' });
-        const data = await res.json();
-        showToast(data.message, 'success');
-        setTimeout(() => { closeCheckModal(); }, 1000);
-    } catch (e) {
-        showToast('修复失败', 'error');
     }
 }
 
@@ -537,10 +546,4 @@ function closeCheckModal() {
     setTimeout(() => { m.classList.add('hidden'); m.classList.remove('flex'); }, 300);
 }
 </script>
-
-<style>
-.custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
-</style>
 {% endblock %}
