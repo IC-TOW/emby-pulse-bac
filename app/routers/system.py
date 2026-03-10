@@ -95,19 +95,66 @@ def api_fix_db(request: Request):
     import os
     if not os.path.exists(DB_PATH): return {"status": "error", "message": "数据库不存在"}
     try:
-        conn = sqlite3.connect(DB_PATH); c = conn.cursor(); results = []
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        results = []
+
+        # 1. 播放记录表
+        try: c.execute("SELECT 1 FROM PlaybackActivity LIMIT 1")
+        except sqlite3.OperationalError:
+            c.execute('''CREATE TABLE IF NOT EXISTS PlaybackActivity (Id INTEGER PRIMARY KEY AUTOINCREMENT, UserId TEXT, UserName TEXT, ItemId TEXT, ItemName TEXT, PlayDuration INTEGER, DateCreated DATETIME DEFAULT CURRENT_TIMESTAMP, Client TEXT, DeviceName TEXT)''')
+            results.append("已修复: 播放活动主表")
+
+        # 2. 用户元数据表
+        try: c.execute("SELECT 1 FROM users_meta LIMIT 1")
+        except sqlite3.OperationalError:
+            c.execute('''CREATE TABLE IF NOT EXISTS users_meta (user_id TEXT PRIMARY KEY, expire_date TEXT, note TEXT, created_at TEXT)''')
+            results.append("已修复: 用户元数据表")
+
+        # 3. 邀请码表 (含字段升级检测)
+        try: 
+            c.execute("SELECT 1 FROM invitations LIMIT 1")
+            try: c.execute("SELECT template_user_id FROM invitations LIMIT 1")
+            except sqlite3.OperationalError:
+                c.execute("ALTER TABLE invitations ADD COLUMN template_user_id TEXT")
+                results.append("已升级: 邀请码模板字段")
+        except sqlite3.OperationalError:
+            c.execute('''CREATE TABLE IF NOT EXISTS invitations (code TEXT PRIMARY KEY, days INTEGER, used_count INTEGER DEFAULT 0, max_uses INTEGER DEFAULT 1, created_at TEXT, used_at DATETIME, used_by TEXT, status INTEGER DEFAULT 0, template_user_id TEXT)''')
+            results.append("已修复: 邀请码表")
+
+        # 4. 追剧日历缓存表
+        try: c.execute("SELECT 1 FROM tv_calendar_cache LIMIT 1")
+        except sqlite3.OperationalError:
+            c.execute('''CREATE TABLE IF NOT EXISTS tv_calendar_cache (id TEXT PRIMARY KEY, series_id TEXT, season INTEGER, episode INTEGER, air_date TEXT, status TEXT, data_json TEXT)''')
+            results.append("已修复: 追剧日历缓存表")
+
+        # 5. 求片主表
         try: c.execute("SELECT 1 FROM media_requests LIMIT 1")
         except sqlite3.OperationalError:
             c.execute('''CREATE TABLE IF NOT EXISTS media_requests (tmdb_id INTEGER, media_type TEXT, title TEXT, year TEXT, poster_path TEXT, status INTEGER DEFAULT 0, season INTEGER DEFAULT 0, reject_reason TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tmdb_id, season))''')
             results.append("已修复: 求片主表")
+
+        # 6. 求片关联表
         try: c.execute("SELECT 1 FROM request_users LIMIT 1")
         except sqlite3.OperationalError:
             c.execute('''CREATE TABLE IF NOT EXISTS request_users (id INTEGER PRIMARY KEY AUTOINCREMENT, tmdb_id INTEGER, user_id TEXT, username TEXT, season INTEGER DEFAULT 0, requested_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(tmdb_id, user_id, season))''')
             results.append("已修复: 求片关联表")
+
+        # 7. 盘点忽略表
         try: c.execute("SELECT 1 FROM insight_ignores LIMIT 1")
         except sqlite3.OperationalError:
             c.execute('''CREATE TABLE IF NOT EXISTS insight_ignores (item_id TEXT PRIMARY KEY, item_name TEXT, ignored_at DATETIME DEFAULT CURRENT_TIMESTAMP)''')
             results.append("已修复: 盘点忽略表")
-        conn.commit(); conn.close()
-        return {"status": "success", "message": f"修复完成: {', '.join(results)}" if results else "数据库结构完整健康，无需修复！"}
-    except Exception as e: return {"status": "error", "message": f"修复严重错误: {e}"}
+
+        # 8. 缺集记录表
+        try: c.execute("SELECT 1 FROM gap_records LIMIT 1")
+        except sqlite3.OperationalError:
+            c.execute('''CREATE TABLE IF NOT EXISTS gap_records (id INTEGER PRIMARY KEY AUTOINCREMENT, series_id TEXT, series_name TEXT, season_number INTEGER, episode_number INTEGER, status INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(series_id, season_number, episode_number))''')
+            results.append("已修复: 缺集记录表")
+
+        conn.commit()
+        conn.close()
+        
+        return {"status": "success", "message": f"修复完成: {', '.join(results)}" if results else "数据库8大核心表结构完整健康，无需修复！"}
+    except Exception as e: 
+        return {"status": "error", "message": f"修复严重错误: {e}"}
