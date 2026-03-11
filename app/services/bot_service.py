@@ -482,7 +482,7 @@ class NotificationBot:
         except Exception as e: 
             logger.error(f"登录通知组装异常: {e}")
 
-    # 🔥 史诗级重构：精准识别删除类型、SxxExx 组装、与父级海报溯源兜底
+# 🔥 史诗级重构：精准识别删除类型、SxxExx 组装、与 TMDB 云端海报溯源兜底
     def on_item_deleted(self, data):
         if not cfg.get("notify_item_deleted"): return
         try:
@@ -507,7 +507,6 @@ class NotificationBot:
                 del_type = "整剧"
             elif raw_type == "Season":
                 del_type = "整季"
-                # 有些老版本删季的时候把季数放到了 IndexNumber 里
                 s_num = ep_num if ep_num is not None else season_num
                 title = f"{series_name or title} - 第 {s_num} 季" if s_num else f"{series_name or title}"
             elif raw_type == "Episode" or (series_name and ep_num is not None):
@@ -529,7 +528,28 @@ class NotificationBot:
             if not primary_io and not backdrop_io and item.get("SeriesId"):
                 primary_io = self._download_emby_image(item.get("SeriesId"), 'Primary')
             
-            tg_img = primary_io or backdrop_io or REPORT_COVER_URL
+            # 3. 🔥 终极防裂图：绕开 Emby，直接向 TMDB 云端索要高清海报
+            tmdb_img_url = None
+            if not primary_io and not backdrop_io:
+                tmdb_id = item.get("ProviderIds", {}).get("Tmdb")
+                if not tmdb_id and item.get("SeriesProviderIds"):
+                    tmdb_id = item.get("SeriesProviderIds", {}).get("Tmdb")
+                    
+                tmdb_key = cfg.get("tmdb_api_key")
+                if tmdb_id and tmdb_key:
+                    try:
+                        m_type = "movie" if raw_type == "Movie" else "tv"
+                        req_url = f"https://api.themoviedb.org/3/{m_type}/{tmdb_id}?api_key={tmdb_key}"
+                        tmdb_res = requests.get(req_url, proxies=self._get_proxies(), timeout=5)
+                        if tmdb_res.status_code == 200:
+                            p_path = tmdb_res.json().get("poster_path")
+                            if p_path:
+                                tmdb_img_url = f"https://image.tmdb.org/t/p/w500{p_path}"
+                    except Exception as e:
+                        logger.error(f"TMDB 云端海报获取异常: {e}")
+            
+            # 优先级：Emby原生主图 -> Emby背景图 -> TMDB云端主图 -> 系统默认兜底图
+            tg_img = primary_io or backdrop_io or tmdb_img_url or REPORT_COVER_URL
             
             self.send_photo("sys_notify", tg_img, msg, platform="all", wecom_photo_io=tg_img)
         except Exception as e: 
