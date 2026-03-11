@@ -64,9 +64,9 @@ class SystemDaemon:
             bus.publish("notify.playback.start", data)
         elif "playback.stop" in event:
             bus.publish("notify.playback.stop", data)
-        elif "authentication" in event or "login" in event:
+        # 🔥 史诗级修复：把 authentication 缩短为 auth，完美匹配 Emby 的 user.authenticated
+        elif "auth" in event or "login" in event:
             bus.publish("notify.user.login", data)
-        # 🔥 增加兼容：防止 Jellyfin 发送的是 removed 而不是 deleted
         elif "deleted" in event or "removed" in event:
             bus.publish("notify.item.deleted", data)
 
