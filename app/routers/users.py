@@ -3,6 +3,8 @@ from pydantic import BaseModel
 from app.schemas.models import UserUpdateModel, NewUserModel, InviteGenModel, BatchActionModel
 from app.core.config import cfg
 from app.core.database import query_db
+# 🔥 引入核心适配器
+from app.core.media_adapter import media_api
 import requests
 import datetime
 import secrets
@@ -16,9 +18,6 @@ class InviteBatchModel(BaseModel):
 
 def check_expired_users():
     try:
-        key = cfg.get("emby_api_key")
-        host = cfg.get("emby_host")
-        if not key or not host: return
         rows = query_db("SELECT user_id, expire_date FROM users_meta WHERE expire_date IS NOT NULL")
         if not rows: return
         now_str = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -27,43 +26,41 @@ def check_expired_users():
             if row['expire_date'] < now_str: 
                 uid = row['user_id']
                 try:
-                    u_res = requests.get(f"{host}/emby/Users/{uid}?api_key={key}", timeout=5)
+                    # 🚀 替换为 media_api
+                    u_res = media_api.get(f"/Users/{uid}", timeout=5)
                     if u_res.status_code == 200:
                         user = u_res.json()
                         policy = user.get('Policy', {})
                         if not policy.get('IsDisabled', False):
                             print(f"🚫 账号已过期: {user.get('Name')} (到期日: {row['expire_date']})")
                             policy['IsDisabled'] = True
-                            requests.post(f"{host}/emby/Users/{uid}/Policy?api_key={key}", json=policy)
+                            media_api.post(f"/Users/{uid}/Policy", json=policy)
                 except Exception as e: pass
     except Exception as e: pass
 
 @router.get("/api/manage/libraries")
 def api_get_libraries(request: Request):
     if not request.session.get("user"): return {"status": "error"}
-    key = cfg.get("emby_api_key")
-    host = cfg.get("emby_host")
     try:
-        res = requests.get(f"{host}/emby/Library/VirtualFolders?api_key={key}", timeout=5)
+        # 🚀 极其清爽的路径请求，不关心 Token，不关心前缀
+        res = media_api.get("/Library/VirtualFolders", timeout=5)
         if res.status_code == 200:
             libs = [{"Id": item["Guid"], "Name": item["Name"]} for item in res.json() if "Guid" in item]
             return {"status": "success", "data": libs}
-        return {"status": "error", "message": "Emby API 返回异常"}
+        return {"status": "error", "message": "媒体服务器 API 返回异常"}
     except Exception as e: return {"status": "error", "message": str(e)}
 
 @router.get("/api/manage/users")
 def api_manage_users(request: Request):
     if not request.session.get("user"): return {"status": "error"}
-    
     check_expired_users()
-    key = cfg.get("emby_api_key")
-    host = cfg.get("emby_host")
-    public_host = cfg.get("emby_public_host") or host
+    
+    public_host = cfg.get("emby_public_host") or cfg.get("emby_host", "")
     if public_host.endswith('/'): public_host = public_host[:-1]
     
     try:
-        res = requests.get(f"{host}/emby/Users?api_key={key}", timeout=5)
-        if res.status_code != 200: return {"status": "error", "message": "Emby 无法连接"}
+        res = media_api.get("/Users", timeout=5)
+        if res.status_code != 200: return {"status": "error", "message": "媒体服务器无法连接"}
         
         emby_users = res.json()
         meta_rows = query_db("SELECT * FROM users_meta")
@@ -99,10 +96,8 @@ def api_manage_users(request: Request):
 @router.get("/api/manage/user/{user_id}")
 def api_get_single_user(user_id: str, request: Request):
     if not request.session.get("user"): return {"status": "error"}
-    key = cfg.get("emby_api_key")
-    host = cfg.get("emby_host")
     try:
-        res = requests.get(f"{host}/emby/Users/{user_id}?api_key={key}", timeout=5)
+        res = media_api.get(f"/Users/{user_id}", timeout=5)
         if res.status_code == 200:
             user_data = res.json()
             policy = user_data.get('Policy', {})
@@ -125,20 +120,20 @@ def api_get_single_user(user_id: str, request: Request):
 
 @router.get("/api/user/image/{user_id}")
 def get_user_avatar(user_id: str):
-    key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
     try:
-        res = requests.get(f"{host}/emby/Users/{user_id}/Images/Primary?api_key={key}&quality=90", timeout=5)
-        if res.status_code == 200: return Response(content=res.content, media_type="image/jpeg", headers={"Cache-Control": "no-cache"})
+        res = media_api.get(f"/Users/{user_id}/Images/Primary", params={"quality": 90}, timeout=5, stream=True)
+        if res.status_code == 200: 
+            return Response(content=res.content, media_type="image/jpeg", headers={"Cache-Control": "no-cache"})
         return Response(status_code=404)
     except: return Response(status_code=404)
 
 @router.post("/api/manage/user/image")
 async def api_update_user_image(request: Request, user_id: str = Form(...), url: str = Form(None), file: UploadFile = File(None)):
     if not request.session.get("user"): return {"status": "error"}
-    key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
     try:
         img_data = None; c_type = "image/png"
         if url:
+            # 下载外部图片依然用原生 requests (因为这不是发给媒体库的请求)
             d_res = requests.get(url, timeout=10)
             if d_res.status_code == 200: 
                 img_data = d_res.content
@@ -149,8 +144,9 @@ async def api_update_user_image(request: Request, user_id: str = Form(...), url:
             
         if not img_data: return {"status": "error", "message": "无图片数据"}
         b64 = base64.b64encode(img_data)
-        requests.delete(f"{host}/emby/Users/{user_id}/Images/Primary?api_key={key}")
-        requests.post(f"{host}/emby/Users/{user_id}/Images/Primary?api_key={key}", data=b64, headers={"Content-Type": c_type})
+        
+        media_api.delete(f"/Users/{user_id}/Images/Primary")
+        media_api.post(f"/Users/{user_id}/Images/Primary", data=b64, headers={"Content-Type": c_type})
         return {"status": "success"}
     except Exception as e: return {"status": "error", "message": str(e)}
 
@@ -189,7 +185,6 @@ def api_manage_invites_batch(data: InviteBatchModel, request: Request):
 @router.post("/api/manage/user/update")
 def api_manage_user_update(data: UserUpdateModel, request: Request):
     if not request.session.get("user"): return {"status": "error"}
-    key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
     try:
         if data.expire_date is not None:
             v = data.expire_date if data.expire_date else None
@@ -198,9 +193,9 @@ def api_manage_user_update(data: UserUpdateModel, request: Request):
             else: query_db("INSERT INTO users_meta (user_id, expire_date, created_at) VALUES (?, ?, ?)", (data.user_id, v, datetime.datetime.now().isoformat()))
         
         if data.password:
-            requests.post(f"{host}/emby/Users/{data.user_id}/Password?api_key={key}", json={"Id": data.user_id, "NewPw": data.password})
+            media_api.post(f"/Users/{data.user_id}/Password", json={"Id": data.user_id, "NewPw": data.password})
 
-        p_res = requests.get(f"{host}/emby/Users/{data.user_id}?api_key={key}")
+        p_res = media_api.get(f"/Users/{data.user_id}")
         if p_res.status_code == 200:
             p = p_res.json().get('Policy', {})
             
@@ -214,14 +209,13 @@ def api_manage_user_update(data: UserUpdateModel, request: Request):
             if data.excluded_sub_folders is not None:
                 p['ExcludedSubFolders'] = data.excluded_sub_folders
                 
-            # 🔥 强制同步连带权限
             if data.enable_downloading is not None: 
                 p['EnableContentDownloading'] = data.enable_downloading
-                p['EnableSyncTranscoding'] = data.enable_downloading # 同步开启/关闭下载转码
+                p['EnableSyncTranscoding'] = data.enable_downloading 
                 
             if data.enable_video_transcoding is not None: 
                 p['EnableVideoPlaybackTranscoding'] = data.enable_video_transcoding
-                p['EnablePlaybackRemuxing'] = data.enable_video_transcoding # 同步开启/关闭容器更改
+                p['EnablePlaybackRemuxing'] = data.enable_video_transcoding 
                 
             if data.enable_audio_transcoding is not None: 
                 p['EnableAudioPlaybackTranscoding'] = data.enable_audio_transcoding
@@ -231,7 +225,7 @@ def api_manage_user_update(data: UserUpdateModel, request: Request):
                 else: p['MaxParentalRating'] = data.max_parental_rating
 
             for k in ['BlockedMediaFolders','BlockedChannels','EnableAllChannels','EnabledChannels','BlockedTags','AllowedTags']: p.pop(k, None)
-            requests.post(f"{host}/emby/Users/{data.user_id}/Policy?api_key={key}", json=p, headers={"Content-Type": "application/json", "X-Emby-Token": key})
+            media_api.post(f"/Users/{data.user_id}/Policy", json=p)
             
         return {"status": "success", "message": "用户信息已更新"}
     except Exception as e: return {"status": "error", "message": str(e)}
@@ -239,26 +233,24 @@ def api_manage_user_update(data: UserUpdateModel, request: Request):
 @router.post("/api/manage/user/new")
 def api_manage_user_new(data: NewUserModel, request: Request):
     if not request.session.get("user"): return {"status": "error"}
-    key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
     try:
-        res = requests.post(f"{host}/emby/Users/New?api_key={key}", json={"Name": data.name})
+        res = media_api.post("/Users/New", json={"Name": data.name})
         if res.status_code != 200: return {"status": "error", "message": f"创建失败: {res.text}"}
         new_id = res.json()['Id']
         
         if data.password: 
-            requests.post(f"{host}/emby/Users/{new_id}/Password?api_key={key}", json={"Id": new_id, "NewPw": data.password})
+            media_api.post(f"/Users/{new_id}/Password", json={"Id": new_id, "NewPw": data.password})
         
-        p = requests.get(f"{host}/emby/Users/{new_id}?api_key={key}").json().get('Policy', {})
+        p = media_api.get(f"/Users/{new_id}").json().get('Policy', {})
         
         if data.template_user_id:
-            src = requests.get(f"{host}/emby/Users/{data.template_user_id}?api_key={key}").json().get('Policy', {})
+            src = media_api.get(f"/Users/{data.template_user_id}").json().get('Policy', {})
             
             if data.copy_library:
                 p['EnableAllFolders'] = src.get('EnableAllFolders', True)
                 p['EnabledFolders'] = src.get('EnabledFolders', [])
                 p['ExcludedSubFolders'] = src.get('ExcludedSubFolders', [])
             
-            # 🔥 拷贝策略时加入子权限
             if data.copy_policy:
                 p['EnableContentDownloading'] = src.get('EnableContentDownloading', True)
                 p['EnableSyncTranscoding'] = src.get('EnableSyncTranscoding', True)
@@ -271,7 +263,7 @@ def api_manage_user_new(data: NewUserModel, request: Request):
                 else: p.pop('MaxParentalRating', None)
             
         for k in ['BlockedMediaFolders','BlockedChannels','EnableAllChannels','EnabledChannels']: p.pop(k, None)
-        requests.post(f"{host}/emby/Users/{new_id}/Policy?api_key={key}", json=p, headers={"X-Emby-Token": key})
+        media_api.post(f"/Users/{new_id}/Policy", json=p)
         
         if data.expire_date: 
             query_db("INSERT INTO users_meta (user_id, expire_date, created_at) VALUES (?, ?, ?)", (new_id, data.expire_date, datetime.datetime.now().isoformat()))
@@ -281,8 +273,7 @@ def api_manage_user_new(data: NewUserModel, request: Request):
 @router.delete("/api/manage/user/{user_id}")
 def api_manage_user_delete(user_id: str, request: Request):
     if not request.session.get("user"): return {"status": "error"}
-    key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
-    if requests.delete(f"{host}/emby/Users/{user_id}?api_key={key}").status_code in [200, 204]:
+    if media_api.delete(f"/Users/{user_id}").status_code in [200, 204]:
         query_db("DELETE FROM users_meta WHERE user_id = ?", (user_id,))
         return {"status": "success"}
     return {"status": "error"}
@@ -290,13 +281,11 @@ def api_manage_user_delete(user_id: str, request: Request):
 @router.post("/api/manage/users/batch")
 def api_manage_users_batch(data: BatchActionModel, request: Request):
     if not request.session.get("user"): return {"status": "error"}
-    key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
     
     try:
-        # 🔥 如果是套用模板操作，先获取一次模板用户的完整 Policy
         src_policy = {}
         if data.action == "apply_template" and data.value:
-            src_res = requests.get(f"{host}/emby/Users/{data.value}?api_key={key}", timeout=5)
+            src_res = media_api.get(f"/Users/{data.value}", timeout=5)
             if src_res.status_code == 200:
                 src_policy = src_res.json().get('Policy', {})
             else:
@@ -304,17 +293,17 @@ def api_manage_users_batch(data: BatchActionModel, request: Request):
 
         for uid in data.user_ids:
             if data.action == "delete":
-                requests.delete(f"{host}/emby/Users/{uid}?api_key={key}")
+                media_api.delete(f"/Users/{uid}")
                 query_db("DELETE FROM users_meta WHERE user_id = ?", (uid,))
             
             elif data.action in ["enable", "disable"]:
-                p_res = requests.get(f"{host}/emby/Users/{uid}?api_key={key}", timeout=5)
+                p_res = media_api.get(f"/Users/{uid}", timeout=5)
                 if p_res.status_code == 200:
                     p = p_res.json().get('Policy', {})
                     p['IsDisabled'] = (data.action == "disable")
                     if data.action == "enable": p['LoginAttemptsBeforeLockout'] = -1
                     for k in ['BlockedMediaFolders','BlockedChannels','EnableAllChannels','EnabledChannels','BlockedTags','AllowedTags']: p.pop(k, None)
-                    requests.post(f"{host}/emby/Users/{uid}/Policy?api_key={key}", json=p, headers={"Content-Type": "application/json", "X-Emby-Token": key})
+                    media_api.post(f"/Users/{uid}/Policy", json=p)
             
             elif data.action == "renew":
                 new_date = None
@@ -335,9 +324,8 @@ def api_manage_users_batch(data: BatchActionModel, request: Request):
                 if exist: query_db("UPDATE users_meta SET expire_date = ? WHERE user_id = ?", (new_date, uid))
                 else: query_db("INSERT INTO users_meta (user_id, expire_date, created_at) VALUES (?, ?, ?)", (uid, new_date, datetime.datetime.now().isoformat()))
             
-            # 🔥 新增：执行模板数据融合
             elif data.action == "apply_template":
-                p_res = requests.get(f"{host}/emby/Users/{uid}?api_key={key}", timeout=5)
+                p_res = media_api.get(f"/Users/{uid}", timeout=5)
                 if p_res.status_code == 200:
                     p = p_res.json().get('Policy', {})
                     
@@ -357,18 +345,16 @@ def api_manage_users_batch(data: BatchActionModel, request: Request):
                         if 'MaxParentalRating' in src_policy: p['MaxParentalRating'] = src_policy['MaxParentalRating']
                         else: p.pop('MaxParentalRating', None)
                     
-                    # 剥离多余冗余参数后提交
                     for k in ['BlockedMediaFolders','BlockedChannels','EnableAllChannels','EnabledChannels','BlockedTags','AllowedTags']: p.pop(k, None)
-                    requests.post(f"{host}/emby/Users/{uid}/Policy?api_key={key}", json=p, headers={"Content-Type": "application/json", "X-Emby-Token": key})
+                    media_api.post(f"/Users/{uid}/Policy", json=p)
 
         return {"status": "success", "message": f"成功操作了 {len(data.user_ids)} 个用户"}
     except Exception as e: return {"status": "error", "message": str(e)}
 
 @router.get("/api/users")
 def api_get_users():
-    key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
     try:
-        res = requests.get(f"{host}/emby/Users?api_key={key}", timeout=5)
+        res = media_api.get("/Users", timeout=5)
         if res.status_code == 200:
             hidden = cfg.get("hidden_users") or []
             data = [{"UserId": u['Id'], "UserName": u['Name'], "IsHidden": u['Id'] in hidden} for u in res.json()]

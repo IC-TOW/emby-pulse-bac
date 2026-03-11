@@ -20,6 +20,7 @@ class SettingsModel(BaseModel):
     pulse_url: Optional[str] = ""
     # 🔥 新增：双引擎模式开关
     playback_data_mode: Optional[str] = "sqlite"
+    server_type: str = "emby"
 
 class BotSettingsModel(BaseModel):
     tg_bot_token: str

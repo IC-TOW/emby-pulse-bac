@@ -54,11 +54,12 @@ DEFAULT_CONFIG = {
     "scheduled_tasks": [],
     "emby_public_url": "", 
     "welcome_message": "",
-    # 🔥 新增配置项注册 (解决保存后刷新为空的问题)
     "client_download_url": "",
     "moviepilot_url": "",
     "moviepilot_token": "",
-    "pulse_url": ""
+    "pulse_url": "",
+    # 🔥 新增：媒体服务器类型 (默认 emby，未来可选 jellyfin)
+    "server_type": "emby" 
 }
 
 class ConfigManager:
@@ -83,15 +84,12 @@ class ConfigManager:
             print(f"⚠️ Config Save Error: {e}")
 
     def get(self, key, default=None): 
-        # 兼容 dict.get 的用法
         return self.config.get(key, default if default is not None else DEFAULT_CONFIG.get(key))
     
     def __getitem__(self, key):
-        # 兼容 cfg['key'] 的用法
         return self.config.get(key, DEFAULT_CONFIG.get(key))
 
     def __setitem__(self, key, value):
-        # 兼容 cfg['key'] = value 的用法
         self.config[key] = value
         self.save()
 
@@ -108,6 +106,5 @@ SECRET_KEY = os.getenv("SECRET_KEY", "embypulse_secret_key_2026")
 PORT = 10307
 DB_PATH = os.getenv("DB_PATH", "/emby-data/playback_reporting.db")
 
-# 🔥🔥 核心修复：导出 save_config 供 system.py 调用
 def save_config():
     cfg.save()

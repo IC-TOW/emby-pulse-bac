@@ -2,6 +2,8 @@ from fastapi import APIRouter
 from typing import Optional
 from app.core.config import cfg
 from app.core.database import query_db, get_base_filter
+# 🔥 引入核心适配器
+from app.core.media_adapter import media_api
 import requests
 import re
 import datetime
@@ -13,9 +15,7 @@ router = APIRouter()
 def get_clean_name(item_name, item_type):
     if not item_name: return "未知内容"
     item_name = str(item_name)
-    
-    if str(item_type) != 'Episode':
-        return item_name.split(' - ')[0]
+    if str(item_type) != 'Episode': return item_name.split(' - ')[0]
 
     parts = [p.strip() for p in item_name.split(' - ')]
     series_name = parts[0]
@@ -25,21 +25,13 @@ def get_clean_name(item_name, item_type):
 
     for part in parts[1:]:
         m1 = re.search(r'(?:S|Season\s*)0*(\d+)', part, re.I)
-        if m1:
-            season_num = int(m1.group(1))
-            break
+        if m1: season_num = int(m1.group(1)); break
         m2 = re.search(r'第\s*(\d+)\s*季', part)
-        if m2:
-            season_num = int(m2.group(1))
-            break
+        if m2: season_num = int(m2.group(1)); break
         m3 = re.search(r'第\s*([一二三四五六七八九十]+)\s*季', part)
-        if m3:
-            season_num = cn_map.get(m3.group(1), 1)
-            break
+        if m3: season_num = cn_map.get(m3.group(1), 1); break
 
-    if season_num is not None:
-        return f"{series_name} - 第 {season_num} 季"
-
+    if season_num is not None: return f"{series_name} - 第 {season_num} 季"
     m_f1 = re.search(r'(?:S|Season\s*)0*(\d+)', item_name, re.I)
     if m_f1: return f"{series_name} - 第 {int(m_f1.group(1))} 季"
     m_f2 = re.search(r'第\s*([一二三四五六七八九十]+)\s*季', item_name)
@@ -49,17 +41,14 @@ def get_clean_name(item_name, item_type):
 
     return series_name
 
-# --- 🖼️ 海报溯源器 ---
 def resolve_poster_ids(items_list):
-    host = cfg.get("emby_host")
-    key = cfg.get("emby_api_key")
-    if not host or not key or not items_list: return
-    
+    if not items_list: return
     ids = ",".join(list(set([str(x['ItemId']) for x in items_list if x.get('ItemId')])))
     if not ids: return
     
     try:
-        res = requests.get(f"{host}/emby/Items?Ids={ids}&api_key={key}", timeout=5)
+        # 🚀 替换为 media_api
+        res = media_api.get("/Items", params={"Ids": ids}, timeout=5)
         if res.status_code == 200:
             emby_items = res.json().get("Items", [])
             id_map = {}
@@ -74,27 +63,25 @@ def resolve_poster_ids(items_list):
     except Exception: pass
 
 def get_admin_user_id():
-    key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
-    if key and host:
-        try:
-            res = requests.get(f"{host}/emby/Users?api_key={key}", timeout=5)
-            if res.status_code == 200:
-                users = res.json()
-                for u in users:
-                    if u.get("Policy", {}).get("IsAdministrator"): return u['Id']
-                if users: return users[0]['Id']
-        except: pass
+    try:
+        # 🚀 替换为 media_api
+        res = media_api.get("/Users", timeout=5)
+        if res.status_code == 200:
+            users = res.json()
+            for u in users:
+                if u.get("Policy", {}).get("IsAdministrator"): return u['Id']
+            if users: return users[0]['Id']
+    except: pass
     return None
 
 def get_user_map_local():
     user_map = {}
-    key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
-    if key and host:
-        try:
-            res = requests.get(f"{host}/emby/Users?api_key={key}", timeout=2)
-            if res.status_code == 200:
-                for u in res.json(): user_map[u['Id']] = u['Name']
-        except: pass
+    try:
+        # 🚀 替换为 media_api
+        res = media_api.get("/Users", timeout=2)
+        if res.status_code == 200:
+            for u in res.json(): user_map[u['Id']] = u['Name']
+    except: pass
     return user_map
 
 @router.get("/api/stats/dashboard")
@@ -106,26 +93,24 @@ def api_dashboard(user_id: Optional[str] = None):
         dur = query_db(f"SELECT SUM(PlayDuration) as c FROM PlaybackActivity {where}", params)[0]['c'] or 0
         base = {"total_plays": plays, "active_users": users, "total_duration": dur}
         lib = {"movie": 0, "series": 0, "episode": 0}
-        key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
-        if key and host:
-            try:
-                res = requests.get(f"{host}/emby/Items/Counts?api_key={key}", timeout=5)
-                if res.status_code == 200:
-                    d = res.json()
-                    lib = {"movie": d.get("MovieCount", 0), "series": d.get("SeriesCount", 0), "episode": d.get("EpisodeCount", 0)}
-            except: pass
+        
+        try:
+            # 🚀 替换为 media_api
+            res = media_api.get("/Items/Counts", timeout=5)
+            if res.status_code == 200:
+                d = res.json()
+                lib = {"movie": d.get("MovieCount", 0), "series": d.get("SeriesCount", 0), "episode": d.get("EpisodeCount", 0)}
+        except: pass
         return {"status": "success", "data": {**base, "library": lib}}
     except: return {"status": "error", "data": {"total_plays":0, "library": {}}}
 
 @router.get("/api/stats/libraries")
 def api_get_libraries():
-    key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
-    if not key or not host: return {"status": "error", "data": []}
     try:
         user_id = get_admin_user_id()
         if not user_id: return {"status": "error", "data": []}
-        url = f"{host}/emby/Users/{user_id}/Views?api_key={key}"
-        res = requests.get(url, timeout=10)
+        # 🚀 替换为 media_api
+        res = media_api.get(f"/Users/{user_id}/Views", timeout=10)
         if res.status_code == 200:
             return {"status": "success", "data": [{"Id": i.get("Id"), "Name": i.get("Name"), "CollectionType": i.get("CollectionType", "unknown"), "Type": i.get("Type")} for i in res.json().get("Items", [])]}
     except: pass
@@ -146,14 +131,12 @@ def api_recent_activity(user_id: Optional[str] = None):
 
 @router.get("/api/stats/latest")
 def api_latest_media(limit: int = 10):
-    key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
-    if not key or not host: return {"status": "error", "data": []}
     try:
         user_id = get_admin_user_id()
         if not user_id: return {"status": "error", "data": []}
-        url = f"{host}/emby/Users/{user_id}/Items/Latest"
-        params = {"Limit": 30, "MediaTypes": "Video", "Fields": "ProductionYear,CommunityRating,Path", "api_key": key}
-        res = requests.get(url, params=params, timeout=15)
+        # 🚀 替换为 media_api
+        params = {"Limit": 30, "MediaTypes": "Video", "Fields": "ProductionYear,CommunityRating,Path"}
+        res = media_api.get(f"/Users/{user_id}/Items/Latest", params=params, timeout=15)
         if res.status_code == 200:
             data = []
             for item in res.json():
@@ -166,10 +149,9 @@ def api_latest_media(limit: int = 10):
 
 @router.get("/api/stats/live")
 def api_live_sessions():
-    key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
-    if not key: return {"status": "error"}
     try:
-        res = requests.get(f"{host}/emby/Sessions?api_key={key}", timeout=5)
+        # 🚀 替换为 media_api
+        res = media_api.get("/Sessions", timeout=5)
         if res.status_code == 200: return {"status": "success", "data": [s for s in res.json() if s.get("NowPlayingItem")]}
     except: pass
     return {"status": "success", "data": []}
@@ -250,31 +232,28 @@ def api_user_details(user_id: Optional[str] = None):
             overview['avg_duration'] = round(overview['total_duration'] / overview['total_plays'])
             
         try:
-            host = cfg.get("emby_host")
-            key = cfg.get("emby_api_key")
-            if host and key:
-                if user_id and user_id != 'all':
-                    u_res = requests.get(f"{host}/emby/Users/{user_id}?api_key={key}", timeout=5)
-                    if u_res.status_code == 200:
-                        dc = u_res.json().get("DateCreated")
+            if user_id and user_id != 'all':
+                u_res = media_api.get(f"/Users/{user_id}", timeout=5)
+                if u_res.status_code == 200:
+                    dc = u_res.json().get("DateCreated")
+                    if dc:
+                        m = re.search(r'(\d{4})-(\d{2})-(\d{2})', str(dc))
+                        if m:
+                            fd = datetime.datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+                            overview['account_age_days'] = max(1, (datetime.datetime.now() - fd).days)
+            else:
+                u_res = media_api.get("/Users", timeout=5)
+                if u_res.status_code == 200:
+                    earliest_dt = None
+                    for u in u_res.json():
+                        dc = u.get("DateCreated")
                         if dc:
                             m = re.search(r'(\d{4})-(\d{2})-(\d{2})', str(dc))
                             if m:
-                                fd = datetime.datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
-                                overview['account_age_days'] = max(1, (datetime.datetime.now() - fd).days)
-                else:
-                    u_res = requests.get(f"{host}/emby/Users?api_key={key}", timeout=5)
-                    if u_res.status_code == 200:
-                        earliest_dt = None
-                        for u in u_res.json():
-                            dc = u.get("DateCreated")
-                            if dc:
-                                m = re.search(r'(\d{4})-(\d{2})-(\d{2})', str(dc))
-                                if m:
-                                    dt = datetime.datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
-                                    if not earliest_dt or dt < earliest_dt: earliest_dt = dt
-                        if earliest_dt:
-                            overview['account_age_days'] = max(1, (datetime.datetime.now() - earliest_dt).days)
+                                dt = datetime.datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+                                if not earliest_dt or dt < earliest_dt: earliest_dt = dt
+                    if earliest_dt:
+                        overview['account_age_days'] = max(1, (datetime.datetime.now() - earliest_dt).days)
         except Exception as e: pass
 
         try:
@@ -323,7 +302,6 @@ def api_chart_stats(user_id: Optional[str] = None, dimension: str = 'day'):
         return {"status": "success", "data": data}
     except: return {"status": "error", "data": {}}
 
-# 🔥 核心升级：报表数据源增强，加入情绪引擎所需数据
 @router.get("/api/stats/poster_data")
 def api_poster_data(user_id: Optional[str] = None, period: str = 'all'):
     try:
@@ -348,18 +326,15 @@ def api_poster_data(user_id: Optional[str] = None, period: str = 'all'):
                 row_dict = dict(row)
                 total_plays += 1; dur = row_dict['PlayDuration'] or 0; total_duration += dur
                 
-                # 统计每日时长
                 dc = row_dict.get('DateCreated', '')
                 if dc:
                     day_str = dc[:10]
                     daily_duration[day_str] += dur
                     
-                    # 抓取深夜刺客 (01:00 - 05:00)
                     m = re.search(r'T(\d{2}):(\d{2}):(\d{2})', dc)
                     if m:
                         hour = int(m.group(1))
                         if 1 <= hour <= 5:
-                            # 找最晚的那条 (最接近5点)
                             if hour > late_night_hour:
                                 late_night_hour = hour
                                 late_night_record = {
@@ -372,24 +347,18 @@ def api_poster_data(user_id: Optional[str] = None, period: str = 'all'):
                 if clean not in aggregated: aggregated[clean] = {'ItemName': clean, 'ItemId': row_dict['ItemId'], 'Count': 0, 'Duration': 0}
                 aggregated[clean]['Count'] += 1; aggregated[clean]['Duration'] += dur
                 
-        # 计算沉迷时刻
         binge_day = None
         if daily_duration:
             max_day = max(daily_duration, key=daily_duration.get)
             max_dur = daily_duration[max_day]
-            if max_dur > 3600: # 至少得看一小时才叫沉迷
-                binge_day = {
-                    "date": max_day[5:].replace('-', '月') + '日',
-                    "hours": round(max_dur / 3600, 1)
-                }
+            if max_dur > 3600:
+                binge_day = {"date": max_day[5:].replace('-', '月') + '日', "hours": round(max_dur / 3600, 1)}
                 
-        # 拉取流派 DNA
         genres = []
         try:
-            key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
-            if host and key and user_id and user_id != 'all':
-                g_url = f"{host}/emby/Users/{user_id}/Items?IncludeItemTypes=Movie,Series&Recursive=true&SortBy=DateCreated&SortOrder=Descending&Limit=100&Fields=Genres&api_key={key}"
-                g_res = requests.get(g_url, timeout=3).json()
+            if user_id and user_id != 'all':
+                # 🚀 替换为 media_api
+                g_res = media_api.get(f"/Users/{user_id}/Items", params={"IncludeItemTypes":"Movie,Series","Recursive":"true","SortBy":"DateCreated","SortOrder":"Descending","Limit":100,"Fields":"Genres"}, timeout=3).json()
                 genre_counts = defaultdict(int)
                 for i in g_res.get("Items", []):
                     for g in i.get("Genres", []): genre_counts[g] += 1
@@ -491,7 +460,7 @@ def api_badges(user_id: Optional[str] = None):
         badges = []
         if night_c >= 2: badges.append({"id": "night", "name": "深夜修仙", "icon": "fa-moon", "color": "text-indigo-500", "bg": "bg-indigo-100", "desc": "深夜是灵魂最自由的时刻"})
         if weekend_c >= 5: badges.append({"id": "weekend", "name": "周末狂欢", "icon": "fa-champagne-glasses", "color": "text-pink-500", "bg": "bg-pink-100", "desc": "工作日唯唯诺诺，周末重拳出击"})
-        if dur_total > 180000: badges.append({"id": "liver", "name": "Emby肝帝", "icon": "fa-fire", "color": "text-red-500", "bg": "bg-red-100", "desc": "阅片无数，肝度爆表"})
+        if dur_total > 180000: badges.append({"id": "liver", "name": "核心肝帝", "icon": "fa-fire", "color": "text-red-500", "bg": "bg-red-100", "desc": "阅片无数，肝度爆表"})
         if fish_c >= 5: badges.append({"id": "fish", "name": "带薪观影", "icon": "fa-fish", "color": "text-cyan-500", "bg": "bg-cyan-100", "desc": "工作是老板的，快乐是自己的"})
         if morning_c >= 2: badges.append({"id": "morning", "name": "晨练追剧", "icon": "fa-sun", "color": "text-amber-500", "bg": "bg-amber-100", "desc": "比你优秀的人，连看片都比你早"})
         if len(devices) >= 2: badges.append({"id": "device", "name": "全平台制霸", "icon": "fa-gamepad", "color": "text-emerald-500", "bg": "bg-emerald-100", "desc": "手机、平板、电视，哪里都能看"})

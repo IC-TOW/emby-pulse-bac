@@ -12,6 +12,7 @@ import time
 from app.core.config import cfg
 from app.core.database import query_db
 from app.routers.search import get_emby_sys_info, is_new_emby_router
+from app.core.media_adapter import media_api
 
 router = APIRouter(prefix="/api/gaps", tags=["gaps"])
 
@@ -28,10 +29,8 @@ def _get_proxies():
     return {"http": proxy, "https": proxy} if proxy else None
 
 def get_admin_user_id():
-    host = cfg.get("emby_host"); key = cfg.get("emby_api_key")
-    if not host or not key: return None
     try:
-        users = requests.get(f"{host}/emby/Users?api_key={key}", timeout=5).json()
+        users = media_api.get("/Users", timeout=5).json()
         for u in users:
             if u.get("Policy", {}).get("IsAdministrator"): return u['Id']
         return users[0]['Id'] if users else None
@@ -82,10 +81,11 @@ def process_single_series(series, lock_map, host, key, tmdb_key, proxies, today,
 
 def run_scan_task():
     try:
-        host = cfg.get("emby_host"); key = cfg.get("emby_api_key"); tmdb_key = cfg.get("tmdb_api_key"); admin_id = get_admin_user_id()
+        host = cfg.get("emby_host"); tmdb_key = cfg.get("tmdb_api_key"); admin_id = get_admin_user_id()
         proxies = _get_proxies(); today = datetime.now().strftime("%Y-%m-%d")
         try:
-            sys_info = requests.get(f"{host}/emby/System/Info/Public", timeout=5).json()
+            # 🚀 替换为 media_api
+            sys_info = media_api.get("/System/Info/Public", timeout=5).json()
             server_id = sys_info.get("Id", ""); use_new_route = is_new_emby_router(sys_info)
         except: server_id = ""; use_new_route = True
 
@@ -97,7 +97,8 @@ def run_scan_task():
         perfect_records = query_db("SELECT series_id FROM gap_perfect_series")
         perfect_set = set([r['series_id'] for r in perfect_records]) if perfect_records else set()
 
-        all_series = requests.get(f"{host}/emby/Users/{admin_id}/Items?IncludeItemTypes=Series&Recursive=true&Fields=ProviderIds&api_key={key}", timeout=15).json().get("Items", [])
+        # 🚀 替换为 media_api
+        all_series = media_api.get(f"/Users/{admin_id}/Items", params={"IncludeItemTypes":"Series","Recursive":"true","Fields":"ProviderIds"}, timeout=15).json().get("Items", [])
         pending_series = [s for s in all_series if s.get("Id") not in perfect_set]
 
         with state_lock:
@@ -108,7 +109,8 @@ def run_scan_task():
             with state_lock: scan_state["results"] = []
             return
 
-        all_eps_data = requests.get(f"{host}/emby/Users/{admin_id}/Items?IncludeItemTypes=Episode&Recursive=true&Fields=IndexNumberEnd&api_key={key}", timeout=45).json().get("Items", [])
+        # 🚀 替换为 media_api
+        all_eps_data = media_api.get(f"/Users/{admin_id}/Items", params={"IncludeItemTypes":"Episode","Recursive":"true","Fields":"IndexNumberEnd"}, timeout=45).json().get("Items", [])
         global_inventory = {}
         for ep in all_eps_data:
             ser_id = ep.get("SeriesId"); s_num = ep.get("ParentIndexNumber"); e_num = ep.get("IndexNumber"); e_end = ep.get("IndexNumberEnd")
@@ -162,10 +164,8 @@ def run_verify_task():
             if scan_state["is_scanning"] or not scan_state.get("results"): return
             results_copy = json.loads(json.dumps(scan_state["results"]))
             
-        host = cfg.get("emby_host")
-        key = cfg.get("emby_api_key")
         admin_id = get_admin_user_id()
-        if not host or not key or not admin_id: return
+        if not admin_id: return
         
         changed = False
         for s in results_copy:
@@ -173,7 +173,8 @@ def run_verify_task():
             if not s.get("gaps"): continue
             
             try:
-                eps_data = requests.get(f"{host}/emby/Users/{admin_id}/Items?ParentId={s_id}&IncludeItemTypes=Episode&Recursive=true&Fields=IndexNumberEnd&api_key={key}", timeout=5).json().get("Items", [])
+                # 🚀 替换为 media_api
+                eps_data = media_api.get(f"/Users/{admin_id}/Items", params={"ParentId":s_id,"IncludeItemTypes":"Episode","Recursive":"true","Fields":"IndexNumberEnd"}, timeout=5).json().get("Items", [])
                 local_eps = set()
                 for ep in eps_data:
                     s_num = ep.get("ParentIndexNumber")
@@ -293,7 +294,8 @@ def search_mp_for_gap(payload: dict):
     admin_id = get_admin_user_id(); genes = []
     if admin_id:
         try:
-            items = requests.get(f"{cfg.get('emby_host')}/emby/Users/{admin_id}/Items?ParentId={series_id}&IncludeItemTypes=Episode&Recursive=true&Limit=1&Fields=MediaSources&api_key={cfg.get('emby_api_key')}", timeout=5).json().get("Items", [])
+            # 🚀 替换为 media_api
+            items = media_api.get(f"/Users/{admin_id}/Items", params={"ParentId":series_id,"IncludeItemTypes":"Episode","Recursive":"true","Limit":1,"Fields":"MediaSources"}, timeout=5).json().get("Items", [])
             if items and items[0].get("MediaSources"):
                 v = next((s for s in items[0]["MediaSources"][0].get("MediaStreams", []) if s.get("Type") == "Video"), None)
                 if v:

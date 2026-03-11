@@ -4,6 +4,8 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from app.core.config import cfg
 from app.core.database import DB_PATH, query_db
+# 🔥 引入核心适配器
+from app.core.media_adapter import media_api
 
 router = APIRouter()
 
@@ -139,14 +141,12 @@ async def translate_task(data: TranslationModel, request: Request):
 @router.get("/api/tasks")
 async def get_tasks(request: Request):
     if not request.session.get("user"): return {"status": "error"}
-    host = cfg.get("emby_host")
-    key = cfg.get("emby_api_key")
     
     try:
-        res = requests.get(f"{host}/emby/ScheduledTasks?api_key={key}", timeout=5)
+        # 🚀 替换为 media_api
+        res = media_api.get("/ScheduledTasks", timeout=5)
         tasks = res.json()
         
-        # 拉取用户自己设置的别名
         custom_trans_rows = query_db("SELECT original_name, translated_name FROM task_translations")
         custom_dict = {r['original_name']: r['translated_name'] for r in custom_trans_rows} if custom_trans_rows else {}
         
@@ -155,27 +155,20 @@ async def get_tasks(request: Request):
             cat = t.get('Category', '未分类')
             orig_name = t.get('Name', '')
             
-            t['OriginalName'] = orig_name # 保留英文原名供后续查重
+            t['OriginalName'] = orig_name 
             
-            # 🔥 优先级：数据库别名 > 基础字典 > 英文原名
-            if orig_name in custom_dict:
-                t['Name'] = custom_dict[orig_name]
-            elif orig_name in COMMON_TASK_DICT:
-                t['Name'] = COMMON_TASK_DICT[orig_name]
+            if orig_name in custom_dict: t['Name'] = custom_dict[orig_name]
+            elif orig_name in COMMON_TASK_DICT: t['Name'] = COMMON_TASK_DICT[orig_name]
                 
             if cat not in groups: groups[cat] = []
             groups[cat].append(t)
             
         result = [{"title": k, "tasks": v} for k, v in groups.items()]
         
-        # 顺手把官方的大分类也汉化一下
         cat_trans = {
-            "Library": "媒体库扫描",
-            "Application": "系统与应用",
-            "Maintenance": "日常维护",
-            "Live TV": "电视直播",
-            "Sync": "状态同步",
-            "Plugins": "插件自动化"
+            "Library": "媒体库扫描", "Application": "系统与应用",
+            "Maintenance": "日常维护", "Live TV": "电视直播",
+            "Sync": "状态同步", "Plugins": "插件自动化"
         }
         for r in result:
             if r["title"] in cat_trans: r["title"] = cat_trans[r["title"]]
@@ -187,10 +180,9 @@ async def get_tasks(request: Request):
 @router.post("/api/tasks/{task_id}/start")
 async def start_task(task_id: str, request: Request):
     if not request.session.get("user"): return {"status": "error"}
-    host = cfg.get("emby_host")
-    key = cfg.get("emby_api_key")
     try:
-        requests.post(f"{host}/emby/ScheduledTasks/Running/{task_id}?api_key={key}", timeout=5)
+        # 🚀 替换为 media_api
+        media_api.post(f"/ScheduledTasks/Running/{task_id}", timeout=5)
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -198,10 +190,9 @@ async def start_task(task_id: str, request: Request):
 @router.post("/api/tasks/{task_id}/stop")
 async def stop_task(task_id: str, request: Request):
     if not request.session.get("user"): return {"status": "error"}
-    host = cfg.get("emby_host")
-    key = cfg.get("emby_api_key")
     try:
-        requests.delete(f"{host}/emby/ScheduledTasks/Running/{task_id}?api_key={key}", timeout=5)
+        # 🚀 替换为 media_api
+        media_api.delete(f"/ScheduledTasks/Running/{task_id}", timeout=5)
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}

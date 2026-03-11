@@ -11,6 +11,7 @@ def api_get_settings(request: Request):
     return {
         "status": "success",
         "data": {
+            "server_type": cfg.get("server_type", "emby"), # 🔥 暴露给前端的引擎类型
             "emby_host": cfg.get("emby_host"),
             "emby_api_key": cfg.get("emby_api_key"),
             "tmdb_api_key": cfg.get("tmdb_api_key"),
@@ -23,7 +24,6 @@ def api_get_settings(request: Request):
             "moviepilot_url": cfg.get("moviepilot_url", ""),
             "moviepilot_token": cfg.get("moviepilot_token", ""),
             "pulse_url": cfg.get("pulse_url", ""),
-            # 🔥 返回双擎模式给前端
             "playback_data_mode": cfg.get("playback_data_mode", "sqlite")
         }
     }
@@ -32,13 +32,19 @@ def api_get_settings(request: Request):
 def api_update_settings(data: SettingsModel, request: Request):
     if not request.session.get("user"): return {"status": "error"}
     
+    # 🔥 智能验证新配置 (兼容 Jellyfin 鉴权与路径)
+    server_type = getattr(data, "server_type", "emby")
+    url = f"{data.emby_host}/System/Info" if server_type == "jellyfin" else f"{data.emby_host}/emby/System/Info"
+    headers = {"Authorization": f'MediaBrowser Token="{data.emby_api_key}"'} if server_type == "jellyfin" else {"X-Emby-Token": data.emby_api_key}
+    
     try:
-        res = requests.get(f"{data.emby_host}/emby/System/Info?api_key={data.emby_api_key}", timeout=5)
+        res = requests.get(url, headers=headers, timeout=5)
         if res.status_code != 200:
-            return {"status": "error", "message": "无法连接 Emby，请检查地址或 API Key"}
+            return {"status": "error", "message": "无法连接媒体服务器，请检查地址或 API Key"}
     except:
-        return {"status": "error", "message": "Emby 地址无法访问"}
+        return {"status": "error", "message": "服务器地址无法访问"}
 
+    cfg["server_type"] = server_type
     cfg["emby_host"] = data.emby_host
     cfg["emby_api_key"] = data.emby_api_key
     cfg["tmdb_api_key"] = data.tmdb_api_key
@@ -51,14 +57,12 @@ def api_update_settings(data: SettingsModel, request: Request):
     cfg["moviepilot_url"] = data.moviepilot_url
     cfg["moviepilot_token"] = data.moviepilot_token
     cfg["pulse_url"] = data.pulse_url
-    # 🔥 保存双擎模式
-    cfg["playback_data_mode"] = data.playback_data_mode
+    cfg["playback_data_mode"] = getattr(data, "playback_data_mode", "sqlite")
     
     save_config()
     
     return {"status": "success", "message": "配置已保存"}
 
-# ...(下面 test_tmdb, test_mp, fix_db 代码完全保持原样，无需修改) ...
 @router.post("/api/settings/test_tmdb")
 def api_test_tmdb(request: Request):
     if not request.session.get("user"): return {"status": "error"}
@@ -99,19 +103,16 @@ def api_fix_db(request: Request):
         c = conn.cursor()
         results = []
 
-        # 1. 播放记录表
         try: c.execute("SELECT 1 FROM PlaybackActivity LIMIT 1")
         except sqlite3.OperationalError:
             c.execute('''CREATE TABLE IF NOT EXISTS PlaybackActivity (Id INTEGER PRIMARY KEY AUTOINCREMENT, UserId TEXT, UserName TEXT, ItemId TEXT, ItemName TEXT, PlayDuration INTEGER, DateCreated DATETIME DEFAULT CURRENT_TIMESTAMP, Client TEXT, DeviceName TEXT)''')
             results.append("已修复: 播放活动主表")
 
-        # 2. 用户元数据表
         try: c.execute("SELECT 1 FROM users_meta LIMIT 1")
         except sqlite3.OperationalError:
             c.execute('''CREATE TABLE IF NOT EXISTS users_meta (user_id TEXT PRIMARY KEY, expire_date TEXT, note TEXT, created_at TEXT)''')
             results.append("已修复: 用户元数据表")
 
-        # 3. 邀请码表 (含字段升级检测)
         try: 
             c.execute("SELECT 1 FROM invitations LIMIT 1")
             try: c.execute("SELECT template_user_id FROM invitations LIMIT 1")
@@ -122,31 +123,26 @@ def api_fix_db(request: Request):
             c.execute('''CREATE TABLE IF NOT EXISTS invitations (code TEXT PRIMARY KEY, days INTEGER, used_count INTEGER DEFAULT 0, max_uses INTEGER DEFAULT 1, created_at TEXT, used_at DATETIME, used_by TEXT, status INTEGER DEFAULT 0, template_user_id TEXT)''')
             results.append("已修复: 邀请码表")
 
-        # 4. 追剧日历缓存表
         try: c.execute("SELECT 1 FROM tv_calendar_cache LIMIT 1")
         except sqlite3.OperationalError:
             c.execute('''CREATE TABLE IF NOT EXISTS tv_calendar_cache (id TEXT PRIMARY KEY, series_id TEXT, season INTEGER, episode INTEGER, air_date TEXT, status TEXT, data_json TEXT)''')
             results.append("已修复: 追剧日历缓存表")
 
-        # 5. 求片主表
         try: c.execute("SELECT 1 FROM media_requests LIMIT 1")
         except sqlite3.OperationalError:
             c.execute('''CREATE TABLE IF NOT EXISTS media_requests (tmdb_id INTEGER, media_type TEXT, title TEXT, year TEXT, poster_path TEXT, status INTEGER DEFAULT 0, season INTEGER DEFAULT 0, reject_reason TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tmdb_id, season))''')
             results.append("已修复: 求片主表")
 
-        # 6. 求片关联表
         try: c.execute("SELECT 1 FROM request_users LIMIT 1")
         except sqlite3.OperationalError:
             c.execute('''CREATE TABLE IF NOT EXISTS request_users (id INTEGER PRIMARY KEY AUTOINCREMENT, tmdb_id INTEGER, user_id TEXT, username TEXT, season INTEGER DEFAULT 0, requested_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(tmdb_id, user_id, season))''')
             results.append("已修复: 求片关联表")
 
-        # 7. 盘点忽略表
         try: c.execute("SELECT 1 FROM insight_ignores LIMIT 1")
         except sqlite3.OperationalError:
             c.execute('''CREATE TABLE IF NOT EXISTS insight_ignores (item_id TEXT PRIMARY KEY, item_name TEXT, ignored_at DATETIME DEFAULT CURRENT_TIMESTAMP)''')
             results.append("已修复: 盘点忽略表")
 
-        # 8. 缺集记录表
         try: c.execute("SELECT 1 FROM gap_records LIMIT 1")
         except sqlite3.OperationalError:
             c.execute('''CREATE TABLE IF NOT EXISTS gap_records (id INTEGER PRIMARY KEY AUTOINCREMENT, series_id TEXT, series_name TEXT, season_number INTEGER, episode_number INTEGER, status INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(series_id, season_number, episode_number))''')

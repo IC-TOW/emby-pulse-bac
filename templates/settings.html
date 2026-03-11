@@ -61,11 +61,34 @@
         <div class="apple-card flex flex-col h-full p-5 md:p-6">
             <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center shrink-0">
                 <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 flex items-center justify-center mr-3 shadow-sm"><i class="fa-solid fa-server text-sm"></i></div> 
-                Emby 核心连接
+                媒体服务器核心
             </h3>
             <div class="flex-1 flex flex-col justify-start space-y-5">
+                
                 <div>
-                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">内网通信地址</label>
+                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">服务器类型</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="relative flex items-center justify-center p-3 rounded-xl cursor-pointer transition-all bg-gray-50 hover:bg-gray-100 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] border border-transparent has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50 dark:has-[:checked]:bg-indigo-900/20 shadow-sm">
+                            <input type="radio" name="server_type" value="emby" class="peer sr-only" checked>
+                            <div class="text-center flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-play block text-lg text-gray-400 peer-checked:text-indigo-500 transition-colors"></i>
+                                <span class="text-[12px] font-bold text-gray-600 dark:text-gray-400 peer-checked:text-indigo-600 dark:peer-checked:text-indigo-400 block">Emby</span>
+                            </div>
+                            <i class="fa-solid fa-circle-check absolute top-2 right-2 text-indigo-500 opacity-0 peer-checked:opacity-100 transition-opacity text-[11px]"></i>
+                        </label>
+                        <label class="relative flex items-center justify-center p-3 rounded-xl cursor-pointer transition-all bg-gray-50 hover:bg-gray-100 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] border border-transparent has-[:checked]:border-purple-500 has-[:checked]:bg-purple-50/50 dark:has-[:checked]:bg-purple-900/20 shadow-sm">
+                            <input type="radio" name="server_type" value="jellyfin" class="peer sr-only">
+                            <div class="text-center flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-j block text-lg text-gray-400 peer-checked:text-purple-500 transition-colors"></i>
+                                <span class="text-[12px] font-bold text-gray-600 dark:text-gray-400 peer-checked:text-purple-600 dark:peer-checked:text-purple-400 block">Jellyfin</span>
+                            </div>
+                            <i class="fa-solid fa-circle-check absolute top-2 right-2 text-purple-500 opacity-0 peer-checked:opacity-100 transition-opacity text-[11px]"></i>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">内网通信地址 (Host)</label>
                     <input type="text" id="emby_host" class="w-full px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder-gray-400" placeholder="http://172.17.0.1:8096">
                 </div>
                 <div>
@@ -195,7 +218,7 @@
                     <input type="text" id="webhook_token" class="w-full px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-orange-500/50 outline-none transition-all">
                 </div>
                 <div class="bg-gray-50 dark:bg-black/20 p-4 rounded-xl border border-gray-200/80 dark:border-white/5 shadow-sm mt-2">
-                    <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-2 uppercase tracking-wider">在 Emby 中填入以下完整地址：</p>
+                    <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-2 uppercase tracking-wider">在媒体服务器中填入以下完整地址：</p>
                     <p class="text-[11px] font-mono text-orange-600 dark:text-orange-400 break-all select-all leading-relaxed bg-white dark:bg-[#1C1C1E] p-2 rounded-lg border border-gray-100 dark:border-white/5 shadow-inner" id="webhook-url-preview">...</p>
                 </div>
             </div>
@@ -304,6 +327,11 @@ async function loadSettings() {
         document.getElementById('moviepilot_token').value = d.moviepilot_token || '';
         document.getElementById('pulse_url').value = d.pulse_url || '';
 
+        // 🔥 恢复服务器引擎状态
+        const srvType = d.server_type || 'emby';
+        const srvRadio = document.querySelector(`input[name="server_type"][value="${srvType}"]`);
+        if (srvRadio) srvRadio.checked = true;
+
         const mode = d.playback_data_mode || 'sqlite';
         const radio = document.querySelector(`input[name="playback_data_mode"][value="${mode}"]`);
         if (radio) radio.checked = true;
@@ -379,6 +407,7 @@ function showToast(msg, type = 'success') {
 
 async function saveSettings() {
     const data = {
+        server_type: document.querySelector('input[name="server_type"]:checked')?.value || 'emby',
         emby_host: document.getElementById('emby_host').value,
         emby_api_key: document.getElementById('emby_api_key').value,
         tmdb_api_key: document.getElementById('tmdb_api_key').value,
