@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 from app.core.config import cfg, REPORT_COVER_URL
+# 👇 修复点：引入 add_sys_notification
 from app.core.database import DB_PATH, query_db, add_sys_notification
 from app.schemas.models import MediaRequestSubmitModel as BaseSubmitModel
 from app.services.bot_service import bot
@@ -30,7 +31,7 @@ def ensure_db_schema():
                     PRIMARY KEY (tmdb_id, season)
                 )
             """)
-            c.execute("INSERT OR IGNORE INTO media_requests (tmdb_id, media_type, title, year, poster_path, status, season, reject_reason, created_at) SELECT tmdb_id, media_type, title, year, poster_path, status, 0, reject_reason, created_at FROM media_requests_old")
+            c.execute("INSERT OR IGNORE INTO media_requests (tmdb_id, media_type, title, year, poster_path, status, 0, reject_reason, created_at) SELECT tmdb_id, media_type, title, year, poster_path, status, 0, reject_reason, created_at FROM media_requests_old")
             c.execute("DROP TABLE media_requests_old")
 
     c.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='request_users'")
@@ -161,7 +162,6 @@ def request_system_login(data: RequestLoginModel, request: Request):
 def check_auth(request: Request):
     user = request.session.get("req_user")
     if user: 
-        # 🔥 新增：自动附带该用户的过期时间和服务器公网地址，提供给前端展示
         user_id = user.get("Id")
         expire_date = "永久有效"
         if user_id:
@@ -184,14 +184,11 @@ def request_system_logout(request: Request):
     request.session.pop("req_user", None)
     return {"status": "success"}
 
-# 🔥 种草弹窗拉取详情专属 API (优化：提升至管理员权限穿透读取，修复拼接漏洞)
 @router.get("/api/requests/item_info")
 def get_item_info(item_id: str, request: Request):
     key = cfg.get("emby_api_key")
-    # 强制清理末尾斜杠，防止 //emby 导致 404
     host = (cfg.get("emby_host") or "").rstrip('/') 
     try:
-        # 使用 admin_id 确保无视用户权限，100% 能够抓取到媒体库内的简介
         admin_id = get_emby_admin(host, key)
         if not admin_id: return {"status": "error"}
         
@@ -212,7 +209,6 @@ def get_item_info(item_id: str, request: Request):
     except Exception as e: 
         return {"status": "error"}
 
-# 🔥 新增：主页扩展枢纽 API (提供【镇站之宝】和【流派解析】)
 @router.get("/api/requests/hub_data")
 def get_hub_data(request: Request):
     user = request.session.get("req_user")
@@ -222,26 +218,22 @@ def get_hub_data(request: Request):
     
     top_rated = []; genres_data = []
     try:
-        import random # 局部引入，防止漏加
-        # 1. 抓取高分神作 (Top Rated) - 扩大获取范围到 100 条作为随机池
+        import random 
         tr_url = f"{host}/emby/Users/{uid}/Items?IncludeItemTypes=Movie,Series&Recursive=true&SortBy=CommunityRating&SortOrder=Descending&Limit=100&Fields=CommunityRating&api_key={key}"
         tr_res = requests.get(tr_url, timeout=5).json()
         
         valid_items = []
         for i in tr_res.get("Items", []):
             rating = i.get("CommunityRating", 0)
-            # 🔥 核心过滤：排除 10 分，保留 8.0 到 9.8 之间的真正神作
             if 8.0 <= rating <= 9.8:
                 valid_items.append({
                     "Id": i.get("Id"), "Name": i.get("Name"), "Type": i.get("Type"),
                     "CommunityRating": rating
                 })
                 
-        # 打乱顺序，随机抽取 10 部（每次刷新都不一样）
         random.shuffle(valid_items)
         top_rated = valid_items[:10]
                 
-        # 2. 抓取流派分布 (取前200部最新影视剧的类型，反映近期建库趋势)
         g_url = f"{host}/emby/Users/{uid}/Items?IncludeItemTypes=Movie,Series&Recursive=true&SortBy=DateCreated&SortOrder=Descending&Limit=200&Fields=Genres&api_key={key}"
         g_res = requests.get(g_url, timeout=5).json()
         genre_counts = {}
@@ -253,7 +245,7 @@ def get_hub_data(request: Request):
                 for g in gs: genre_counts[g] = genre_counts.get(g, 0) + 1
         
         if total_items > 0:
-            sorted_genres = sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)[:6] # 取前6个流派
+            sorted_genres = sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)[:6] 
             for k, v in sorted_genres:
                 genres_data.append({"name": k, "count": v, "pct": round(v / total_items * 100)})
     except Exception as e: 
@@ -274,7 +266,7 @@ def search_tmdb(query: str, request: Request):
                 results.append({"tmdb_id": i['id'], "media_type": i['media_type'], "title": i.get('title') or i.get('name'), "year": (i.get('release_date') or i.get('first_air_date') or "")[:4], "poster_path": f"https://image.tmdb.org/t/p/w500{i['poster_path']}" if i.get('poster_path') else "", "overview": i.get('overview', ''), "vote_average": round(i.get('vote_average', 0), 1), "local_status": -1})
         return {"status": "success", "data": results}
     except Exception as e: return {"status": "error", "message": str(e)}
-# 🔥 新增：Apple TV+ 风格动态海报墙的专属数据源
+
 @router.get("/api/requests/trending")
 def get_tmdb_trending(request: Request):
     if not request.session.get("req_user"): return {"status": "error", "message": "未登录"}
@@ -282,11 +274,9 @@ def get_tmdb_trending(request: Request):
     proxy = cfg.get("proxy_url"); proxies = {"https": proxy} if proxy else None
     try:
         results = []
-        # 连抓 2 页，拿到 40 部最新热门大片铺满屏幕
         for page in [1, 2]:
             res = requests.get(f"https://api.themoviedb.org/3/trending/all/week?api_key={tmdb_key}&language=zh-CN&page={page}", proxies=proxies, timeout=10).json()
             for i in res.get("results", []):
-                # 只保留有海报的电影和剧集
                 if i.get("media_type") in ["movie", "tv"] and i.get("poster_path"):
                     results.append({
                         "tmdb_id": i['id'], 
@@ -301,24 +291,23 @@ def get_tmdb_trending(request: Request):
         return {"status": "success", "data": results}
     except Exception as e: 
         return {"status": "error", "message": str(e)}
+
 @router.get("/api/requests/tv/{tmdb_id}")
 def get_tv_details(tmdb_id: int):
     tmdb_key = cfg.get("tmdb_api_key")
     proxy = cfg.get("proxy_url"); proxies = {"https": proxy} if proxy else None
     try:
         emby_host = cfg.get("emby_host"); emby_key = cfg.get("emby_api_key")
-        local_seasons_map = {} # 新增：用于存放 "第几季: 已下载几集" 的映射
+        local_seasons_map = {} 
         
         admin_id = get_emby_admin(emby_host, emby_key)
         if admin_id:
-            # 1. 查剧集是否存在
             s_res = requests.get(f"{emby_host}/emby/Users/{admin_id}/Items?AnyProviderIdEquals=tmdb.{tmdb_id}&IncludeItemTypes=Series&Recursive=true&api_key={emby_key}", timeout=5).json()
             if s_res.get("Items"):
                 sid = s_res["Items"][0]["Id"]
-                # 2. 🔥 深度穿透：获取该剧集下所有的单集，并统计每季的数量
                 ep_res = requests.get(f"{emby_host}/emby/Users/{admin_id}/Items?ParentId={sid}&IncludeItemTypes=Episode&Recursive=true&Fields=ParentIndexNumber&api_key={emby_key}", timeout=5).json()
                 for ep in ep_res.get("Items", []):
-                    sn = ep.get("ParentIndexNumber") # ParentIndexNumber 就是季数
+                    sn = ep.get("ParentIndexNumber")
                     if sn is not None:
                         local_seasons_map[sn] = local_seasons_map.get(sn, 0) + 1
 
@@ -330,13 +319,14 @@ def get_tv_details(tmdb_id: int):
                 seasons.append({
                     "season_number": sn, 
                     "name": s["name"], 
-                    "episode_count": s["episode_count"], # TMDB 上总共多少集
-                    "exists_locally": sn in local_seasons_map, # 只要下载了至少 1 集，就算入库
-                    "local_ep_count": local_seasons_map.get(sn, 0) # 🔥 告诉前端实际下载了多少集
+                    "episode_count": s["episode_count"],
+                    "exists_locally": sn in local_seasons_map,
+                    "local_ep_count": local_seasons_map.get(sn, 0)
                 })
         return {"status": "success", "seasons": seasons}
     except Exception as e: 
         return {"status": "error", "message": str(e)}
+
 @router.get("/api/requests/check/{media_type}/{tmdb_id}")
 def check_local_status(media_type: str, tmdb_id: int):
     exists = check_emby_exists(tmdb_id, media_type)
@@ -386,7 +376,8 @@ def submit_media_request(data: MediaRequestSubmitModel, request: Request):
     ]}
     
     bot.send_photo("sys_notify", data.poster_path or REPORT_COVER_URL, bot_msg, reply_markup=keyboard, platform="all")
-# 👇 在下面新增这几行：写入全局通知中心
+    
+    # 👇 新增：写入全局通知中心
     try:
         add_sys_notification(
             notify_type="request",
@@ -396,6 +387,7 @@ def submit_media_request(data: MediaRequestSubmitModel, request: Request):
         )
     except Exception as e:
         print(f"写入求片通知失败: {e}")
+
     return {"status": "success", "message": f"成功提交 {len(results)} 项求片请求"}
 
 @router.get("/api/requests/my")
@@ -465,7 +457,6 @@ def batch_manage_action(data: BulkAdminActionModel, request: Request):
 def manage_request_action(data: AdminActionModel, request: Request):
     return batch_manage_action(BulkAdminActionModel(items=[{"tmdb_id": data.tmdb_id, "season": data.season}], action=data.action, reject_reason=data.reject_reason), request)
 
-
 @router.get("/api/requests/pending_notify")
 def get_pending_notify(request: Request):
     if not request.session.get("user"): return {"status": "error"}
@@ -519,7 +510,6 @@ def get_pending_notify(request: Request):
         return {"status": "success", "count": req_count + feed_count, "items": items[:5]}
     except Exception as e: return {"status": "error", "message": str(e)}
 
-
 @router.post("/api/requests/feedback/submit")
 def submit_feedback(data: FeedbackSubmitModel, request: Request):
     user = request.session.get("req_user")
@@ -563,17 +553,17 @@ def submit_feedback(data: FeedbackSubmitModel, request: Request):
     img_url = actual_poster or REPORT_COVER_URL
     bot.send_photo("sys_notify", img_url, msg, reply_markup=keyboard, platform="all")
     
-# 👇 在下面新增这几行：写入全局通知中心
+    # 👇 新增：写入全局通知中心
     try:
         add_sys_notification(
             notify_type="system",
             title=f"⚠️ 资源报错: {uname}",
             message=f"{data.item_name} - {data.issue_type}",
-            action_url="/requests_admin"
+            action_url="/requests_admin?tab=feedback"
         )
     except Exception as e:
         print(f"写入报错通知失败: {e}")
-
+    
     return {"status": "success", "message": "反馈已提交，感谢您的协助！"}
 
 @router.get("/api/requests/feedback/my")
@@ -619,7 +609,6 @@ def batch_feedback_action(data: BulkFeedbackActionModel, request: Request):
     conn.commit(); conn.close()
     return {"status": "success", "message": "批量操作已完成"}
 
-# 🔥 新增：安全热播榜 (彻底告别 HTTP 请求自己，改用内部函数直调，零延迟防拒绝)
 @router.get("/api/requests/safe_top")
 def get_safe_top_media(category: str, request: Request):
     user = request.session.get("req_user")
@@ -627,7 +616,6 @@ def get_safe_top_media(category: str, request: Request):
     uid = user['Id']
     
     try:
-        # 🚨 核心修复：不再使用 requests.get 瞎绕圈子，直接把 stats.py 里的函数拉过来执行！
         from app.routers.stats import api_top_movies
         global_res = api_top_movies(user_id="all", category=category, sort_by="count")
         global_items = global_res.get("data", [])
@@ -652,8 +640,6 @@ def get_safe_top_media(category: str, request: Request):
         print(f"安全热播榜生成失败: {e}")
         return {"status": "error", "data": []}
 
-
-# 🔥 新增：安全最新入库 (内部函数直调版)
 @router.get("/api/requests/safe_latest")
 def get_safe_latest(limit: int = 15, request: Request = None):
     user = request.session.get("req_user")
@@ -661,7 +647,6 @@ def get_safe_latest(limit: int = 15, request: Request = None):
     uid = user['Id']
     
     try:
-        # 🚨 核心修复：直接调用 api_latest_media
         from app.routers.stats import api_latest_media
         global_res = api_latest_media(limit=40)
         global_items = global_res.get("data", [])

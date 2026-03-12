@@ -10,6 +10,7 @@ import re
 import ipaddress
 from collections import defaultdict
 from app.core.config import cfg, REPORT_COVER_URL, FALLBACK_IMAGE_URL
+# 👇 修复点：引入 add_sys_notification
 from app.core.database import query_db, get_base_filter, add_sys_notification
 from app.services.report_service import report_gen, HAS_PIL
 from app.core.event_bus import bus
@@ -296,7 +297,6 @@ class NotificationBot:
 
     def stop(self): self.running = False
 
-    # 🔥 核心增强：带操作按钮的风控警报
     def on_risk_alert(self, data):
         uid = data.get("user_id", "")
         username = data.get("username", "未知")
@@ -310,14 +310,11 @@ class NotificationBot:
                f"📱 <b>违规设备：</b>\n{devices_info}\n\n"
                f"⚠️ <i>天眼系统已记录，请立即进行处置！</i>")
         
-        # 组装 Inline Keyboard 按钮
         keyboard = {"inline_keyboard": []}
         
-        # 按钮1：向 Telegram 发送直接封禁回调 (WeCom 也会将此转为文字，不受影响)
         if uid:
             keyboard["inline_keyboard"].append([{"text": "🚫 立即封禁此违规账号", "callback_data": f"risk_ban_{uid}"}])
             
-        # 按钮2：前往网页后台
         admin_url = cfg.get("pulse_url") or cfg.get("emby_public_url")
         if admin_url:
             risk_url = f"{admin_url.rstrip('/')}/risk"
@@ -325,7 +322,7 @@ class NotificationBot:
             
         self.send_message("sys_notify", msg, reply_markup=keyboard if keyboard["inline_keyboard"] else None, platform="all")
 
-# 👇 在下面新增这几行：写入全局通知中心
+        # 👇 新增：写入全局通知中心
         try:
             add_sys_notification(
                 notify_type="risk",
@@ -565,7 +562,6 @@ class NotificationBot:
             self.send_message(chat_id, msg, platform="all")
         else: self._cmd_stats(chat_id, 'yesterday', platform="all")
 
-    # ---------- 基础工具与通信通道 ----------
     def _get_proxies(self):
         proxy = cfg.get("proxy_url")
         return {"http": proxy, "https": proxy} if proxy else None
@@ -769,7 +765,6 @@ class NotificationBot:
                     requests.post(f"https://api.telegram.org/bot{cfg.get('tg_bot_token')}/sendMessage", json=data, proxies=self._get_proxies(), timeout=10)
                 except: pass
 
-    # ---------- 交互与回调处理 ----------
     def _polling_loop(self):
         token = cfg.get("tg_bot_token"); admin_id = str(cfg.get("tg_chat_id"))
         while self.running:
@@ -798,17 +793,14 @@ class NotificationBot:
         try: requests.post(f"https://api.telegram.org/bot{token}/answerCallbackQuery", json={"callback_query_id": cq_id}, proxies=proxies, timeout=5)
         except: pass
 
-# 🔥 新增：处理 TG 的风控封号指令
         if data.startswith("risk_ban_"):
             uid = data.replace("risk_ban_", "")
             from app.services.risk_service import ban_user, log_risk_action
             
             operator = cq.get('from', {}).get('first_name', 'Admin')
-            # 👇 修复：动态获取真实的用户名
             target_username = self._get_username(uid) 
             
             if ban_user(uid):
-                # 👇 修复：存入真实的用户名
                 log_risk_action(uid, target_username, "ban", f"机器快捷执法 (操作人: {operator})")
                 action_text = f"✅ 已成功封禁该违规账号！\n(执行人: {operator})"
             else:
