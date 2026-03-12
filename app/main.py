@@ -8,13 +8,16 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
+# 🔥 修复在这里：完整的引入语句
+from app.services.risk_service import start_risk_monitor
+
 from app.routers import insight
 from app.core.config import PORT, SECRET_KEY, CONFIG_DIR, FONT_DIR
 from app.core.database import init_db
 from app.services.bot_service import bot
 from app.routers import media_request
 # 🔥 引入所有路由
-from app.routers import views, auth, users, stats, bot as bot_router, system, proxy, report, webhook, insight, tasks, history, calendar, search, clients, gaps,risk
+from app.routers import views, auth, users, stats, bot as bot_router, system, proxy, report, webhook, insight, tasks, history, calendar, search, clients, gaps, risk
 
 # 初始化目录和数据库
 if not os.path.exists("static"): os.makedirs("static")
