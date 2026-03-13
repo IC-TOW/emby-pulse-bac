@@ -143,10 +143,7 @@
                 </div>
             </div>
         </div>
-
-        <div class="mt-8 flex gap-3">
-            <button onclick="closeConfigModal()" class="flex-1 py-3 bg-gray-200 dark:bg-[#3A3A3C] text-gray-700 dark:text-gray-300 rounded-xl font-bold text-[14px] transition-colors">确认保存</button>
-        </div>
+        <div class="mt-8 flex gap-3"><button onclick="closeConfigModal()" class="flex-1 py-3 bg-gray-200 dark:bg-[#3A3A3C] text-gray-700 dark:text-gray-300 rounded-xl font-bold text-[14px] transition-colors">确认保存</button></div>
     </div>
 </div>
 
@@ -157,11 +154,9 @@
             <button onclick="closeWhitelistModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
         </div>
         <p class="text-xs text-gray-500 mb-4 shrink-0">被加入白名单的影视剧，系统扫描时将永远直接跳过，保护您的特殊收藏。</p>
-        
         <div id="whitelist-container" class="flex-1 overflow-y-auto mac-scrollbar bg-gray-50 dark:bg-black/10 rounded-xl border border-gray-100 dark:border-white/5 p-2 space-y-1">
             <div class="text-center py-10 text-gray-400 text-xs">加载中...</div>
         </div>
-
         <div class="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 flex justify-between items-center shrink-0">
             <span class="text-xs text-gray-500" id="wl-count-text">已选择 0 项</span>
             <button onclick="removeWhitelistItems()" class="px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-[13px] shadow-sm transition-colors active:scale-95 disabled:opacity-50" id="btn-rm-wl" disabled>
@@ -174,9 +169,7 @@
 <div id="auth-modal" class="fixed inset-0 z-[110] hidden flex items-center justify-center bg-black/60 backdrop-blur-md opacity-0 transition-opacity duration-300 px-4">
     <div class="bg-white dark:bg-apple-cardDark w-full max-w-sm rounded-[24px] shadow-2xl p-6 transform scale-95 transition-transform duration-300 border border-red-500/20">
         <div class="text-center mb-5">
-            <div class="w-14 h-14 bg-red-50 text-red-500 dark:bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                <i class="fa-solid fa-shield-halved text-2xl"></i>
-            </div>
+            <div class="w-14 h-14 bg-red-50 text-red-500 dark:bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-shield-halved text-2xl"></i></div>
             <h3 class="text-lg font-black text-gray-900 dark:text-white">高危操作验证</h3>
             <p class="text-[12px] text-gray-500 mt-1.5 px-2 leading-relaxed">为了防止误删珍贵媒体，由于您是首次操作，必须输入 <b class="text-brand-500">Emby管理员密码</b> 进行确权。</p>
         </div>
@@ -199,7 +192,7 @@
     .ep-checkbox {
         appearance: none; background-color: transparent; margin: 0; color: currentColor;
         width: 1.3em; height: 1.3em; border: 2px solid #9CA3AF; border-radius: 0.35em;
-        display: grid; place-content: center; transition: all 0.2s ease-in-out; cursor: pointer; shrink-0;
+        display: grid; place-content: center; transition: all 0.2s ease-in-out; cursor: pointer; flex-shrink: 0;
     }
     .ep-checkbox::before {
         content: ""; width: 0.65em; height: 0.65em; transform: scale(0); transition: 120ms transform ease-in-out;
@@ -328,7 +321,6 @@
         } catch(e) { console.error(e); }
     }
 
-    // 🔥 完美电影/剧集分离与折叠引擎
     function renderResults(groups, embyUrl, serverId) {
         const containerEmpty = document.getElementById('dedupe-empty-state'); 
         const cMovies = document.getElementById('dedupe-results-movies'); 
@@ -356,7 +348,7 @@
                 movieGroups[`movie_${gKey}`] = { type: 'Movie', title: first.title, targetImageId: first.item_id, itemCount: items.length, itemGroups: [ { gKey: gKey, items: items } ] };
             } else {
                 const seriesName = first.title || "未知剧集";
-                const seriesKey = `tv_show_${first.tmdb_id}`; 
+                const seriesKey = `tv_show_${first.tmdb_id || seriesName}`; 
                 if (!tvDisplayGroups[seriesKey]) {
                     tvDisplayGroups[seriesKey] = { type: 'Episode', title: seriesName, targetImageId: first.item_id, itemCount: 0, epCount: 0, itemGroups: [] };
                 }
@@ -366,7 +358,6 @@
             }
         });
 
-        // 通用渲染块函数
         const buildCards = (displayData, isTv) => {
             let html = '';
             Object.values(displayData).forEach((dg, index) => {
@@ -376,7 +367,7 @@
 
                 html += `
                 <div class="bg-white dark:bg-apple-cardDark rounded-[16px] shadow-sm border border-gray-200 dark:border-white/5 overflow-hidden transition-colors hover:border-brand-500/30 group flex flex-col h-fit">
-                    <div class="pl-3 pr-4 py-2 flex items-center justify-between cursor-pointer bg-gray-50/50 dark:bg-black/20 select-none hover:bg-gray-100/50 dark:hover:bg-white/5" onclick="toggleAccordion('${uniqueId}')">
+                    <div class="pl-3 pr-4 py-2 flex items-center justify-between cursor-pointer bg-gray-50/50 dark:bg-black/20 select-none hover:bg-gray-100/50 dark:hover:bg-white/5 transition-colors" onclick="toggleAccordion('${uniqueId}')">
                         <div class="flex items-center gap-3 flex-1 min-w-0">
                             <img src="/api/proxy/smart_image?item_id=${dg.targetImageId}&type=Primary" class="w-8 h-12 object-cover rounded shadow-sm border border-gray-200 dark:border-white/10" onerror="this.style.display='none'">
                             <div class="flex flex-col min-w-0">
@@ -457,11 +448,9 @@
         updateActionPill();
     }
 
-    // 白名单管理
     let whitelistSelected = new Set();
     function openWhitelistModal() {
-        const m = document.getElementById('whitelist-modal'); m.classList.remove('hidden'); void m.offsetWidth; m.classList.remove('opacity-0'); m.querySelector('div').classList.remove('scale-95');
-        fetchWhitelist();
+        const m = document.getElementById('whitelist-modal'); m.classList.remove('hidden'); void m.offsetWidth; m.classList.remove('opacity-0'); m.querySelector('div').classList.remove('scale-95'); fetchWhitelist();
     }
     function closeWhitelistModal() {
         const m = document.getElementById('whitelist-modal'); m.classList.add('opacity-0'); m.querySelector('div').classList.add('scale-95'); setTimeout(() => m.classList.add('hidden'), 300);
@@ -477,26 +466,17 @@
                 html += `
                 <label class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer transition-colors border border-transparent">
                     <input type="checkbox" class="ep-checkbox brand-cb wl-cb" value="${item.group_key}" onchange="toggleWl('${item.group_key}', this)">
-                    <div class="flex flex-col min-w-0">
-                        <span class="text-[13px] font-bold text-gray-800 dark:text-gray-200 truncate">${item.title || item.group_key}</span>
-                        <span class="text-[10px] text-gray-400 font-mono mt-0.5">添加于: ${item.created_at.substring(0,16)}</span>
-                    </div>
+                    <div class="flex flex-col min-w-0"><span class="text-[13px] font-bold text-gray-800 dark:text-gray-200 truncate">${item.title || item.group_key}</span><span class="text-[10px] text-gray-400 font-mono mt-0.5">添加于: ${item.created_at.substring(0,16)}</span></div>
                 </label>`;
             });
             c.innerHTML = html;
         } catch(e) { console.error(e); }
     }
     function toggleWl(key, el) { if(el.checked) whitelistSelected.add(key); else whitelistSelected.delete(key); updateWlBtn(); }
-    function updateWlBtn() { 
-        document.getElementById('wl-count-text').innerText = `已选择 ${whitelistSelected.size} 项`;
-        document.getElementById('btn-rm-wl').disabled = whitelistSelected.size === 0; 
-    }
+    function updateWlBtn() { document.getElementById('wl-count-text').innerText = `已选择 ${whitelistSelected.size} 项`; document.getElementById('btn-rm-wl').disabled = whitelistSelected.size === 0; }
     async function removeWhitelistItems() {
         if(whitelistSelected.size === 0) return;
-        try {
-            const res = await fetch('/api/dedupe/whitelist/remove', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({group_keys: Array.from(whitelistSelected)}) });
-            const data = await res.json(); fetchWhitelist();
-        } catch(e) {}
+        try { await fetch('/api/dedupe/whitelist/remove', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({group_keys: Array.from(whitelistSelected)}) }); fetchWhitelist(); } catch(e) {}
     }
 
     async function batchIgnore() {
@@ -531,8 +511,7 @@
     }
     function executeFinalDelete() {
         const u = document.getElementById('auth-user').value.trim(); const p = document.getElementById('auth-pwd').value.trim();
-        if(!u || !p) { alert("必须输入账号和密码！"); return; }
-        closeAuthModal(); executeDeleteAPI(u, p);
+        if(!u || !p) { alert("必须输入账号和密码！"); return; } closeAuthModal(); executeDeleteAPI(u, p);
     }
     async function executeDeleteAPI(u, p) {
         document.getElementById('action-pill').style.opacity = '0.5'; document.getElementById('action-pill').style.pointerEvents = 'none';

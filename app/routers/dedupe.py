@@ -133,26 +133,39 @@ def run_dedupe_scan(strategy: str = "quality", custom_weights: dict = None):
     
     scan_state["is_scanning"] = True
     scan_state["progress"] = 0
-    scan_state["message"] = "第一阶段：极速抽取全库索引..."
+    scan_state["message"] = "阶段一：构建剧集关系映射树..."
     
     key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
     try:
         admin_res = requests.get(f"{host}/emby/Users?api_key={key}", timeout=5).json()
         admin_id = next((u['Id'] for u in admin_res if u.get("Policy", {}).get("IsAdministrator")), admin_res[0]['Id'])
         
+        # 🔥 核心修复 1：预先抓取所有 Series 建立 TMDB 映射树
+        series_map = {}
+        try:
+            s_url = f"{host}/emby/Users/{admin_id}/Items"
+            s_params = { "IncludeItemTypes": "Series", "Recursive": "true", "Fields": "ProviderIds", "api_key": key }
+            s_res = requests.get(s_url, params=s_params, timeout=15).json().get("Items", [])
+            for s in s_res:
+                tmdb_id = s.get("ProviderIds", {}).get("Tmdb")
+                if tmdb_id: series_map[s["Id"]] = tmdb_id
+        except Exception as e:
+            logger.error(f"[去重引擎] 构建映射树失败: {e}")
+
+        scan_state["message"] = "阶段二：极速抽取全库索引..."
         items = []; start = 0; limit = 10000
         while True:
-            # 🔥 修复2: 引入 SeriesProviderIds。只有它才能跨越不同的 Series 对象，完美抓取整剧重复！
             url = f"{host}/emby/Users/{admin_id}/Items"
-            params = { "IncludeItemTypes": "Movie,Episode", "Recursive": "true", "Fields": "ProviderIds,SeriesProviderIds,ParentIndexNumber,IndexNumber,IndexNumberEnd", "StartIndex": start, "Limit": limit, "api_key": key }
+            # 注意加入了 SeriesId 字段
+            params = { "IncludeItemTypes": "Movie,Episode", "Recursive": "true", "Fields": "ProviderIds,ParentIndexNumber,IndexNumber,IndexNumberEnd,SeriesId", "StartIndex": start, "Limit": limit, "api_key": key }
             chunk = requests.get(url, params=params, timeout=30).json().get("Items", [])
             items.extend(chunk)
             if len(chunk) < limit: break
             start += limit
-            scan_state["message"] = f"第一阶段：已抽取 {len(items)} 条索引..."
+            scan_state["message"] = f"阶段二：已抽取 {len(items)} 条索引..."
             
         scan_state["total_items"] = len(items)
-        scan_state["message"] = "第二阶段：内存哈希碰撞匹配中..."
+        scan_state["message"] = "阶段三：内存哈希碰撞匹配中..."
         
         whitelist = [r['group_key'] for r in query_db("SELECT group_key FROM dedupe_whitelist")]
         groups = defaultdict(list)
@@ -163,14 +176,16 @@ def run_dedupe_scan(strategy: str = "quality", custom_weights: dict = None):
                 if not tmdb: continue
                 g_key = f"movie_{tmdb}"
             elif mtype == "Episode":
-                # 🔥 修复2: 改用 Series 的 TMDB ID 作为前缀，无视 Emby 生成的多个内部 SeriesId
-                series_tmdb = i.get("SeriesProviderIds", {}).get("Tmdb")
-                if not series_tmdb: continue
+                series_id = i.get("SeriesId")
+                if not series_id: continue
+                # 🔥 核心修复 2：查字典找爹的 TMDB ID。如果找不到，用自身的 SeriesId 兜底（防漏）
+                series_tmdb = series_map.get(series_id) or series_id
                 g_key = f"tv_{series_tmdb}_s{i.get('ParentIndexNumber', 0)}e{i.get('IndexNumber', 0)}"
             else: continue
             
             if g_key not in whitelist: groups[g_key].append(i)
                 
+        # 只要有一集出现重复，整组被判定为需要分析
         dup_groups = {k: v for k, v in groups.items() if len(v) > 1}
         scan_state["duplicate_groups"] = len(dup_groups)
         
@@ -182,11 +197,10 @@ def run_dedupe_scan(strategy: str = "quality", custom_weights: dict = None):
         for g_key, item_list in dup_groups.items():
             current += 1
             scan_state["progress"] = int((current / total_dups) * 100)
-            scan_state["message"] = f"第三阶段：深层分析视频流 ({current}/{total_dups})"
+            scan_state["message"] = f"阶段四：深层分析视频流 ({current}/{total_dups})"
             
             ids = ",".join([i["Id"] for i in item_list])
-            # 🔥 获取详情时同步带回 ProviderIds，存入 DB 以备分类使用
-            detail_url = f"{host}/emby/Users/{admin_id}/Items?Ids={ids}&Fields=MediaSources,Path,ProviderIds,SeriesProviderIds&api_key={key}"
+            detail_url = f"{host}/emby/Users/{admin_id}/Items?Ids={ids}&Fields=MediaSources,Path,ProviderIds,SeriesId&api_key={key}"
             details = requests.get(detail_url, timeout=10).json().get("Items", [])
             
             parsed_items = []
@@ -198,11 +212,12 @@ def run_dedupe_scan(strategy: str = "quality", custom_weights: dict = None):
                 full_path = src.get("Path", "")
                 file_name = full_path.split("/")[-1].split("\\")[-1] if full_path else d.get("Name", "未知文件")
                 
-                tmdb_val = d.get("ProviderIds", {}).get("Tmdb")
-                if d.get("Type") == "Episode": tmdb_val = d.get("SeriesProviderIds", {}).get("Tmdb")
+                tmdb_val = d.get("ProviderIds", {}).get("Tmdb", "")
+                if d.get("Type") == "Episode":
+                    tmdb_val = series_map.get(d.get("SeriesId"), d.get("SeriesId"))
                 
                 parsed_items.append({
-                    "g_key": g_key, "tmdb": tmdb_val or "",
+                    "g_key": g_key, "tmdb": str(tmdb_val),
                     "mtype": d.get("Type"), "title": d.get("SeriesName") or d.get("Name", ""),
                     "season": d.get("ParentIndexNumber", 0), "episode": d.get("IndexNumber", 0),
                     "item_id": d["Id"], "file_name": file_name, "file_path": full_path,
@@ -282,7 +297,6 @@ async def get_results():
     base_url = cfg.get("emby_public_url") or cfg.get("emby_host") or ""
     if base_url.endswith('/'): base_url = base_url[:-1]
     
-    # 🔥 修复 1: 主动向系统抓取真实 ServerId 传递给前端拼接
     server_id = ""
     try:
         host = cfg.get("emby_host"); key = cfg.get("emby_api_key")
