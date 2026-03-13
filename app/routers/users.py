@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Request, Response, UploadFile, File, Form
 from pydantic import BaseModel
-from typing import Optional
-from app.schemas.models import InviteGenModel, BatchActionModel
+from typing import Optional, List
 from app.core.config import cfg
 from app.core.database import query_db
 from app.core.media_adapter import media_api
@@ -13,20 +12,24 @@ import logging
 
 router = APIRouter()
 
+# 🔥 自动无损升级数据库，确保有 remark 字段
 try:
     query_db("ALTER TABLE users_meta ADD COLUMN remark TEXT DEFAULT ''")
-    logging.getLogger("uvicorn").info("✅ 数据库无损升级：已成功添加用户备注(remark)字段")
+    logging.getLogger("uvicorn").info("✅ 数据库升级：已成功添加用户备注(remark)字段")
 except Exception:
     pass
 
+# ==========================================
+# 🔥 重新定义数据接收模型，脱离外部模型的束缚，彻底解决 422 报错
+# ==========================================
 class UserUpdateModelEx(BaseModel):
     user_id: str
     is_disabled: bool = False
     expire_date: Optional[str] = None
     password: Optional[str] = None
     enable_all_folders: bool = True
-    enabled_folders: list[str] = []
-    excluded_sub_folders: list[str] = []
+    enabled_folders: List[str] = []
+    excluded_sub_folders: List[str] = []
     enable_downloading: bool = True
     enable_video_transcoding: bool = True
     enable_audio_transcoding: bool = True
@@ -34,7 +37,6 @@ class UserUpdateModelEx(BaseModel):
     max_concurrent: Optional[int] = None
     is_vip: bool = False
     remark: Optional[str] = ""
-    # 🔥 新增全量克隆标记，用于单体编辑时的深度套用
     apply_template_id: Optional[str] = None
     copy_library: bool = True
     copy_policy: bool = True
@@ -52,25 +54,37 @@ class NewUserModelEx(BaseModel):
     is_vip: bool = False
     remark: Optional[str] = ""
 
+class InviteGenModelLocal(BaseModel):
+    days: int
+    count: Optional[int] = 1
+    template_user_id: Optional[str] = None
+
+class BatchActionModelLocal(BaseModel):
+    user_ids: List[str]
+    action: str
+    value: Optional[str] = None
+    copy_library: Optional[bool] = True
+    copy_policy: Optional[bool] = True
+    copy_parental: Optional[bool] = True
+
 class InviteBatchModel(BaseModel):
-    codes: list[str]
+    codes: List[str]
     action: str
 
 # ==========================================
-# 🔥 核心引擎：全量策略快照克隆器
+# 🔥 全量策略快照克隆器
 # ==========================================
 DANGEROUS_POLICY_KEYS = {'IsAdministrator', 'IsDisabled', 'IsHidden', 'LoginAttemptsBeforeLockout'}
 LIBRARY_POLICY_KEYS = {'EnableAllFolders', 'EnabledFolders', 'ExcludedSubFolders', 'BlockedMediaFolders', 'BlockedChannels', 'EnableAllChannels', 'EnabledChannels'}
 PARENTAL_POLICY_KEYS = {'MaxParentalRating', 'BlockUnratedItems', 'BlockedTags', 'AllowedTags'}
 
 def clone_policy(target_policy: dict, src_policy: dict, copy_lib: bool, copy_pol: bool, copy_par: bool):
-    """深拷贝策略对象，支持分类映射。无需枚举，兼容未来所有 Emby 新权限字段！"""
     for k, v in src_policy.items():
         if k in DANGEROUS_POLICY_KEYS:
             continue
         is_lib = k in LIBRARY_POLICY_KEYS
         is_par = k in PARENTAL_POLICY_KEYS
-        is_pol = not is_lib and not is_par  # 未知的新字段全部归入基础策略
+        is_pol = not is_lib and not is_par
         
         if (copy_lib and is_lib) or (copy_par and is_par) or (copy_pol and is_pol):
             target_policy[k] = v
@@ -199,7 +213,7 @@ async def api_update_user_image(request: Request, user_id: str = Form(...), url:
     except Exception as e: return {"status": "error", "message": str(e)}
 
 @router.post("/api/manage/invite/gen")
-def api_gen_invite(data: InviteGenModel, request: Request):
+def api_gen_invite(data: InviteGenModelLocal, request: Request):
     if not request.session.get("user"): return {"status": "error"}
     try:
         count = data.count if data.count and data.count > 0 else 1
@@ -252,14 +266,12 @@ def api_manage_user_update(data: UserUpdateModelEx, request: Request):
         if p_res.status_code == 200:
             p = p_res.json().get('Policy', {})
             
-            # 🔥 如果前端执行了“一键套用”，优先使用全量克隆覆盖一次底层属性
             if data.apply_template_id:
                 src_res = media_api.get(f"/Users/{data.apply_template_id}", timeout=5)
                 if src_res.status_code == 200:
                     src_policy = src_res.json().get('Policy', {})
                     p = clone_policy(p, src_policy, data.copy_library, data.copy_policy, data.copy_parental)
 
-            # 紧接着，再用前端手动提交的明确字段覆盖回来 (保证以用户在界面的勾选为最高准则)
             if data.is_disabled is not None:
                 p['IsDisabled'] = data.is_disabled
                 if not data.is_disabled: p['LoginAttemptsBeforeLockout'] = -1
@@ -292,12 +304,10 @@ def api_manage_user_new(data: NewUserModelEx, request: Request):
         
         p = media_api.get(f"/Users/{new_id}").json().get('Policy', {})
         
-        # 🔥 全量克隆继承
         if data.template_user_id:
             src = media_api.get(f"/Users/{data.template_user_id}").json().get('Policy', {})
             p = clone_policy(p, src, data.copy_library, data.copy_policy, data.copy_parental)
         else:
-            # 没有模板时清理默认的脏属性
             for k in ['BlockedMediaFolders','BlockedChannels','EnableAllChannels','EnabledChannels']: p.pop(k, None)
             
         media_api.post(f"/Users/{new_id}/Policy", json=p)
@@ -320,7 +330,7 @@ def api_manage_user_delete(user_id: str, request: Request):
     return {"status": "error"}
 
 @router.post("/api/manage/users/batch")
-def api_manage_users_batch(data: BatchActionModel, request: Request):
+def api_manage_users_batch(data: BatchActionModelLocal, request: Request):
     if not request.session.get("user"): return {"status": "error"}
     try:
         src_policy = {}; src_max_concurrent = None; src_is_vip = 0
@@ -369,10 +379,8 @@ def api_manage_users_batch(data: BatchActionModel, request: Request):
                 if p_res.status_code == 200:
                     p = p_res.json().get('Policy', {})
                     
-                    # 🔥 核心：执行全量克隆覆盖
                     p = clone_policy(p, src_policy, data.copy_library, data.copy_policy, data.copy_parental)
                     
-                    # 其他本地专属属性(VIP,并发)独立同步
                     if data.copy_policy:
                         exist = query_db("SELECT 1 FROM users_meta WHERE user_id = ?", (uid,), one=True)
                         if exist: query_db("UPDATE users_meta SET max_concurrent = ?, is_vip = ? WHERE user_id = ?", (src_max_concurrent, src_is_vip, uid))

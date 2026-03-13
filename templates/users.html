@@ -147,6 +147,51 @@
     </div>
 </div>
 
+<div id="invite-manage-modal" class="fixed inset-0 z-[100] hidden items-center justify-center h-screen w-screen bg-black/50 backdrop-blur-sm px-4 py-6">
+    <div class="bg-white dark:bg-[#1C1C1E] rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden border border-gray-100 dark:border-white/5">
+        <div class="p-6 pb-4 border-b border-gray-100 dark:border-white/5 flex justify-between items-center shrink-0">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-link text-brand-500"></i> 系统邀请码管理</h3>
+            <button onclick="closeInviteManageModal()" class="text-gray-400 hover:text-red-500 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <div class="p-0 overflow-y-auto overflow-x-auto mac-scrollbar flex-1 relative bg-gray-50/30 dark:bg-black/10">
+            <table class="w-full text-left text-[13px] text-gray-600 dark:text-gray-300 min-w-[600px]">
+                <thead class="bg-gray-50 dark:bg-black/20 text-gray-500 dark:text-gray-400 font-bold sticky top-0 shadow-sm z-10 text-[11px] uppercase tracking-wider">
+                    <tr>
+                        <th class="px-5 py-3 w-12 text-center whitespace-nowrap"><input type="checkbox" onchange="toggleSelectAllInvites(this)" class="w-4 h-4 rounded text-brand-500 cursor-pointer"></th>
+                        <th class="px-4 py-3 whitespace-nowrap">邀请码链接</th>
+                        <th class="px-4 py-3 whitespace-nowrap">初始时长</th>
+                        <th class="px-4 py-3 whitespace-nowrap">使用状态 (包含人)</th>
+                        <th class="px-4 py-3 whitespace-nowrap">生成时间</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50 dark:divide-white/5" id="invite-list-tbody"></tbody>
+            </table>
+        </div>
+        <div class="p-4 border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/20 shrink-0 flex justify-between items-center rounded-b-2xl">
+            <button onclick="batchDeleteInvites()" id="btn-batch-del-invite" disabled class="px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-[13px] font-bold shadow-sm transition opacity-50 cursor-not-allowed"><i class="fa-solid fa-trash mr-1"></i>批量删除</button>
+            <button onclick="closeInviteManageModal()" class="px-5 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-xl text-[13px] font-bold transition">返回关闭</button>
+        </div>
+    </div>
+</div>
+
+<div id="batch-renew-modal" class="fixed inset-0 z-[100] hidden items-center justify-center h-screen w-screen bg-black/50 backdrop-blur-sm px-4">
+    <div class="bg-white dark:bg-[#1C1C1E] rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-gray-100 dark:border-white/5">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4"><i class="fa-solid fa-calendar-plus text-brand-500 mr-2"></i>批量续期</h3>
+        <p class="text-[13px] text-gray-500 mb-4">将为选中的 <span id="renew-count-text" class="font-bold text-brand-500"></span> 个用户修改到期时间。</p>
+        <div class="grid grid-cols-3 gap-2 mb-4">
+            <button onclick="submitBatchRenew('+30')" class="py-2.5 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-xl text-[13px] font-bold hover:bg-brand-100 transition border border-transparent hover:border-brand-200 dark:hover:border-brand-500/30">+ 30 天</button>
+            <button onclick="submitBatchRenew('+90')" class="py-2.5 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-xl text-[13px] font-bold hover:bg-brand-100 transition border border-transparent hover:border-brand-200 dark:hover:border-brand-500/30">+ 90 天</button>
+            <button onclick="submitBatchRenew('+365')" class="py-2.5 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-xl text-[13px] font-bold hover:bg-brand-100 transition border border-transparent hover:border-brand-200 dark:hover:border-brand-500/30">+ 1 年</button>
+        </div>
+        <div class="relative flex py-2 items-center"><div class="flex-grow border-t border-gray-200 dark:border-gray-700"></div><span class="flex-shrink-0 mx-4 text-gray-400 text-xs">或指定绝对日期</span><div class="flex-grow border-t border-gray-200 dark:border-gray-700"></div></div>
+        <input type="date" id="batch-date-picker" class="w-full px-4 py-3 mt-2 mb-6 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50 dark:bg-black/20 focus:ring-2 focus:ring-brand-500 outline-none text-[13px]">
+        <div class="flex justify-end gap-3">
+            <button onclick="closeBatchRenewModal()" class="px-5 py-2.5 bg-gray-100 dark:bg-[#2C2C2E] text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#3A3A3C] rounded-xl text-[13px] font-bold transition">取消</button>
+            <button onclick="submitBatchRenew('date')" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-[13px] font-bold shadow-md transition">确认指定</button>
+        </div>
+    </div>
+</div>
+
 <div id="new-user-modal" class="fixed inset-0 z-[100] hidden items-center justify-center h-screen w-screen bg-black/50 backdrop-blur-sm px-4 py-6">
     <div class="bg-white dark:bg-[#1C1C1E] rounded-2xl shadow-2xl w-full max-w-md p-6 transform transition-all border border-gray-100 dark:border-white/5 max-h-[90vh] overflow-y-auto mac-scrollbar">
         <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2"><i class="fa-solid fa-user-plus text-brand-500"></i> 创建新账号</h3>
@@ -167,12 +212,10 @@
                 <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase">账号到期时间</label>
                 <input type="date" id="new-expire" class="w-full px-4 py-3 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50 dark:bg-black/20 focus:ring-2 focus:ring-brand-500 outline-none transition-all text-[13px]">
             </div>
-            
             <div>
                 <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase">专属并发限制 (可选)</label>
                 <input type="number" id="new-max-concurrent" min="1" class="w-full px-4 py-3 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50 dark:bg-black/20 focus:ring-2 focus:ring-brand-500 outline-none transition-all text-[13px]" placeholder="留空则使用全局默认限制">
             </div>
-            
             <label class="flex items-center justify-between p-3 border border-purple-200/80 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-900/10 rounded-xl cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-900/20 transition-all shadow-sm mt-2">
                 <div>
                     <div class="text-[13px] font-bold text-purple-700 dark:text-purple-400"><i class="fa-solid fa-crown mr-1"></i>设为 VIP 账号</div>
@@ -183,7 +226,6 @@
                     <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
                 </div>
             </label>
-
             <div class="p-4 bg-brand-50/50 dark:bg-brand-500/5 rounded-xl border border-brand-100 dark:border-brand-500/10">
                 <label class="block text-xs font-bold text-brand-600 dark:text-brand-400 mb-2 uppercase tracking-wide">权限同步模板 (包含所有策略)</label>
                 <select id="new-template" onchange="toggleNewTemplateOpts()" class="w-full px-3 py-2.5 rounded-xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#2C2C2E] focus:ring-2 focus:ring-brand-500 outline-none appearance-none cursor-pointer text-[13px] mb-3 shadow-sm"></select>
@@ -199,7 +241,6 @@
                     </label>
                 </div>
             </div>
-
             <div class="flex justify-end gap-3 mt-8">
                 <button onclick="closeNewUserModal()" class="px-5 py-2.5 bg-gray-100 dark:bg-[#2C2C2E] text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#3A3A3C] rounded-xl font-bold text-[13px] transition-colors">取消</button>
                 <button onclick="submitNewUser()" id="new-user-btn" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-bold text-[13px] shadow-md active:scale-95 transition-all">立即创建</button>
@@ -220,7 +261,6 @@
         </div>
         <input type="hidden" id="edit-userid">
         <div class="p-6 overflow-y-auto mac-scrollbar flex-1 bg-gray-50/30 dark:bg-black/10">
-            
             <div id="edit-tab-basic" class="block space-y-6">
                 <div class="flex flex-col items-center pb-6 border-b border-gray-100 dark:border-white/5">
                     <div class="relative group mb-4">
@@ -458,7 +498,6 @@ let currentFilter = 'all';
 let invitesList = [];
 let selectedInvites = new Set();
 
-// 🔥 新增：用于记录单体编辑时，用户选择了哪个模板
 let currentApplyTemplate = null;
 
 document.addEventListener('DOMContentLoaded', function() { 
@@ -913,7 +952,6 @@ async function openEditUserModal(uid) {
     if (!user) return; 
     switchEditTab('basic');
     
-    // 🔥 清理全量克隆记忆状态
     currentApplyTemplate = null;
 
     document.getElementById('edit-userid').value = uid; 
@@ -1011,7 +1049,6 @@ async function applyEditTemplate() {
                 document.getElementById('edit-max-parental-rating').value = (tData.MaxParentalRating !== null && tData.MaxParentalRating !== undefined) ? tData.MaxParentalRating : "-1"; 
             }
             
-            // 🔥 记录前端套用状态，供提交时进行全量深拷贝
             currentApplyTemplate = {
                 id: tid,
                 lib: document.getElementById('apply-opt-lib').checked,
@@ -1065,7 +1102,6 @@ async function submitEditUser() {
             is_vip: document.getElementById('edit-is-vip').checked,
             remark: document.getElementById('edit-remark').value.trim(),
             
-            // 🔥 提交全量克隆标记给后端
             apply_template_id: currentApplyTemplate ? currentApplyTemplate.id : null,
             copy_library: currentApplyTemplate ? currentApplyTemplate.lib : true,
             copy_policy: currentApplyTemplate ? currentApplyTemplate.pol : true,
