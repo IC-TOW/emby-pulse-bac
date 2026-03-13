@@ -83,14 +83,14 @@ def calculate_score(src: dict, strategy: str = "quality", custom_weights: dict =
     elif strategy == "size": w = {"res": 20, "bitrate": 10, "codec": 30, "hdr": 10, "chi": 10, "ass": 10}
     elif strategy == "custom" and custom_weights: w = custom_weights
 
-    width = video.get("Width", 0)
+    width = video.get("Width") or 0
     res_str = "未知"
     if width >= 3800: score += w.get("res", 40); res_str = "4K"
     elif width >= 1900: score += w.get("res", 40) // 2; res_str = "1080P"
     elif width >= 1200: score += w.get("res", 40) // 4; res_str = "720P"
     elif width > 0: res_str = f"{width}P"
     
-    bitrate = src.get("Bitrate", 0)
+    bitrate = src.get("Bitrate") or 0
     if bitrate > 0: score += min(w.get("bitrate", 20), int((bitrate / 1000000) / 2))
         
     codec = video.get("Codec", "").lower()
@@ -113,7 +113,7 @@ def calculate_score(src: dict, strategy: str = "quality", custom_weights: dict =
     if has_chi: score += w.get("chi", 10)
     if has_ass: score += w.get("ass", 15)
         
-    size = src.get("Size", 0)
+    size = src.get("Size") or 0
     if strategy == "size" and size > 0: score -= int((size / (1024**3)) * 2)
         
     return score, {
@@ -133,14 +133,14 @@ def run_dedupe_scan(strategy: str = "quality", custom_weights: dict = None):
     
     scan_state["is_scanning"] = True
     scan_state["progress"] = 0
-    scan_state["message"] = "阶段一：构建剧集关系映射树..."
+    scan_state["message"] = "阶段一：构建剧集映射树..."
     
     key = cfg.get("emby_api_key"); host = cfg.get("emby_host")
     try:
         admin_res = requests.get(f"{host}/emby/Users?api_key={key}", timeout=5).json()
         admin_id = next((u['Id'] for u in admin_res if u.get("Policy", {}).get("IsAdministrator")), admin_res[0]['Id'])
         
-        # 🔥 核心修复 1：预先抓取所有 Series 建立 TMDB 映射树
+        # 🔥 核心修复 1：在拉取单集前，预先拉取所有 Series，建立 [SeriesId -> TMDB ID] 的强映射字典
         series_map = {}
         try:
             s_url = f"{host}/emby/Users/{admin_id}/Items"
@@ -156,7 +156,6 @@ def run_dedupe_scan(strategy: str = "quality", custom_weights: dict = None):
         items = []; start = 0; limit = 10000
         while True:
             url = f"{host}/emby/Users/{admin_id}/Items"
-            # 注意加入了 SeriesId 字段
             params = { "IncludeItemTypes": "Movie,Episode", "Recursive": "true", "Fields": "ProviderIds,ParentIndexNumber,IndexNumber,IndexNumberEnd,SeriesId", "StartIndex": start, "Limit": limit, "api_key": key }
             chunk = requests.get(url, params=params, timeout=30).json().get("Items", [])
             items.extend(chunk)
@@ -176,16 +175,14 @@ def run_dedupe_scan(strategy: str = "quality", custom_weights: dict = None):
                 if not tmdb: continue
                 g_key = f"movie_{tmdb}"
             elif mtype == "Episode":
-                series_id = i.get("SeriesId")
-                if not series_id: continue
-                # 🔥 核心修复 2：查字典找爹的 TMDB ID。如果找不到，用自身的 SeriesId 兜底（防漏）
+                # 🔥 核心修复 2：单集没有 TMDB ID，必须查刚才建的字典！查不到用自身 SeriesId 兜底！
+                series_id = i.get("SeriesId") or i.get("ParentId") or "unknown"
                 series_tmdb = series_map.get(series_id) or series_id
                 g_key = f"tv_{series_tmdb}_s{i.get('ParentIndexNumber', 0)}e{i.get('IndexNumber', 0)}"
             else: continue
             
             if g_key not in whitelist: groups[g_key].append(i)
                 
-        # 只要有一集出现重复，整组被判定为需要分析
         dup_groups = {k: v for k, v in groups.items() if len(v) > 1}
         scan_state["duplicate_groups"] = len(dup_groups)
         
@@ -200,7 +197,7 @@ def run_dedupe_scan(strategy: str = "quality", custom_weights: dict = None):
             scan_state["message"] = f"阶段四：深层分析视频流 ({current}/{total_dups})"
             
             ids = ",".join([i["Id"] for i in item_list])
-            detail_url = f"{host}/emby/Users/{admin_id}/Items?Ids={ids}&Fields=MediaSources,Path,ProviderIds,SeriesId&api_key={key}"
+            detail_url = f"{host}/emby/Users/{admin_id}/Items?Ids={ids}&Fields=MediaSources,Path&api_key={key}"
             details = requests.get(detail_url, timeout=10).json().get("Items", [])
             
             parsed_items = []
@@ -212,16 +209,15 @@ def run_dedupe_scan(strategy: str = "quality", custom_weights: dict = None):
                 full_path = src.get("Path", "")
                 file_name = full_path.split("/")[-1].split("\\")[-1] if full_path else d.get("Name", "未知文件")
                 
-                tmdb_val = d.get("ProviderIds", {}).get("Tmdb", "")
-                if d.get("Type") == "Episode":
-                    tmdb_val = series_map.get(d.get("SeriesId"), d.get("SeriesId"))
+                # 直接从 g_key 中反向提取出真实的 TMDB 标志
+                tmdb_val = g_key.split("_")[1] if "_" in g_key else ""
                 
                 parsed_items.append({
                     "g_key": g_key, "tmdb": str(tmdb_val),
                     "mtype": d.get("Type"), "title": d.get("SeriesName") or d.get("Name", ""),
                     "season": d.get("ParentIndexNumber", 0), "episode": d.get("IndexNumber", 0),
                     "item_id": d["Id"], "file_name": file_name, "file_path": full_path,
-                    "res": tags["res"], "bitrate": src.get("Bitrate", 0), "size": src.get("Size", 0), 
+                    "res": tags["res"], "bitrate": src.get("Bitrate") or 0, "size": src.get("Size") or 0, 
                     "v_codec": tags["v_codec"], "a_codec": tags["a_codec"],
                     "hdr": tags["has_hdr"], "dovi": tags["has_dovi"], "chi": tags["has_chi"], "ass": tags["has_ass"],
                     "score": score, "exempt": is_exempt
@@ -244,12 +240,12 @@ def run_dedupe_scan(strategy: str = "quality", custom_weights: dict = None):
                          pi['a_codec'], pi['hdr'], pi['dovi'], pi['chi'], pi['ass'], pi['score'], pi['del_mark'], pi['exempt'])
                     )
             conn.commit()
-            time.sleep(0.05)
+            time.sleep(0.02)
             
         conn.close()
         elapsed = time.time() - start_time
         logger.info(f"✅ [去重引擎] 扫描完成！共遍历 {scan_state['total_items']} 个资源，发现 {scan_state['duplicate_groups']} 组重复。耗时: {elapsed:.2f} 秒。")
-        scan_state["message"] = f"✅ 扫描完成！遍历 {scan_state['total_items']} 项，耗时 {int(elapsed)}s"
+        scan_state["message"] = f"✅ 扫描完成！遍历 {scan_state['total_items']} 项，发现 {scan_state['duplicate_groups']} 组重复"
         
     except Exception as e:
         logger.error(f"[去重引擎] 扫描异常: {e}")
@@ -297,11 +293,15 @@ async def get_results():
     base_url = cfg.get("emby_public_url") or cfg.get("emby_host") or ""
     if base_url.endswith('/'): base_url = base_url[:-1]
     
+    # 🔥 核心修复 3：主动抓取 Emby ServerId 喂给前端进行精确跳转
     server_id = ""
     try:
         host = cfg.get("emby_host"); key = cfg.get("emby_api_key")
         info_res = requests.get(f"{host}/emby/System/Info?api_key={key}", timeout=2).json()
         server_id = info_res.get("Id", "")
+        if not server_id:
+            item_res = requests.get(f"{host}/emby/Items?Limit=1&api_key={key}", timeout=2).json()
+            if item_res.get("Items"): server_id = item_res["Items"][0].get("ServerId", "")
     except: pass
     
     return {"success": True, "data": result_tree, "emby_url": base_url, "server_id": server_id}

@@ -3,7 +3,7 @@
 {% block title %}去重管理 - EmbyPulse{% endblock %}
 
 {% block content %}
-<div class="p-4 md:p-8 w-full max-w-[1600px] 2xl:max-w-[1920px] mx-auto flex flex-col gap-6 relative min-h-screen">
+<div class="p-4 md:p-8 w-full max-w-[100%] mx-auto flex flex-col gap-6 relative min-h-screen">
     
     <div class="bg-white dark:bg-apple-cardDark rounded-[24px] p-6 md:p-8 shadow-sm border border-gray-100 dark:border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
         <div class="absolute -right-10 -top-10 text-brand-500/5 dark:text-white/5 pointer-events-none">
@@ -54,21 +54,23 @@
         <p class="text-[15px] font-medium text-gray-500">准备就绪，等待您的扫描指令</p>
     </div>
 
-    <div id="dedupe-results-movies" class="hidden grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5 items-start mb-6">
-        <div class="col-span-full flex items-center gap-3 mb-1">
+    <div id="dedupe-results-movies" class="hidden mb-6">
+        <div class="flex items-center gap-3 mb-4">
             <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 dark:bg-blue-500/20 flex items-center justify-center"><i class="fa-solid fa-film"></i></div>
             <h2 class="text-xl font-black text-gray-900 dark:text-white">电影去重</h2>
-            <span id="movie-count-badge" class="ml-1 bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400 px-2.5 py-1 rounded-md text-[11px] font-bold"></span>
+            <span id="movie-count-badge" class="ml-2 bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400 px-2.5 py-1 rounded-md text-[11px] font-bold"></span>
         </div>
-        </div>
+        <div id="movie-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 items-start"></div>
+    </div>
 
-    <div id="dedupe-results-tv" class="hidden grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5 items-start pb-28">
-        <div class="col-span-full flex items-center gap-3 mb-1">
+    <div id="dedupe-results-tv" class="hidden pb-28">
+        <div class="flex items-center gap-3 mb-4">
             <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 dark:bg-indigo-500/20 flex items-center justify-center"><i class="fa-solid fa-tv"></i></div>
             <h2 class="text-xl font-black text-gray-900 dark:text-white">剧集去重</h2>
-            <span id="tv-count-badge" class="ml-1 bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400 px-2.5 py-1 rounded-md text-[11px] font-bold"></span>
+            <span id="tv-count-badge" class="ml-2 bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400 px-2.5 py-1 rounded-md text-[11px] font-bold"></span>
         </div>
-        </div>
+        <div id="tv-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 items-start"></div>
+    </div>
 
     <div id="action-pill" class="fixed bottom-[90px] md:bottom-8 left-1/2 -translate-x-1/2 z-[90] w-[92%] md:w-auto min-w-[320px] max-w-3xl bg-white/95 dark:bg-[#2C2C2E]/95 apple-blur border border-gray-200 dark:border-white/10 rounded-[20px] shadow-[0_20px_40px_rgba(0,0,0,0.3)] p-2.5 md:px-4 md:py-3 flex items-center justify-between transition-all duration-400 transform translate-y-32 opacity-0 pointer-events-none">
         <div class="flex items-center gap-3 flex-1 min-w-0">
@@ -245,7 +247,7 @@
     }
 
     function formatBytes(bytes) {
-        if (bytes === 0) return '0 B'; const k = 1024; const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        if (!bytes || bytes === 0) return '0 B'; const k = 1024; const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
     function updateActionPill() {
@@ -325,6 +327,8 @@
         const containerEmpty = document.getElementById('dedupe-empty-state'); 
         const cMovies = document.getElementById('dedupe-results-movies'); 
         const cTv = document.getElementById('dedupe-results-tv');
+        const cMovieCards = document.getElementById('movie-cards-container');
+        const cTvCards = document.getElementById('tv-cards-container');
         
         selectedItems.clear(); 
         let keys = Object.keys(groups);
@@ -362,7 +366,7 @@
             let html = '';
             Object.values(displayData).forEach((dg, index) => {
                 const titleInfo = isTv ? `📺 ${dg.title}` : `🎬 ${dg.title}`;
-                const subInfo = isTv ? `含 ${dg.epCount} 集重复 (共 ${dg.itemCount} 个文件)` : `包含 ${dg.itemCount} 个重复版本`;
+                const subInfo = isTv ? `含 ${dg.epCount} 集重复 (共 ${dg.itemCount} 项)` : `包含 ${dg.itemCount} 个重复版本`;
                 const uniqueId = isTv ? `tv_grp_${index}` : `mv_grp_${index}`;
 
                 html += `
@@ -436,12 +440,12 @@
         const tKeys = Object.keys(tvDisplayGroups);
 
         if (mKeys.length > 0) {
-            cMovies.innerHTML = cMovies.innerHTML.split('')[0] + buildCards(movieGroups, false);
+            cMovieCards.innerHTML = buildCards(movieGroups, false);
             cMovies.classList.remove('hidden'); document.getElementById('movie-count-badge').innerText = `${mKeys.length} 组`;
         } else { cMovies.classList.add('hidden'); }
 
         if (tKeys.length > 0) {
-            cTv.innerHTML = cTv.innerHTML.split('')[0] + buildCards(tvDisplayGroups, true);
+            cTvCards.innerHTML = buildCards(tvDisplayGroups, true);
             cTv.classList.remove('hidden'); document.getElementById('tv-count-badge').innerText = `${tKeys.length} 部`;
         } else { cTv.classList.add('hidden'); }
 
