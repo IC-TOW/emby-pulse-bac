@@ -408,7 +408,9 @@ async function loadInvites() {
             invitesList = json.data; 
             renderInvites(); 
         } 
-    } catch(err) {}
+    } catch(err) {
+        console.error("Failed to load invites", err);
+    }
 }
 
 function renderInvites() {
@@ -423,9 +425,16 @@ function renderInvites() {
     invitesList.forEach(inv => {
         const isChecked = selectedInvites.has(inv.code) ? 'checked' : '';
         const isUsed = inv.used_count > 0 || inv.used_by || inv.is_used || inv.used_at;
-        const statusBadge = isUsed 
-            ? `<span class="px-2 py-1 text-[11px] font-bold rounded bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">已用</span>` 
-            : `<span class="px-2 py-1 text-[11px] font-bold rounded bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400">空闲</span>`;
+        
+        // 🔥 修复：将使用者信息拼接到状态徽章中
+        let statusBadge = '';
+        if (isUsed) {
+            const userText = inv.used_by ? `<span class="text-[11px] font-bold text-gray-400 ml-1.5 truncate max-w-[100px] inline-block align-bottom"><i class="fa-solid fa-user-check text-[10px] mr-0.5"></i>${inv.used_by}</span>` : '';
+            statusBadge = `<div class="flex items-center"><span class="px-2 py-1 text-[11px] font-bold rounded bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">已用</span>${userText}</div>`;
+        } else {
+            statusBadge = `<span class="px-2 py-1 text-[11px] font-bold rounded bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400">空闲</span>`;
+        }
+        
         const daysText = inv.days == -1 ? '永久' : `${inv.days} 天`;
         const dateStr = inv.created_at ? new Date(inv.created_at).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '未知';
         const fullLink = window.location.origin + '/invite/' + inv.code;
@@ -449,28 +458,52 @@ function renderInvites() {
 }
 
 function toggleSelectInvite(code, isChecked) { 
-    if (isChecked) selectedInvites.add(code); else selectedInvites.delete(code); 
+    if (isChecked) selectedInvites.add(code); 
+    else selectedInvites.delete(code); 
     updateInviteBatchBtn(); 
 }
+
 function toggleSelectAllInvites(checkbox) { 
     document.querySelectorAll('.invite-checkbox').forEach(b => { 
         b.checked = checkbox.checked; 
-        if (checkbox.checked) selectedInvites.add(b.value); else selectedInvites.delete(b.value); 
+        if (checkbox.checked) selectedInvites.add(b.value); 
+        else selectedInvites.delete(b.value); 
     }); 
     updateInviteBatchBtn(); 
 }
+
 function updateInviteBatchBtn() {
     const btn = document.getElementById('btn-batch-del-invite');
-    if (selectedInvites.size > 0) { btn.classList.remove('opacity-50', 'cursor-not-allowed'); btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-trash mr-1"></i>删除已选 (${selectedInvites.size})`; } 
-    else { btn.classList.add('opacity-50', 'cursor-not-allowed'); btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-trash mr-1"></i>批量删除`; }
+    if (selectedInvites.size > 0) { 
+        btn.classList.remove('opacity-50', 'cursor-not-allowed'); 
+        btn.disabled = false; 
+        btn.innerHTML = `<i class="fa-solid fa-trash mr-1"></i>删除已选 (${selectedInvites.size})`; 
+    } else { 
+        btn.classList.add('opacity-50', 'cursor-not-allowed'); 
+        btn.disabled = true; 
+        btn.innerHTML = `<i class="fa-solid fa-trash mr-1"></i>批量删除`; 
+    }
 }
+
 async function batchDeleteInvites() {
     if (selectedInvites.size === 0) return; 
     if (!confirm(`确认删除 ${selectedInvites.size} 个邀请码？不可逆！`)) return;
     try {
-        const res = await fetch('/api/manage/invites/batch', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ codes: Array.from(selectedInvites), action: 'delete' }) });
-        if ((await res.json()).status === 'success') { selectedInvites.clear(); loadInvites(); } 
-    } catch(e) {}
+        const res = await fetch('/api/manage/invites/batch', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ codes: Array.from(selectedInvites), action: 'delete' }) 
+        });
+        const json = await res.json(); 
+        if (json.status === 'success') { 
+            selectedInvites.clear(); 
+            loadInvites(); 
+        } else {
+            alert("删除失败");
+        }
+    } catch(e) {
+        console.error(e);
+    }
 }
 
 async function loadLibraries() { 
@@ -491,7 +524,9 @@ async function loadUsers() {
             today.setHours(0,0,0,0);
             users.forEach(u => {
                 let diffDays = Infinity; 
-                if (u.ExpireDate) { diffDays = (new Date(u.ExpireDate) - today) / 86400000; }
+                if (u.ExpireDate) { 
+                    diffDays = (new Date(u.ExpireDate) - today) / 86400000; 
+                }
                 if (u.IsDisabled) u.StatusCat = 'disabled'; 
                 else if (diffDays < 0) u.StatusCat = 'expired'; 
                 else if (diffDays <= 7) u.StatusCat = 'expiring'; 
@@ -503,7 +538,12 @@ async function loadUsers() {
     } catch (err) {}
 }
 
-function setFilter(filter) { currentFilter = filter; selectedUsers.clear(); renderUsers(); updateStickyBar(); }
+function setFilter(filter) { 
+    currentFilter = filter; 
+    selectedUsers.clear(); 
+    renderUsers(); 
+    updateStickyBar(); 
+}
 
 function renderUsers() {
     const desktopBody = document.getElementById('user-list-body-desktop'); 
@@ -517,7 +557,6 @@ function renderUsers() {
     document.getElementById('stat-error').innerText = users.filter(u => u.StatusCat === 'disabled' || u.StatusCat === 'expired').length;
 
     let filtered = users.filter(u => {
-        // 🔥 更新搜索逻辑：支持搜索用户名和备注
         const matchName = u.Name.toLowerCase().includes(searchQ);
         const remarkVal = u.remark || u.Remark || "";
         const matchRemark = remarkVal.toLowerCase().includes(searchQ);
@@ -533,7 +572,8 @@ function renderUsers() {
     else if (sortOpt === 'login') filtered.sort((a,b) => new Date(b.LastLoginDate||0) - new Date(a.LastLoginDate||0));
     else if (sortOpt === 'expire_asc') filtered.sort((a,b) => new Date(a.ExpireDate||'2099-12-31') - new Date(b.ExpireDate||'2099-12-31'));
 
-    let desktopHtml = ""; let mobileHtml = "";
+    let desktopHtml = ""; 
+    let mobileHtml = "";
     
     filtered.forEach(u => {
         const avatarUrl = "/api/user/image/" + u.Id + "?v=" + (u.PrimaryImageTag || Date.now());
@@ -548,15 +588,16 @@ function renderUsers() {
         else badge = '<span class="px-2 py-1 rounded bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400 text-[11px] font-bold">活跃</span>';
 
         const isChecked = selectedUsers.has(u.Id) ? 'checked' : '';
-        const vipBadge = u.IsVIP ? '<span class="text-[9px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-400 px-1.5 py-0.5 rounded ml-1"><i class="fa-solid fa-crown mr-0.5"></i>VIP</span>' : '';
         
-        // 🔥 添加备注渲染
+        const vipBadge = u.IsVIP ? '<span class="text-[9px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-400 px-1.5 py-0.5 rounded ml-1"><i class="fa-solid fa-crown mr-0.5"></i>VIP</span>' : '';
         const remarkVal = u.remark || u.Remark || "";
         const remarkHtml = remarkVal ? `<span class="text-[12px] font-normal text-gray-400 dark:text-gray-500 ml-1.5 truncate max-w-[120px] inline-block align-bottom" title="${remarkVal}">(${remarkVal})</span>` : '';
 
         desktopHtml += `
             <tr class="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-all border-b border-gray-50 dark:border-white/5">
-                <td class="px-5 py-4 text-center whitespace-nowrap"><input type="checkbox" value="${u.Id}" onchange="toggleSelectUser('${u.Id}', this.checked)" class="user-checkbox w-4 h-4 rounded text-brand-500 cursor-pointer" ${isChecked}></td>
+                <td class="px-5 py-4 text-center whitespace-nowrap">
+                    <input type="checkbox" value="${u.Id}" onchange="toggleSelectUser('${u.Id}', this.checked)" class="user-checkbox w-4 h-4 rounded text-brand-500 cursor-pointer" ${isChecked}>
+                </td>
                 <td class="px-2 py-4 whitespace-nowrap">
                     <div class="flex items-center gap-3">
                         ${avatarTag}
@@ -604,126 +645,324 @@ function renderUsers() {
     const allBoxM = document.getElementById('selectAll-mobile');
     const renderedIds = filtered.map(u => u.Id); 
     const allSelected = renderedIds.length > 0 && renderedIds.every(id => selectedUsers.has(id));
+    
     if(allBoxD) allBoxD.checked = allSelected; 
     if(allBoxM) allBoxM.checked = allSelected;
     
     updateStickyBar();
 }
 
-function toggleSelectUser(uid, isChecked) { if (isChecked) selectedUsers.add(uid); else selectedUsers.delete(uid); updateStickyBar(); }
-function toggleSelectAll(checkbox) { document.querySelectorAll('.user-checkbox').forEach(b => { b.checked = checkbox.checked; if (checkbox.checked) selectedUsers.add(b.value); else selectedUsers.delete(b.value); }); updateStickyBar(); }
+function toggleSelectUser(uid, isChecked) { 
+    if (isChecked) selectedUsers.add(uid); 
+    else selectedUsers.delete(uid); 
+    updateStickyBar(); 
+}
+
+function toggleSelectAll(checkbox) { 
+    document.querySelectorAll('.user-checkbox').forEach(b => { 
+        b.checked = checkbox.checked; 
+        if (checkbox.checked) selectedUsers.add(b.value); 
+        else selectedUsers.delete(b.value); 
+    }); 
+    updateStickyBar(); 
+}
+
 function updateStickyBar() {
-    const bar = document.getElementById('batch-action-bar'); const countSpan = document.getElementById('batch-count');
-    if (selectedUsers.size > 0) { countSpan.innerText = selectedUsers.size; bar.classList.remove('translate-y-24', 'opacity-0'); bar.classList.add('translate-y-0', 'opacity-100'); } 
-    else { bar.classList.remove('translate-y-0', 'opacity-100'); bar.classList.add('translate-y-24', 'opacity-0'); }
+    const bar = document.getElementById('batch-action-bar'); 
+    const countSpan = document.getElementById('batch-count');
+    if (selectedUsers.size > 0) { 
+        countSpan.innerText = selectedUsers.size; 
+        bar.classList.remove('translate-y-24', 'opacity-0'); 
+        bar.classList.add('translate-y-0', 'opacity-100'); 
+    } else { 
+        bar.classList.remove('translate-y-0', 'opacity-100'); 
+        bar.classList.add('translate-y-24', 'opacity-0'); 
+    }
 }
 
 async function deleteUser(uid) {
     if (!confirm('物理删除，确认注销？')) return;
-    try { const res = await fetch("/api/manage/user/" + uid, { method: 'DELETE' }); const json = await res.json(); if (json.status === 'success') { selectedUsers.delete(uid); loadUsers(); } } catch(e) {}
+    try { 
+        const res = await fetch("/api/manage/user/" + uid, { method: 'DELETE' }); 
+        const json = await res.json(); 
+        if (json.status === 'success') { 
+            selectedUsers.delete(uid); 
+            loadUsers(); 
+        } else {
+            alert('失败'); 
+        }
+    } catch(e) {}
 }
 
 async function batchAction(actionName) {
-    if (selectedUsers.size === 0) return; if (actionName === 'delete' && !confirm(`彻底删除 ${selectedUsers.size} 个账号？`)) return;
-    try { const res = await fetch('/api/manage/users/batch', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_ids: Array.from(selectedUsers), action: actionName }) }); if ((await res.json()).status === 'success') { selectedUsers.clear(); loadUsers(); } } catch(e) {}
+    if (selectedUsers.size === 0) return; 
+    if (actionName === 'delete' && !confirm(`彻底删除 ${selectedUsers.size} 个账号？`)) return;
+    try { 
+        const res = await fetch('/api/manage/users/batch', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ user_ids: Array.from(selectedUsers), action: actionName }) 
+        });
+        if ((await res.json()).status === 'success') { 
+            selectedUsers.clear(); 
+            loadUsers(); 
+        } 
+    } catch(e) {}
 }
 
-function openBatchRenewModal() { document.getElementById('renew-count-text').innerText = selectedUsers.size; const modal = document.getElementById('batch-renew-modal'); modal.classList.remove('hidden'); modal.classList.add('flex'); }
-function closeBatchRenewModal() { const modal = document.getElementById('batch-renew-modal'); modal.classList.add('hidden'); modal.classList.remove('flex'); }
+function openBatchRenewModal() { 
+    document.getElementById('renew-count-text').innerText = selectedUsers.size; 
+    const modal = document.getElementById('batch-renew-modal'); 
+    modal.classList.remove('hidden'); 
+    modal.classList.add('flex'); 
+}
+
+function closeBatchRenewModal() { 
+    const modal = document.getElementById('batch-renew-modal'); 
+    modal.classList.add('hidden'); 
+    modal.classList.remove('flex'); 
+}
 
 async function submitBatchRenew(val) {
-    if (selectedUsers.size === 0) return; let finalValue = val; if (val === 'date') { finalValue = document.getElementById('batch-date-picker').value; if (!finalValue) return alert('选日期'); }
-    try { const res = await fetch('/api/manage/users/batch', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_ids: Array.from(selectedUsers), action: 'renew', value: finalValue }) }); if ((await res.json()).status === 'success') { closeBatchRenewModal(); selectedUsers.clear(); loadUsers(); } } catch(e) {}
+    if (selectedUsers.size === 0) return; 
+    let finalValue = val;
+    if (val === 'date') { 
+        finalValue = document.getElementById('batch-date-picker').value; 
+        if (!finalValue) return alert('选日期'); 
+    }
+    try { 
+        const res = await fetch('/api/manage/users/batch', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ user_ids: Array.from(selectedUsers), action: 'renew', value: finalValue }) 
+        });
+        if ((await res.json()).status === 'success') { 
+            closeBatchRenewModal(); 
+            selectedUsers.clear(); 
+            loadUsers(); 
+        } 
+    } catch(e) {}
 }
 
 function populateTemplates(selectId, excludeUserId = null) {
-    const sel = document.getElementById(selectId); sel.innerHTML = '<option value="">默认模板 (全库)</option>';
-    users.forEach(user => { if (excludeUserId && user.Id === excludeUserId) return; const option = document.createElement('option'); option.value = user.Id; option.textContent = user.Name; sel.appendChild(option); });
+    const sel = document.getElementById(selectId); 
+    sel.innerHTML = '<option value="">默认模板 (全库)</option>';
+    users.forEach(user => { 
+        if (excludeUserId && user.Id === excludeUserId) return; 
+        const option = document.createElement('option'); 
+        option.value = user.Id; 
+        option.textContent = user.Name; 
+        sel.appendChild(option); 
+    });
     if (selectId === 'new-template') toggleNewTemplateOpts();
 }
 
-function toggleNewTemplateOpts() { const val = document.getElementById('new-template').value; const opts = document.getElementById('new-template-opts'); if (val) opts.classList.remove('hidden'); else opts.classList.add('hidden'); }
-function selectDuration(days) { selectedDuration = parseInt(days); const buttons = document.querySelectorAll('.dur-btn'); buttons.forEach(b => b.className = "dur-btn px-2 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl text-xs hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all font-medium"); const target = Array.from(buttons).find(btn => btn.getAttribute('onclick').includes("(" + days + ")")); if (target) target.className = "dur-btn px-2 py-2.5 border border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold rounded-xl text-xs shadow-sm transition-all"; }
-function setCustomDuration() { const val = document.getElementById('custom-duration').value; if (val && parseInt(val) > 0) { selectedDuration = parseInt(val); document.querySelectorAll('.dur-btn').forEach(b => b.className = "dur-btn px-2 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl text-xs hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all font-medium"); } else { selectDuration(30); } }
-
-async function generateInvite(e) {
-    const count = parseInt(document.getElementById('invite-count').value) || 1; const templateId = document.getElementById('invite-template').value; const submitBtn = e.target; submitBtn.disabled = true; submitBtn.innerHTML = '生成中...';
-    try {
-        const response = await fetch('/api/manage/invite/gen', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ days: selectedDuration, count: count, template_user_id: templateId || null }) }); const json = await response.json();
-        if (json.status === 'success') {
-            const container = document.getElementById('invite-links-container'); container.innerHTML = ""; 
-            json.codes.forEach(c => { const link = window.location.origin + '/invite/' + c; container.innerHTML += `<div class="flex items-center gap-2 bg-white dark:bg-[#2C2C2E] p-2.5 rounded-xl border border-gray-100 dark:border-white/5 shadow-sm"><span class="flex-1 truncate font-mono text-[11px] select-all">${link}</span><button onclick="copyToClipboard('${link}')" class="text-emerald-500 font-bold px-3 py-1 text-xs border-l border-gray-100 dark:border-white/10 hover:text-emerald-600">复制</button></div>`; });
-            document.getElementById('invite-form-step').classList.add('hidden'); document.getElementById('invite-result-step').classList.remove('hidden');
-        }
-    } catch (e) { } finally { submitBtn.disabled = false; submitBtn.textContent = "生成链接"; }
+function toggleNewTemplateOpts() { 
+    const val = document.getElementById('new-template').value; 
+    const opts = document.getElementById('new-template-opts'); 
+    if (val) opts.classList.remove('hidden'); 
+    else opts.classList.add('hidden'); 
 }
 
-function copyAllInvites() { let allLinks = ""; document.querySelectorAll('#invite-links-container span').forEach(s => allLinks += s.textContent + "\n"); copyToClipboard(allLinks.trim()); }
-function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => alert('已复制')); }
-function switchEditTab(tabName) { ['basic', 'library', 'policy'].forEach(t => { document.getElementById(`edit-tab-${t}`).style.display = (t === tabName) ? 'block' : 'none'; document.getElementById(`tab-btn-${t}`).className = (t === tabName) ? "pb-3 text-[13px] font-bold text-brand-500 border-b-2 border-brand-500 transition-all" : "pb-3 text-[13px] font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 dark:text-gray-300 transition-all"; }); }
+function selectDuration(days) {
+    selectedDuration = parseInt(days); 
+    const buttons = document.querySelectorAll('.dur-btn');
+    buttons.forEach(b => b.className = "dur-btn px-2 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl text-xs hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all font-medium");
+    const target = Array.from(buttons).find(btn => btn.getAttribute('onclick').includes("(" + days + ")"));
+    if (target) target.className = "dur-btn px-2 py-2.5 border border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold rounded-xl text-xs shadow-sm transition-all";
+}
+
+function setCustomDuration() { 
+    const val = document.getElementById('custom-duration').value; 
+    if (val && parseInt(val) > 0) { 
+        selectedDuration = parseInt(val); 
+        document.querySelectorAll('.dur-btn').forEach(b => b.className = "dur-btn px-2 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl text-xs hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all font-medium"); 
+    } else {
+        selectDuration(30); 
+    }
+}
+
+async function generateInvite(e) {
+    const count = parseInt(document.getElementById('invite-count').value) || 1; 
+    const templateId = document.getElementById('invite-template').value;
+    const submitBtn = e.target; 
+    submitBtn.disabled = true; 
+    submitBtn.innerHTML = '生成中...';
+    try {
+        const response = await fetch('/api/manage/invite/gen', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ days: selectedDuration, count: count, template_user_id: templateId || null }) 
+        });
+        const json = await response.json();
+        if (json.status === 'success') {
+            const container = document.getElementById('invite-links-container'); 
+            container.innerHTML = ""; 
+            json.codes.forEach(c => { 
+                const link = window.location.origin + '/invite/' + c; 
+                container.innerHTML += `
+                    <div class="flex items-center gap-2 bg-white dark:bg-[#2C2C2E] p-2.5 rounded-xl border border-gray-100 dark:border-white/5 shadow-sm">
+                        <span class="flex-1 truncate font-mono text-[11px] select-all">${link}</span>
+                        <button onclick="copyToClipboard('${link}')" class="text-emerald-500 font-bold px-3 py-1 text-xs border-l border-gray-100 dark:border-white/10 hover:text-emerald-600">复制</button>
+                    </div>`; 
+            });
+            document.getElementById('invite-form-step').classList.add('hidden'); 
+            document.getElementById('invite-result-step').classList.remove('hidden');
+        }
+    } catch (e) {
+        console.error(e);
+    } finally { 
+        submitBtn.disabled = false; 
+        submitBtn.textContent = "生成链接"; 
+    }
+}
+
+function copyAllInvites() { 
+    let allLinks = ""; 
+    document.querySelectorAll('#invite-links-container span').forEach(s => allLinks += s.textContent + "\n"); 
+    copyToClipboard(allLinks.trim()); 
+}
+
+function copyToClipboard(text) { 
+    navigator.clipboard.writeText(text).then(() => alert('已复制')); 
+}
+
+function switchEditTab(tabName) {
+    ['basic', 'library', 'policy'].forEach(t => {
+        document.getElementById(`edit-tab-${t}`).style.display = (t === tabName) ? 'block' : 'none';
+        document.getElementById(`tab-btn-${t}`).className = (t === tabName) 
+            ? "pb-3 text-[13px] font-bold text-brand-500 border-b-2 border-brand-500 transition-all" 
+            : "pb-3 text-[13px] font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 dark:text-gray-300 transition-all";
+    });
+}
 
 async function openEditUserModal(uid) {
-    const user = users.find(u => u.Id === uid); if (!user) return; switchEditTab('basic');
+    const user = users.find(u => u.Id === uid); 
+    if (!user) return; 
+    switchEditTab('basic');
+    
     document.getElementById('edit-userid').value = uid; 
     document.getElementById('edit-username').value = user.Name; 
     document.getElementById('edit-disabled').value = String(user.IsDisabled); 
     document.getElementById('edit-expire').value = user.ExpireDate || ''; 
     document.getElementById('edit-password').value = '';
     
-    // 🔥 初始化备注字段
-    document.getElementById('edit-remark').value = user.remark || user.Remark || '';
-    
     const preview = document.getElementById('edit-avatar-preview');
-    if (user.PrimaryImageTag) { preview.src = "/api/user/image/" + uid + "?t=" + Date.now(); } 
-    else { preview.src = "https://api.dicebear.com/9.x/notionists/png?seed=" + user.Name; }
+    if (user.PrimaryImageTag) {
+        preview.src = "/api/user/image/" + uid + "?t=" + Date.now(); 
+    } else {
+        preview.src = "https://api.dicebear.com/9.x/notionists/png?seed=" + user.Name;
+    }
     
-    const modal = document.getElementById('edit-user-modal'); modal.classList.remove('hidden'); setTimeout(() => { modal.classList.add('flex'); }, 10);
+    const modal = document.getElementById('edit-user-modal'); 
+    modal.classList.remove('hidden'); 
+    setTimeout(() => { modal.classList.add('flex'); }, 10);
     
     try {
-        const res = await fetch("/api/manage/user/" + uid); const json = await res.json();
+        const res = await fetch("/api/manage/user/" + uid); 
+        const json = await res.json();
         if (json.status === 'success') {
-            user.EnableAllFolders = json.data.EnableAllFolders; user.EnabledFolders = json.data.EnabledFolders; currentExcludedSubFolders = json.data.ExcludedSubFolders || [];
-            document.getElementById('edit-enable-downloading').checked = json.data.EnableDownloading !== false; document.getElementById('edit-enable-video-transcode').checked = json.data.EnableVideoTranscoding !== false; document.getElementById('edit-enable-audio-transcode').checked = json.data.EnableAudioTranscoding !== false;
+            user.EnableAllFolders = json.data.EnableAllFolders; 
+            user.EnabledFolders = json.data.EnabledFolders; 
+            currentExcludedSubFolders = json.data.ExcludedSubFolders || [];
+            document.getElementById('edit-enable-downloading').checked = json.data.EnableDownloading !== false; 
+            document.getElementById('edit-enable-video-transcode').checked = json.data.EnableVideoTranscoding !== false; 
+            document.getElementById('edit-enable-audio-transcode').checked = json.data.EnableAudioTranscoding !== false;
             document.getElementById('edit-max-parental-rating').value = (json.data.MaxParentalRating !== null && json.data.MaxParentalRating !== undefined) ? json.data.MaxParentalRating : "-1";
             document.getElementById('edit-max-concurrent').value = (json.data.MaxConcurrent !== null && json.data.MaxConcurrent !== undefined) ? json.data.MaxConcurrent : "";
             document.getElementById('edit-is-vip').checked = json.data.IsVIP === true;
-            // 如果后端返回了额外的备注数据，确保填充
-            document.getElementById('edit-remark').value = json.data.remark || json.data.Remark || document.getElementById('edit-remark').value;
+            document.getElementById('edit-remark').value = json.data.Remark || json.data.remark || "";
         }
     } catch(err) {}
-    renderLibraryCheckboxes(user); populateTemplates('edit-template-select', uid);
+    renderLibraryCheckboxes(user); 
+    populateTemplates('edit-template-select', uid);
 }
 
 function renderLibraryCheckboxes(user) {
-    const container = document.getElementById('edit-library-list'); container.innerHTML = "";
-    if (allLibraries.length === 0) { container.innerHTML = '<div class="p-4 text-center text-gray-400 text-xs italic col-span-2">未获取到数据</div>'; } 
-    else { allLibraries.forEach(lib => { const isChecked = user.EnabledFolders.includes(lib.Id) ? 'checked' : ''; container.innerHTML += `<label class="flex items-center gap-3 p-2.5 bg-gray-50 dark:bg-[#2C2C2E] border border-gray-100 dark:border-white/5 rounded-xl cursor-pointer hover:shadow-sm transition-all"><input type="checkbox" value="${lib.Id}" class="lib-checkbox w-4 h-4 text-brand-500 rounded cursor-pointer" ${isChecked}><span class="text-[12px] font-bold text-gray-700 dark:text-gray-300 truncate">${lib.Name}</span></label>`; }); }
-    document.getElementById('edit-enable-all').checked = user.EnableAllFolders; toggleLibraryCheckboxes();
+    const container = document.getElementById('edit-library-list'); 
+    container.innerHTML = "";
+    if (allLibraries.length === 0) {
+        container.innerHTML = '<div class="p-4 text-center text-gray-400 text-xs italic col-span-2">未获取到数据</div>';
+    } else {
+        allLibraries.forEach(lib => {
+            const isChecked = user.EnabledFolders.includes(lib.Id) ? 'checked' : '';
+            container.innerHTML += `
+                <label class="flex items-center gap-3 p-2.5 bg-gray-50 dark:bg-[#2C2C2E] border border-gray-100 dark:border-white/5 rounded-xl cursor-pointer hover:shadow-sm transition-all">
+                    <input type="checkbox" value="${lib.Id}" class="lib-checkbox w-4 h-4 text-brand-500 rounded cursor-pointer" ${isChecked}>
+                    <span class="text-[12px] font-bold text-gray-700 dark:text-gray-300 truncate">${lib.Name}</span>
+                </label>`;
+        });
+    }
+    document.getElementById('edit-enable-all').checked = user.EnableAllFolders; 
+    toggleLibraryCheckboxes();
 }
 
-function toggleLibraryCheckboxes() { const isAll = document.getElementById('edit-enable-all').checked; const list = document.getElementById('edit-library-list'); document.querySelectorAll('.lib-checkbox').forEach(b => b.disabled = isAll); list.style.opacity = isAll ? '0.3' : '1'; list.style.pointerEvents = isAll ? 'none' : 'auto'; }
-function clearSubFolders() { if (confirm('确认重置限制？')) { currentExcludedSubFolders = []; alert("已重置"); } }
+function toggleLibraryCheckboxes() { 
+    const isAll = document.getElementById('edit-enable-all').checked; 
+    const list = document.getElementById('edit-library-list'); 
+    document.querySelectorAll('.lib-checkbox').forEach(b => b.disabled = isAll); 
+    list.style.opacity = isAll ? '0.3' : '1'; 
+    list.style.pointerEvents = isAll ? 'none' : 'auto'; 
+}
+
+function clearSubFolders() { 
+    if (confirm('确认重置限制？')) { 
+        currentExcludedSubFolders = []; 
+        alert("已重置"); 
+    } 
+}
 
 async function applyEditTemplate() {
-    const tid = document.getElementById('edit-template-select').value; if (!tid) return;
+    const tid = document.getElementById('edit-template-select').value; 
+    if (!tid) return;
     try {
-        const res = await fetch("/api/manage/user/" + tid); const json = await res.json();
+        const res = await fetch("/api/manage/user/" + tid); 
+        const json = await res.json();
         if (json.status === 'success') {
             const tData = json.data;
-            if (document.getElementById('apply-opt-lib').checked) { document.getElementById('edit-enable-all').checked = tData.EnableAllFolders; document.querySelectorAll('.lib-checkbox').forEach(b => b.checked = tData.EnabledFolders.includes(b.value)); currentExcludedSubFolders = tData.ExcludedSubFolders || []; toggleLibraryCheckboxes(); }
-            if (document.getElementById('apply-opt-pol').checked) { document.getElementById('edit-enable-downloading').checked = tData.EnableDownloading !== false; document.getElementById('edit-enable-video-transcode').checked = tData.EnableVideoTranscoding !== false; document.getElementById('edit-enable-audio-transcode').checked = tData.EnableAudioTranscoding !== false; document.getElementById('edit-max-concurrent').value = (tData.MaxConcurrent !== null && tData.MaxConcurrent !== undefined) ? tData.MaxConcurrent : ""; }
-            if (document.getElementById('apply-opt-par').checked) { document.getElementById('edit-max-parental-rating').value = (tData.MaxParentalRating !== null && tData.MaxParentalRating !== undefined) ? tData.MaxParentalRating : "-1"; }
+            if (document.getElementById('apply-opt-lib').checked) { 
+                document.getElementById('edit-enable-all').checked = tData.EnableAllFolders; 
+                document.querySelectorAll('.lib-checkbox').forEach(b => b.checked = tData.EnabledFolders.includes(b.value)); 
+                currentExcludedSubFolders = tData.ExcludedSubFolders || []; 
+                toggleLibraryCheckboxes(); 
+            }
+            if (document.getElementById('apply-opt-pol').checked) { 
+                document.getElementById('edit-enable-downloading').checked = tData.EnableDownloading !== false; 
+                document.getElementById('edit-enable-video-transcode').checked = tData.EnableVideoTranscoding !== false; 
+                document.getElementById('edit-enable-audio-transcode').checked = tData.EnableAudioTranscoding !== false; 
+                document.getElementById('edit-max-concurrent').value = (tData.MaxConcurrent !== null && tData.MaxConcurrent !== undefined) ? tData.MaxConcurrent : "";
+            }
+            if (document.getElementById('apply-opt-par').checked) { 
+                document.getElementById('edit-max-parental-rating').value = (tData.MaxParentalRating !== null && tData.MaxParentalRating !== undefined) ? tData.MaxParentalRating : "-1"; 
+            }
             alert("✅ 已同步！请保存");
         }
     } catch(err) {}
 }
 
 async function submitEditUser() {
-    const saveBtn = document.getElementById('save-user-btn'); const labelSpan = document.getElementById('save-user-text'); const uid = document.getElementById('edit-userid').value; const isEnableAll = document.getElementById('edit-enable-all').checked; 
-    let guids = []; if (!isEnableAll) { document.querySelectorAll('.lib-checkbox:checked').forEach(b => guids.push(b.value)); }
-    saveBtn.disabled = true; labelSpan.textContent = "保存中...";
+    const saveBtn = document.getElementById('save-user-btn'); 
+    const labelSpan = document.getElementById('save-user-text'); 
+    const uid = document.getElementById('edit-userid').value;
+    const isEnableAll = document.getElementById('edit-enable-all').checked; 
     
-    if (currentAvatarUrl || currentAvatarFile) { const formData = new FormData(); formData.append('user_id', uid); if (currentAvatarFile) formData.append('file', currentAvatarFile); else formData.append('url', currentAvatarUrl); try { await fetch('/api/manage/user/image', { method: 'POST', body: formData }); } catch (e) {} }
+    let guids = []; 
+    if (!isEnableAll) { 
+        document.querySelectorAll('.lib-checkbox:checked').forEach(b => guids.push(b.value)); 
+    }
+    
+    saveBtn.disabled = true; 
+    labelSpan.textContent = "保存中...";
+    
+    if (currentAvatarUrl || currentAvatarFile) { 
+        const formData = new FormData(); 
+        formData.append('user_id', uid); 
+        if (currentAvatarFile) formData.append('file', currentAvatarFile); 
+        else formData.append('url', currentAvatarUrl); 
+        try { 
+            await fetch('/api/manage/user/image', { method: 'POST', body: formData }); 
+        } catch (e) {} 
+    }
     
     try {
         const payload = { 
@@ -740,31 +979,52 @@ async function submitEditUser() {
             max_parental_rating: parseInt(document.getElementById('edit-max-parental-rating').value),
             max_concurrent: document.getElementById('edit-max-concurrent').value ? parseInt(document.getElementById('edit-max-concurrent').value) : null,
             is_vip: document.getElementById('edit-is-vip').checked,
-            // 🔥 提交编辑后的备注
             remark: document.getElementById('edit-remark').value.trim()
         };
-        const res = await fetch('/api/manage/user/update', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }); const json = await res.json();
-        if (json.status === 'success') { closeEditUserModal(); loadUsers(); } else { alert("失败: " + json.message); }
-    } catch (err) {} finally { saveBtn.disabled = false; labelSpan.textContent = "保存配置"; }
+        
+        const res = await fetch('/api/manage/user/update', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify(payload) 
+        }); 
+        const json = await res.json();
+        if (json.status === 'success') { 
+            closeEditUserModal(); 
+            loadUsers(); 
+        } else {
+            alert("失败: " + json.message);
+        }
+    } catch (err) {} 
+    finally { 
+        saveBtn.disabled = false; 
+        labelSpan.textContent = "保存配置"; 
+    }
 }
 
 function openNewUserModal() { 
-    const modal = document.getElementById('new-user-modal'); modal.classList.remove('hidden'); 
+    const modal = document.getElementById('new-user-modal'); 
+    modal.classList.remove('hidden'); 
     document.getElementById('new-username').value = ""; 
     document.getElementById('new-password').value = ""; 
     document.getElementById('new-expire').value = ""; 
     document.getElementById('new-max-concurrent').value = ""; 
     document.getElementById('new-is-vip').checked = false;
-    // 🔥 清空新建时的备注
     document.getElementById('new-remark').value = "";
-    populateTemplates('new-template'); setTimeout(() => { modal.classList.add('flex'); }, 10); 
+    populateTemplates('new-template'); 
+    setTimeout(() => { modal.classList.add('flex'); }, 10); 
 }
 
-function closeNewUserModal() { document.getElementById('new-user-modal').classList.remove('flex'); document.getElementById('new-user-modal').classList.add('hidden'); }
+function closeNewUserModal() { 
+    document.getElementById('new-user-modal').classList.remove('flex'); 
+    document.getElementById('new-user-modal').classList.add('hidden'); 
+}
 
 async function submitNewUser() {
-    const btn = document.getElementById('new-user-btn'); const name = document.getElementById('new-username').value; if (!name) return alert("填用户名");
-    btn.disabled = true; btn.textContent = "处理中...";
+    const btn = document.getElementById('new-user-btn'); 
+    const name = document.getElementById('new-username').value; 
+    if (!name) return alert("填用户名");
+    btn.disabled = true; 
+    btn.textContent = "处理中...";
     try {
         const res = await fetch('/api/manage/user/new', { 
             method: 'POST', 
@@ -779,27 +1039,119 @@ async function submitNewUser() {
                 copy_parental: document.getElementById('new-opt-par').checked,
                 max_concurrent: document.getElementById('new-max-concurrent').value ? parseInt(document.getElementById('new-max-concurrent').value) : null,
                 is_vip: document.getElementById('new-is-vip').checked,
-                // 🔥 提交创建时的备注
                 remark: document.getElementById('new-remark').value.trim()
             }) 
         });
-        if ((await res.json()).status === 'success') { closeNewUserModal(); loadUsers(); }
+        if ((await res.json()).status === 'success') { 
+            closeNewUserModal(); 
+            loadUsers(); 
+        }
     } catch(e) {} 
-    btn.disabled = false; btn.textContent = "立即创建";
+    btn.disabled = false; 
+    btn.textContent = "立即创建";
 }
 
-function generateRandomAvatar() { const seed = Math.random().toString(36).substring(7); currentAvatarUrl = "https://api.dicebear.com/9.x/notionists/png?seed=" + seed; currentAvatarFile = null; document.getElementById('edit-avatar-preview').src = currentAvatarUrl; }
-function setAvatarPreset(style) { const seed = Math.random().toString(36).substring(7); currentAvatarUrl = "https://api.dicebear.com/9.x/" + style + "/png?seed=" + seed; currentAvatarFile = null; document.getElementById('edit-avatar-preview').src = currentAvatarUrl; }
-function previewFileAvatar() { const input = document.getElementById('edit-avatar-file'); if (input.files && input.files[0]) { currentAvatarFile = input.files[0]; currentAvatarUrl = ""; const reader = new FileReader(); reader.onload = e => document.getElementById('edit-avatar-preview').src = e.target.result; reader.readAsDataURL(input.files[0]); } }
-function closeEditUserModal() { document.getElementById('edit-user-modal').classList.remove('flex'); document.getElementById('edit-user-modal').classList.add('hidden'); }
-function openBatchTemplateModal() { document.getElementById('batch-template-count').innerText = selectedUsers.size; populateTemplates('batch-template-select'); const sel = document.getElementById('batch-template-select'); if (sel.options.length > 0 && sel.options[0].value === "") sel.remove(0); const modal = document.getElementById('batch-template-modal'); modal.classList.remove('hidden'); setTimeout(() => modal.classList.add('flex'), 10); }
-function closeBatchTemplateModal() { document.getElementById('batch-template-modal').classList.remove('flex'); document.getElementById('batch-template-modal').classList.add('hidden'); }
+function openInviteModal() { 
+    const modal = document.getElementById('invite-modal'); 
+    modal.classList.remove('hidden'); 
+    document.getElementById('invite-form-step').classList.remove('hidden'); 
+    document.getElementById('invite-result-step').classList.add('hidden'); 
+    document.getElementById('custom-duration').value = ''; 
+    selectDuration(30); 
+    populateTemplates('invite-template'); 
+    setTimeout(() => { modal.classList.add('flex'); }, 10); 
+}
+
+function closeInviteModal() { 
+    document.getElementById('invite-modal').classList.remove('flex'); 
+    document.getElementById('invite-modal').classList.add('hidden'); 
+}
+
+function generateRandomAvatar() { 
+    const seed = Math.random().toString(36).substring(7); 
+    currentAvatarUrl = "https://api.dicebear.com/9.x/notionists/png?seed=" + seed; 
+    currentAvatarFile = null; 
+    document.getElementById('edit-avatar-preview').src = currentAvatarUrl; 
+}
+
+function setAvatarPreset(style) { 
+    const seed = Math.random().toString(36).substring(7); 
+    currentAvatarUrl = "https://api.dicebear.com/9.x/" + style + "/png?seed=" + seed; 
+    currentAvatarFile = null; 
+    document.getElementById('edit-avatar-preview').src = currentAvatarUrl; 
+}
+
+function previewFileAvatar() { 
+    const input = document.getElementById('edit-avatar-file'); 
+    if (input.files && input.files[0]) { 
+        currentAvatarFile = input.files[0]; 
+        currentAvatarUrl = ""; 
+        const reader = new FileReader(); 
+        reader.onload = e => document.getElementById('edit-avatar-preview').src = e.target.result; 
+        reader.readAsDataURL(input.files[0]); 
+    } 
+}
+
+function closeEditUserModal() { 
+    document.getElementById('edit-user-modal').classList.remove('flex'); 
+    document.getElementById('edit-user-modal').classList.add('hidden'); 
+}
+
+function openBatchTemplateModal() { 
+    document.getElementById('batch-template-count').innerText = selectedUsers.size; 
+    populateTemplates('batch-template-select'); 
+    const sel = document.getElementById('batch-template-select'); 
+    if (sel.options.length > 0 && sel.options[0].value === "") sel.remove(0); 
+    const modal = document.getElementById('batch-template-modal'); 
+    modal.classList.remove('hidden'); 
+    setTimeout(() => modal.classList.add('flex'), 10); 
+}
+
+function closeBatchTemplateModal() { 
+    document.getElementById('batch-template-modal').classList.remove('flex'); 
+    document.getElementById('batch-template-modal').classList.add('hidden'); 
+}
+
 async function submitBatchTemplate() {
-    if (selectedUsers.size === 0) return; const tid = document.getElementById('batch-template-select').value; if (!tid) return alert('选模板');
-    const cLib = document.getElementById('batch-opt-lib').checked; const cPol = document.getElementById('batch-opt-pol').checked; const cPar = document.getElementById('batch-opt-par').checked;
+    if (selectedUsers.size === 0) return; 
+    const tid = document.getElementById('batch-template-select').value; 
+    if (!tid) return alert('选模板');
+    const cLib = document.getElementById('batch-opt-lib').checked; 
+    const cPol = document.getElementById('batch-opt-pol').checked; 
+    const cPar = document.getElementById('batch-opt-par').checked;
+    
     if (!cLib && !cPol && !cPar) return alert('至少勾一项');
-    const btn = document.getElementById('batch-template-btn'); btn.disabled = true; btn.innerHTML = '执行中...';
-    try { const res = await fetch('/api/manage/users/batch', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ user_ids: Array.from(selectedUsers), action: 'apply_template', value: tid, copy_library: cLib, copy_policy: cPol, copy_parental: cPar }) }); const json = await res.json(); if (json.status === 'success') { closeBatchTemplateModal(); selectedUsers.clear(); loadUsers(); alert(`成功套用给 ${Array.from(selectedUsers).length} 个用户！`); } else { alert('失败'); } } catch(e) {} finally { btn.disabled = false; btn.innerHTML = '执行套用'; }
+    const btn = document.getElementById('batch-template-btn'); 
+    btn.disabled = true; 
+    btn.innerHTML = '执行中...';
+    
+    try {
+        const res = await fetch('/api/manage/users/batch', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ 
+                user_ids: Array.from(selectedUsers), 
+                action: 'apply_template', 
+                value: tid, 
+                copy_library: cLib, 
+                copy_policy: cPol, 
+                copy_parental: cPar 
+            }) 
+        });
+        const json = await res.json(); 
+        if (json.status === 'success') { 
+            closeBatchTemplateModal(); 
+            selectedUsers.clear(); 
+            loadUsers(); 
+            alert(`成功套用给 ${Array.from(selectedUsers).length} 个用户！`); 
+        } else {
+            alert('失败');
+        }
+    } catch(e) {} 
+    finally { 
+        btn.disabled = false; 
+        btn.innerHTML = '执行套用'; 
+    }
 }
 </script>
 {% endblock %}
