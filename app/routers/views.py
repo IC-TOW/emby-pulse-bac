@@ -65,8 +65,11 @@ async def get_service_worker():
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     if not check_login(request): return RedirectResponse("/login")
-    emby_url = cfg.get("emby_public_url") or cfg.get("emby_public_host") or cfg.get("emby_host") or ""
+    
+    # 🔥 核心修复点：使用 get_main_public_url 提取单纯的网址，而不是把整段 JSON 拿出来
+    emby_url = cfg.get_main_public_url() or cfg.get("emby_public_host") or cfg.get("emby_host") or ""
     if emby_url.endswith('/'): emby_url = emby_url[:-1]
+    
     server_id = ""
     try:
         sys_res = requests.get(f"{cfg.get('emby_host')}/emby/System/Info?api_key={cfg.get('emby_api_key')}", timeout=2)
@@ -167,13 +170,11 @@ async def gaps_page(request: Request):
 
 @router.get("/risk", response_class=HTMLResponse)
 async def risk_control_page(request: Request):
-    """风险管控大盘页面"""
-    # 🔥 必须补上 version 和 active_page，否则前端无法渲染版本和高亮
     return templates.TemplateResponse("risk.html", {
         "request": request, 
         "title": "风险管控中心",
-        "active_page": "risk",  # 确保侧边栏亮起
-        "version": APP_VERSION  # 确保版本号显示 (假设你定义的变量名是 APP_VERSION)
+        "active_page": "risk",
+        "version": APP_VERSION
     })
 
 @router.get("/api/wallpaper")
@@ -203,5 +204,5 @@ async def dedupe_page(request: Request):
     return templates.TemplateResponse("dedupe.html", {
         "request": request, 
         "active_page": "dedupe", 
-        "version": APP_VERSION  # 🔥 保持与项目全局版本号完全一致
+        "version": APP_VERSION
     })
