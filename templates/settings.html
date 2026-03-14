@@ -56,14 +56,14 @@
         </button>
     </div>
 
-    <div class="columns-1 lg:columns-2 2xl:columns-3 gap-5 md:gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5 md:gap-6 items-stretch grid-flow-row-dense">
         
-        <div class="apple-card break-inside-avoid mb-5 md:mb-6 w-full inline-block">
-            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center">
+        <div class="apple-card flex flex-col h-full p-5 md:p-6">
+            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center shrink-0">
                 <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 flex items-center justify-center mr-3 shadow-sm"><i class="fa-solid fa-server text-sm"></i></div> 
                 媒体服务器核心
             </h3>
-            <div class="space-y-5">
+            <div class="flex-1 flex flex-col justify-between space-y-5">
                 <div>
                     <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">服务器类型</label>
                     <div class="grid grid-cols-2 gap-3">
@@ -124,21 +124,24 @@
             </div>
         </div>
 
-        <div class="apple-card break-inside-avoid mb-5 md:mb-6 w-full inline-block">
-            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center">
+        <div class="apple-card flex flex-col h-full lg:col-span-2 p-5 md:p-6">
+            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center shrink-0">
                 <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 flex items-center justify-center mr-3 shadow-sm"><i class="fa-solid fa-globe text-sm"></i></div> 
                 对外服务门户
             </h3>
-            <div class="space-y-5">
-                <div class="bg-gray-50 dark:bg-[#1C1C1E] p-4 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-sm">
-                    <label class="block text-[13px] font-bold text-gray-800 dark:text-gray-200 mb-1">
-                        <i class="fa-solid fa-network-wired text-brand-500 mr-1.5"></i> 公网访问入口 (首选 + 多线路)
-                    </label>
-                    <p class="text-[11px] text-gray-500 mb-3 leading-relaxed">系统所有内链跳转强制使用<strong class="text-brand-500 font-bold mx-1">主线路</strong>，下方的备用线路仅在测速面板中展示给用户挑选。</p>
+            
+            <div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                <div class="bg-gray-50 dark:bg-[#1C1C1E] p-4 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <label class="block text-[13px] font-bold text-gray-800 dark:text-gray-200 mb-1">
+                            <i class="fa-solid fa-network-wired text-brand-500 mr-1.5"></i> 公网访问入口 (首选 + 多线路)
+                        </label>
+                        <p class="text-[11px] text-gray-500 mb-3 leading-relaxed">内链跳转强制使用<strong class="text-brand-500 font-bold mx-1">主线路</strong>，备用线路在注册页展示。</p>
+                    </div>
                     <input type="hidden" id="emby_public_url" name="emby_public_url">
-                    <div id="routes-container" class="space-y-2.5"></div>
+                    <div id="routes-container" class="space-y-2.5 flex-1 overflow-y-auto mac-scrollbar min-h-[150px]"></div>
                     
-                    <div class="flex gap-2 mt-3">
+                    <div class="flex gap-2 mt-3 shrink-0">
                         <button type="button" onclick="pingAllAdmin()" class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors text-[12px] font-bold active:scale-[0.98]">
                             <i class="fa-solid fa-satellite-dish"></i> 测速验证
                         </button>
@@ -148,23 +151,25 @@
                     </div>
                 </div>
                 
-                <div>
-                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">客户端引导链接 (可选)</label>
-                    <input type="text" id="client_download_url" class="w-full px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all placeholder-gray-400" placeholder="https://emby.media/download.html">
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">入职欢迎语 (支持换行/HTML)</label>
-                    <textarea id="welcome_message" rows="4" class="w-full px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all placeholder-gray-400 mac-scrollbar resize-none" placeholder="支持直接回车换行！也可写 <b>加粗</b> 或 <font color='red'>标红</font>。"></textarea>
+                <div class="flex flex-col space-y-5">
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">客户端引导链接 (可选)</label>
+                        <input type="text" id="client_download_url" class="w-full px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all placeholder-gray-400" placeholder="https://emby.media/download.html">
+                    </div>
+                    <div class="flex-1 flex flex-col">
+                        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">入职欢迎语 (支持换行/HTML)</label>
+                        <textarea id="welcome_message" class="w-full h-full min-h-[120px] px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all placeholder-gray-400 mac-scrollbar resize-none" placeholder="支持直接回车换行！也可写 <b>加粗</b> 或 <font color='red'>标红</font>。"></textarea>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="apple-card break-inside-avoid mb-5 md:mb-6 w-full inline-block">
-            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center">
+        <div class="apple-card flex flex-col h-full p-5 md:p-6">
+            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center shrink-0">
                 <div class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-500 flex items-center justify-center mr-3 shadow-sm"><i class="fa-solid fa-bolt text-sm"></i></div> 
                 MoviePilot 自动化联控
             </h3>
-            <div class="space-y-5">
+            <div class="flex-1 flex flex-col justify-between space-y-5">
                 <div>
                     <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">MP 通信地址</label>
                     <input type="text" id="moviepilot_url" class="w-full px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-purple-500/50 outline-none transition-all placeholder-gray-400" placeholder="http://192.168.31.2:3000">
@@ -190,12 +195,12 @@
             </div>
         </div>
 
-        <div class="apple-card break-inside-avoid mb-5 md:mb-6 w-full inline-block">
-            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center">
+        <div class="apple-card flex flex-col h-full p-5 md:p-6">
+            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center shrink-0">
                 <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-500 flex items-center justify-center mr-3 shadow-sm"><i class="fa-solid fa-database text-sm"></i></div> 
                 TMDB & 数据库体检
             </h3>
-            <div class="space-y-5">
+            <div class="flex-1 flex flex-col justify-between space-y-5">
                 <div>
                     <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">TMDB API Key (v3)</label>
                     <div class="relative">
@@ -209,40 +214,40 @@
                     <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">全局科学代理 (可选)</label>
                     <input type="text" id="proxy_url" class="w-full px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all placeholder-gray-400" placeholder="http://127.0.0.1:7890">
                 </div>
-                <div class="pt-4 border-t border-gray-100 dark:border-white/5">
+                <div class="pt-4 border-t border-gray-100 dark:border-white/5 mt-auto">
                     <button onclick="runHealthCheck(this)" class="w-full flex items-center justify-center gap-2 px-5 py-3 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:hover:bg-rose-900/40 rounded-[14px] text-[13px] font-bold shadow-sm transition-all active:scale-95 border border-rose-100 dark:border-rose-800/30">
-                        <i class="fa-solid fa-stethoscope"></i> 启动全库深度体检与自愈
+                        <i class="fa-solid fa-stethoscope"></i> 全库深度体检与自愈
                     </button>
                 </div>
             </div>
         </div>
 
-        <div class="apple-card break-inside-avoid mb-5 md:mb-6 w-full inline-block">
-            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center">
+        <div class="apple-card flex flex-col h-full p-5 md:p-6">
+            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center shrink-0">
                 <div class="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-500/10 text-orange-500 flex items-center justify-center mr-3 shadow-sm"><i class="fa-solid fa-tower-broadcast text-sm"></i></div> 
                 系统神经感知 (Webhook)
             </h3>
-            <div class="space-y-5">
+            <div class="flex-1 flex flex-col justify-between space-y-5">
                 <div class="bg-orange-50/80 dark:bg-orange-500/10 p-3.5 rounded-xl border border-orange-100 dark:border-orange-500/20 shadow-sm">
-                    <p class="text-[11px] text-orange-800 dark:text-orange-300 leading-relaxed font-medium">此接口是核心感知神经，用于接收播放和入库通知。<strong>必须在媒体服务器中填入此地址！</strong></p>
+                    <p class="text-[11px] text-orange-800 dark:text-orange-300 leading-relaxed font-medium">此接口用于接收播放和入库通知。<strong>必须配置到媒体服务器中！</strong></p>
                 </div>
                 <div>
                     <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">接口验证 Token</label>
                     <input type="text" id="webhook_token" class="w-full px-4 py-3 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[13px] font-mono text-gray-800 dark:text-gray-100 focus:bg-white dark:focus:bg-black/30 focus:ring-2 focus:ring-orange-500/50 outline-none transition-all">
                 </div>
-                <div>
+                <div class="mt-auto">
                     <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider pl-1">推送目标地址</label>
                     <p class="text-[11px] font-mono text-orange-600 dark:text-orange-400 break-all select-all leading-relaxed bg-gray-100 dark:bg-[#2C2C2E] p-3 rounded-xl border border-transparent dark:border-white/5 shadow-inner" id="webhook-url-preview">...</p>
                 </div>
             </div>
         </div>
 
-        <div class="apple-card break-inside-avoid mb-5 md:mb-6 w-full inline-block">
-            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-5 flex items-center">
+        <div class="apple-card flex flex-col h-full p-5 md:p-6">
+            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-5 flex items-center shrink-0">
                 <div class="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-500 flex items-center justify-center mr-3 shadow-sm"><i class="fa-solid fa-shield-halved text-sm"></i></div> 
                 附加安全事件订阅
             </h3>
-            <div class="space-y-3">
+            <div class="flex-1 flex flex-col justify-center space-y-4">
                 <label class="flex items-center justify-between p-3.5 border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-[#2C2C2E] rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-[#3A3A3C] transition-all shadow-sm group">
                     <div>
                         <div class="text-[13px] font-bold text-gray-800 dark:text-gray-100 flex items-center gap-1.5"><i class="fa-solid fa-right-to-bracket text-gray-400 group-hover:text-rose-500 transition-colors"></i> 用户登录追踪</div>
@@ -267,14 +272,14 @@
             </div>
         </div>
 
-        <div class="apple-card break-inside-avoid mb-5 md:mb-6 w-full inline-block">
-            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center">
+        <div class="apple-card flex flex-col h-full xl:col-span-2 p-5 md:p-6">
+            <h3 class="text-[15px] font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center shrink-0">
                 <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-[#2C2C2E] text-slate-500 flex items-center justify-center mr-3 shadow-sm border border-gray-200/50 dark:border-white/5"><i class="fa-solid fa-user-ninja text-sm"></i></div> 
                 排行黑名单 (幽灵模式)
             </h3>
-            <div class="space-y-4">
+            <div class="flex-1 flex flex-col justify-start space-y-5">
                 <p class="text-[11px] text-gray-500 leading-relaxed">被加入此名单的用户，所有记录将不会出现在大盘与排行榜中，适合用于隐藏管理员或扫库机器人账号。</p>
-                <div class="flex gap-2 w-full">
+                <div class="flex gap-2 w-full md:w-1/2">
                     <select id="user-selector" class="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-transparent bg-gray-100 hover:bg-gray-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[12px] font-bold text-gray-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-slate-500/50 transition-all cursor-pointer shadow-sm">
                         <option value="">选择需要隐藏的用户...</option>
                     </select>
