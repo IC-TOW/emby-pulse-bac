@@ -1,5 +1,6 @@
 import os
 import requests
+import json
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -18,6 +19,42 @@ def check_login(request: Request):
     user = request.session.get("user")
     if user and user.get("is_admin"): return True
     return False
+
+# 🔥 核心修复：智能公网网址解析器
+# 无论是老版本的单行网址，还是新版的 JSON 多线路，它都能精准提取出唯一的主线路 URL 给前端使用。
+def get_common_vars(request: Request, active_page: str, extra_vars: dict = None):
+    raw_url = cfg.get("emby_public_url") or cfg.get("emby_public_host") or cfg.get("emby_host") or ""
+    emby_url = raw_url
+    try:
+        routes = json.loads(raw_url)
+        if isinstance(routes, list) and len(routes) > 0:
+            emby_url = routes[0].get("url", "")
+            for r in routes:
+                if r.get("is_main"): 
+                    emby_url = r.get("url", "")
+                    break
+    except Exception:
+        pass
+        
+    emby_url = emby_url.strip().rstrip('/')
+    
+    server_id = ""
+    try:
+        sys_res = requests.get(f"{cfg.get('emby_host')}/emby/System/Info?api_key={cfg.get('emby_api_key')}", timeout=2)
+        if sys_res.status_code == 200: server_id = sys_res.json().get("Id", "")
+    except: pass
+
+    vars_dict = {
+        "request": request,
+        "version": APP_VERSION,
+        "active_page": active_page,
+        "emby_url": emby_url,     # 提取后的纯净主线路
+        "server_id": server_id
+    }
+    if extra_vars:
+        vars_dict.update(extra_vars)
+    return vars_dict
+
 
 @router.get("/apple-touch-icon.png")
 @router.get("/apple-touch-icon-precomposed.png")
@@ -65,17 +102,7 @@ async def get_service_worker():
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     if not check_login(request): return RedirectResponse("/login")
-    
-    # 🔥 核心修复点：使用 get_main_public_url 提取单纯的网址，而不是把整段 JSON 拿出来
-    emby_url = cfg.get_main_public_url() or cfg.get("emby_public_host") or cfg.get("emby_host") or ""
-    if emby_url.endswith('/'): emby_url = emby_url[:-1]
-    
-    server_id = ""
-    try:
-        sys_res = requests.get(f"{cfg.get('emby_host')}/emby/System/Info?api_key={cfg.get('emby_api_key')}", timeout=2)
-        if sys_res.status_code == 200: server_id = sys_res.json().get("Id", "")
-    except: pass
-    return templates.TemplateResponse("index.html", {"request": request, "active_page": "dashboard", "version": APP_VERSION, "emby_url": emby_url, "server_id": server_id})
+    return templates.TemplateResponse("index.html", get_common_vars(request, "dashboard"))
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
@@ -93,50 +120,50 @@ async def invite_page(code: str, request: Request):
 @router.get("/content", response_class=HTMLResponse)
 async def content_page(request: Request):
     if not check_login(request): return RedirectResponse("/login")
-    return templates.TemplateResponse("content.html", {"request": request, "active_page": "content", "version": APP_VERSION})
+    return templates.TemplateResponse("content.html", get_common_vars(request, "content"))
 
 @router.get("/details", response_class=HTMLResponse)
 async def details_page(request: Request):
     if not check_login(request): return RedirectResponse("/login")
-    return templates.TemplateResponse("details.html", {"request": request, "active_page": "details", "version": APP_VERSION})
+    return templates.TemplateResponse("details.html", get_common_vars(request, "details"))
 
 @router.get("/report", response_class=HTMLResponse)
 async def report_page(request: Request):
     if not check_login(request): return RedirectResponse("/login")
-    return templates.TemplateResponse("report.html", {"request": request, "active_page": "report", "version": APP_VERSION})
+    return templates.TemplateResponse("report.html", get_common_vars(request, "report"))
 
 @router.get("/bot", response_class=HTMLResponse)
 async def bot_page(request: Request):
     if not check_login(request): return RedirectResponse("/login")
-    return templates.TemplateResponse("bot.html", {"request": request, "active_page": "bot", "version": APP_VERSION})
+    return templates.TemplateResponse("bot.html", get_common_vars(request, "bot"))
 
 @router.get("/users_manage", response_class=HTMLResponse)
 @router.get("/users", response_class=HTMLResponse)
 async def users_page(request: Request):
     if not check_login(request): return RedirectResponse("/login")
-    return templates.TemplateResponse("users.html", {"request": request, "active_page": "users", "version": APP_VERSION})
+    return templates.TemplateResponse("users.html", get_common_vars(request, "users"))
 
 @router.get("/settings", response_class=HTMLResponse)
 @router.get("/system", response_class=HTMLResponse)
 async def system_page(request: Request):
     if not check_login(request): return RedirectResponse("/login")
-    return templates.TemplateResponse("settings.html", {"request": request, "active_page": "settings", "version": APP_VERSION})
+    return templates.TemplateResponse("settings.html", get_common_vars(request, "settings"))
 
 @router.get("/insight", response_class=HTMLResponse)
 async def insight_page(request: Request):
     if not check_login(request): return RedirectResponse("/login")
-    return templates.TemplateResponse("insight.html", {"request": request, "active_page": "insight", "version": APP_VERSION})
+    return templates.TemplateResponse("insight.html", get_common_vars(request, "insight"))
 
 @router.get("/tasks", response_class=HTMLResponse)
 async def tasks_page(request: Request):
     if not check_login(request): return RedirectResponse("/login")
-    return templates.TemplateResponse("tasks.html", {"request": request, "active_page": "tasks", "version": APP_VERSION})
+    return templates.TemplateResponse("tasks.html", get_common_vars(request, "tasks"))
 
 @router.get("/history", response_class=HTMLResponse)
 async def history_page(request: Request):
     user = request.session.get("user")
     if not user: return RedirectResponse(url="/login", status_code=303)
-    return templates.TemplateResponse("history.html", {"request": request, "user": user, "active_page": "history", "version": APP_VERSION})
+    return templates.TemplateResponse("history.html", get_common_vars(request, "history", {"user": user}))
 
 @router.get("/request", response_class=HTMLResponse)
 async def request_page(request: Request):
@@ -151,31 +178,26 @@ async def request_login_page(request: Request):
 @router.get("/requests_admin", response_class=HTMLResponse)
 async def requests_admin_page(request: Request):
     if not check_login(request): return RedirectResponse("/login")
-    return templates.TemplateResponse("requests_admin.html", {"request": request, "active_page": "requests_admin", "version": APP_VERSION})
+    return templates.TemplateResponse("requests_admin.html", get_common_vars(request, "requests_admin"))
 
 @router.get("/clients", response_class=HTMLResponse)
 async def clients_page(request: Request):
     if not check_login(request): return RedirectResponse("/login")
-    return templates.TemplateResponse("clients.html", {"request": request, "active_page": "clients", "version": APP_VERSION})
+    return templates.TemplateResponse("clients.html", get_common_vars(request, "clients"))
 
 @router.get("/about", response_class=HTMLResponse)
 async def about_page(request: Request):
     if not check_login(request): return RedirectResponse("/login")
-    return templates.TemplateResponse("about.html", {"request": request, "active_page": "about", "version": APP_VERSION})
+    return templates.TemplateResponse("about.html", get_common_vars(request, "about"))
 
 @router.get("/gaps", response_class=HTMLResponse)
 async def gaps_page(request: Request):
     if not check_login(request): return RedirectResponse("/login")
-    return templates.TemplateResponse("gaps.html", {"request": request, "active_page": "gaps", "version": APP_VERSION})
+    return templates.TemplateResponse("gaps.html", get_common_vars(request, "gaps"))
 
 @router.get("/risk", response_class=HTMLResponse)
 async def risk_control_page(request: Request):
-    return templates.TemplateResponse("risk.html", {
-        "request": request, 
-        "title": "风险管控中心",
-        "active_page": "risk",
-        "version": APP_VERSION
-    })
+    return templates.TemplateResponse("risk.html", get_common_vars(request, "risk", {"title": "风险管控中心"}))
 
 @router.get("/api/wallpaper")
 async def get_wallpaper():
@@ -201,8 +223,4 @@ async def get_wallpaper():
 @router.get("/dedupe", response_class=HTMLResponse)
 async def dedupe_page(request: Request):
     if not check_login(request): return RedirectResponse("/login")
-    return templates.TemplateResponse("dedupe.html", {
-        "request": request, 
-        "active_page": "dedupe", 
-        "version": APP_VERSION
-    })
+    return templates.TemplateResponse("dedupe.html", get_common_vars(request, "dedupe"))
